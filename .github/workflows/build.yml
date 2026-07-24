@@ -2,7 +2,7 @@ name: citra-build
 
 on:
   push:
-    branches: [ "AzaharTrigger" ]
+    branches: [ "Game-Title-on-Multiplayer" ]
     tags: [ "v*" ]
   pull_request:
     branches: [ "*" ]
