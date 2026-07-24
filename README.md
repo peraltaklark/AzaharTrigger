@@ -1,6 +1,6 @@
 <b>AzaharTrigger</b> is a fork of the Azahar Plus 3DS emulator with extra features.
 
-I added some wxtra features too (klark231)
+I added some extra features too (klark231)
 
 Each version is the same as the corresponding version of Azahar exept for this:
 - Compatibility with all game files. If a file works with any Citra fork, it works with AzaharPlus.
