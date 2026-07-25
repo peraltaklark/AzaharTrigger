@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.citra.citra_emu.R
 import org.citra.citra_emu.dialogs.ChatDialog
-import org.citra.citra_emu.features.settings.utils.IntSetting
+import org.citra.citra_emu.features.settings.model.IntSetting
 import org.citra.citra_emu.utils.NetPlayManager
 
 /**
@@ -28,10 +28,15 @@ class ChatOverlayManager(
     private val chatButton: FloatingActionButton,
     private val context: Context
 ) {
+    
+    // ==================== PROPERTIES ====================
+    
     private val chatAdapter = ChatOverlayAdapter()
     private val mainHandler = Handler(Looper.getMainLooper())
     private var autoHideRunnable: Runnable? = null
-
+    
+    // ==================== INIT ====================
+    
     init {
         setupRecyclerView()
         setupChatButton()
@@ -39,7 +44,49 @@ class ChatOverlayManager(
         updateChatButtonVisibility()
         loadSettings()
     }
-
+    
+    // ==================== SETUP METHODS ====================
+    
+    /**
+     * Initializes the RecyclerView with layout manager and adapter
+     */
+    private fun setupRecyclerView() {
+        chatRecycler.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = chatAdapter
+        }
+    }
+    
+    /**
+     * Configures the chat button click listener and drag functionality
+     */
+    private fun setupChatButton() {
+        chatButton.setOnClickListener {
+            ChatDialog(context).show()
+        }
+        setupDraggableChatButton()
+        chatButton.visibility = if (NetPlayManager.netPlayIsJoined()) View.VISIBLE else View.GONE
+    }
+    
+    /**
+     * Sets up the NetPlay message listener to receive chat messages
+     */
+    private fun setupNetPlayListener() {
+        NetPlayManager.setOnMessageReceivedListener { type, msg ->
+            (context as? android.app.Activity)?.runOnUiThread {
+                if (!NetPlayManager.netPlayIsJoined()) {
+                    clearAllMessages()
+                    updateChatButtonVisibility()
+                    return@runOnUiThread
+                }
+                displayNewMessage(type, msg)
+                updateChatButtonVisibility()
+            }
+        }
+    }
+    
+    // ==================== SETTINGS METHODS ====================
+    
     /**
      * Loads saved settings from preferences
      */
@@ -50,14 +97,14 @@ class ChatOverlayManager(
         applyFabSize(IntSetting.CHAT_FAB_SIZE.int)
         applyShadowRadius(IntSetting.CHAT_SHADOW_RADIUS.int.toFloat())
     }
-
+    
     /**
      * Applies text size to the RecyclerView
      */
     private fun applyTextSize(size: Float) {
         chatAdapter.setTextSize(size)
     }
-
+    
     /**
      * Applies background opacity to the chat container
      */
@@ -71,7 +118,7 @@ class ChatOverlayManager(
         )
         chatContainer.setBackgroundColor(backgroundColor)
     }
-
+    
     /**
      * Applies opacity to the FAB button
      */
@@ -79,7 +126,7 @@ class ChatOverlayManager(
         val alpha = opacity / 100f
         chatButton.alpha = alpha
     }
-
+    
     /**
      * Applies size to the FAB button
      */
@@ -94,70 +141,29 @@ class ChatOverlayManager(
         layoutParams.width = sizePx
         layoutParams.height = sizePx
         chatButton.layoutParams = layoutParams
-        
-        // Request layout update
         chatButton.requestLayout()
     }
-
+    
     /**
      * Applies shadow radius to chat messages
      */
     private fun applyShadowRadius(radius: Float) {
         chatAdapter.setShadowRadius(radius)
     }
-
-    /**
-     * Initializes the RecyclerView with layout manager and adapter
-     */
-    private fun setupRecyclerView() {
-        chatRecycler.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = chatAdapter
-        }
-    }
-
-    /**
-     * Configures the chat button click listener and drag functionality
-     */
-    private fun setupChatButton() {
-        chatButton.setOnClickListener {
-            ChatDialog(context).show()
-        }
-        setupDraggableChatButton()
-        chatButton.visibility = if (NetPlayManager.netPlayIsJoined()) View.VISIBLE else View.GONE
-    }
-
-    /**
-     * Sets up the NetPlay overlay listener to receive chat messages
-     */
-    private fun setupNetPlayListener() {
-        NetPlayManager.setOverlayListener { type, msg ->
-            (context as? android.app.Activity)?.runOnUiThread {
-                if (!NetPlayManager.netPlayIsJoined()) {
-                    clearAllMessages()
-                    updateChatButtonVisibility()
-                    return@runOnUiThread
-                }
-                displayNewMessage(type, msg)
-                updateChatButtonVisibility()
-            }
-        }
-    }
-
+    
+    // ==================== PUBLIC METHODS ====================
+    
     /**
      * Displays a new chat message in the overlay
-     * @param type The type of message (chat, join, leave, etc.)
-     * @param msg The actual message text
      */
     fun displayNewMessage(type: Int, msg: String) {
         val formattedMessage = formatMessageByType(type, msg)
-        
         chatAdapter.add(formattedMessage)
         showChatContainer()
         scrollToLatestMessage()
         scheduleAutoHide()
     }
-
+    
     /**
      * Clears all chat messages and hides the overlay
      */
@@ -170,7 +176,7 @@ class ChatOverlayManager(
         chatContainer.alpha = 1f
         chatContainer.visibility = View.GONE
     }
-
+    
     /**
      * Updates the chat button visibility based on netplay status
      */
@@ -182,7 +188,7 @@ class ChatOverlayManager(
             clearAllMessages()
         }
     }
-
+    
     /**
      * Called when the fragment resumes - refreshes chat state
      */
@@ -190,20 +196,22 @@ class ChatOverlayManager(
         updateChatButtonVisibility()
         loadSettings()
     }
-
+    
     /**
      * Returns the chat adapter for external access if needed
      */
     fun getChatAdapter(): ChatOverlayAdapter = chatAdapter
-
+    
     /**
      * Cleans up resources when the fragment is destroyed
      */
     fun cleanup() {
-        NetPlayManager.setOverlayListener(null)
+        NetPlayManager.setOnMessageReceivedListener(null)
         clearAllMessages()
     }
-
+    
+    // ==================== PRIVATE HELPER METHODS ====================
+    
     /**
      * Formats the message with appropriate prefix based on message type
      */
@@ -217,7 +225,7 @@ class ChatOverlayManager(
             else -> msg
         }
     }
-
+    
     /**
      * Makes the chat button draggable within its parent bounds
      */
@@ -264,7 +272,7 @@ class ChatOverlayManager(
             }
         }
     }
-
+    
     /**
      * Shows the chat container with full opacity
      */
@@ -272,14 +280,14 @@ class ChatOverlayManager(
         chatContainer.visibility = View.VISIBLE
         chatContainer.alpha = 1f
     }
-
+    
     /**
      * Scrolls the RecyclerView to show the latest message
      */
     private fun scrollToLatestMessage() {
         chatRecycler.scrollToPosition(chatAdapter.itemCount - 1)
     }
-
+    
     /**
      * Schedules the chat container to auto-hide after 10 seconds
      */
@@ -296,7 +304,9 @@ class ChatOverlayManager(
         }
         mainHandler.postDelayed(autoHideRunnable!!, 10000)
     }
-
+    
+    // ==================== INNER ADAPTER CLASS ====================
+    
     /**
      * Inner adapter class for chat messages
      */
