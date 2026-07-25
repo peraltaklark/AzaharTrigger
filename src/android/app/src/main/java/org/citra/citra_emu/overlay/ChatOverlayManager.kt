@@ -102,7 +102,7 @@ class ChatOverlayManager(
     /**
      * Loads saved settings from preferences and applies them
      */
-    private fun loadSettings() {
+    fun loadSettings() {
         applyTextSize(IntSetting.CHAT_TEXT_SIZE.int.toFloat())
         applyBackgroundOpacity(IntSetting.CHAT_BACKGROUND_OPACITY.int)
         applyFabOpacity(IntSetting.CHAT_FAB_OPACITY.int)

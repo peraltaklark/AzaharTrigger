@@ -106,6 +106,10 @@ object NetPlayManager {
         messageListeners.remove(listener)
     }
 
+    fun notifyMessageListeners(type: Int, message: String) {
+        messageListeners.forEach { it(type, message) }
+    }
+
     fun setOnAdapterRefreshListener(listener: (Int, String) -> Unit) {
         adapterRefreshListener = listener
     }

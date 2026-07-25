@@ -90,6 +90,13 @@ class ChatDialog(context: Context) : BottomSheetDialog(context) {
         )
 
         NetPlayManager.addChatMessage(chatMessage)
+        
+        // Notify overlay to show your message
+        NetPlayManager.notifyMessageListeners(
+            NetPlayManager.NetPlayStatus.CHAT_MESSAGE,
+            "$username: $message"
+        )
+        
         chatAdapter.notifyDataSetChanged()
         scrollToBottom()
     }

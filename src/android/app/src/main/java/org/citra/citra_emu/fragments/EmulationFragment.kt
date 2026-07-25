@@ -128,6 +128,20 @@ class EmulationFragment :
 
     private lateinit var chatOverlayManager: ChatOverlayManager
 
+    private val settingsListener = object : SharedPreferences.OnSharedPreferenceChangeListener {
+        override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+            when (key) {
+                "CHAT_TEXT_SIZE",
+                "CHAT_BACKGROUND_OPACITY",
+                "CHAT_FAB_OPACITY",
+                "CHAT_FAB_SIZE",
+                "CHAT_SHADOW_RADIUS" -> {
+                    chatOverlayManager?.loadSettings()
+                }
+            }
+        }
+    }
+
     // Only used if a game is passed through intent on google play variant
     private var gameFd: Int? = null
 
@@ -587,6 +601,9 @@ class EmulationFragment :
         if (::chatOverlayManager.isInitialized) {
             chatOverlayManager.onFragmentResume()
         }
+
+        PreferenceManager.getDefaultSharedPreferences(requireContext())
+            .registerOnSharedPreferenceChangeListener(settingsListener)
     }
 
     override fun onPause() {
@@ -595,6 +612,9 @@ class EmulationFragment :
         }
         Choreographer.getInstance().removeFrameCallback(this)
         super.onPause()
+
+        PreferenceManager.getDefaultSharedPreferences(requireContext())
+            .unregisterOnSharedPreferenceChangeListener(settingsListener)
     }
 
     override fun onDetach() {
