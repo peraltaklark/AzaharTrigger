@@ -97,7 +97,7 @@ object NetPlayManager {
     private var messageListener: ((Int, String) -> Unit)? = null
     private var adapterRefreshListener: ((Int, String) -> Unit)? = null
 
-    fun setOnMessageReceivedListener(listener: (Int, String) -> Unit) {
+    fun setOnMessageReceivedListener(listener: ((Int, String) -> Unit)?) {
         messageListener = listener
     }
 
