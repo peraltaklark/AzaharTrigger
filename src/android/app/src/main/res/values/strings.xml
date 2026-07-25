@@ -431,6 +431,11 @@
     <string name="chat_background_opacity">Chat Background Opacity</string>
     <string name="chat_fab_opacity">Chat Button Opacity</string>
     <string name="chat_fab_size">Chat Button Size</string>
+	<string name="chat_text_size_description">Chat text size in overlay</string>
+    <string name="chat_shadow_radius_description">Text shadow radius for chat messages</string>
+    <string name="chat_background_opacity_description">Background opacity for chat overlay</string>
+    <string name="chat_fab_opacity_description">Opacity for the chat FAB button</string>
+    <string name="chat_fab_size_description">Size of the chat FAB button</string>
 
 	<!-- Miscellaneous -->
 	<string name="clear">Clear</string>

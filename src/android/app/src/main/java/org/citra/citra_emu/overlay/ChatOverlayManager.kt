@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.citra.citra_emu.R
 import org.citra.citra_emu.dialogs.ChatDialog
-import org.citra.citra_emu.features.settings.model.IntSetting
+import org.citra.citra_emu.features.settings.utils.IntSetting
 import org.citra.citra_emu.utils.NetPlayManager
 
 /**
@@ -31,8 +31,13 @@ class ChatOverlayManager(
     
     // ==================== PROPERTIES ====================
     
+    /** Adapter for displaying chat messages */
     private val chatAdapter = ChatOverlayAdapter()
+    
+    /** Handler for main thread operations */
     private val mainHandler = Handler(Looper.getMainLooper())
+    
+    /** Runnable for auto-hiding chat container */
     private var autoHideRunnable: Runnable? = null
     
     // ==================== INIT ====================
@@ -88,7 +93,7 @@ class ChatOverlayManager(
     // ==================== SETTINGS METHODS ====================
     
     /**
-     * Loads saved settings from preferences
+     * Loads saved settings from preferences and applies them
      */
     private fun loadSettings() {
         applyTextSize(IntSetting.CHAT_TEXT_SIZE.int.toFloat())
@@ -99,7 +104,8 @@ class ChatOverlayManager(
     }
     
     /**
-     * Applies text size to the RecyclerView
+     * Applies text size to chat messages
+     * @param size Text size in SP
      */
     private fun applyTextSize(size: Float) {
         chatAdapter.setTextSize(size)
@@ -107,28 +113,25 @@ class ChatOverlayManager(
     
     /**
      * Applies background opacity to the chat container
+     * @param opacity Opacity percentage (0-100)
      */
     private fun applyBackgroundOpacity(opacity: Int) {
         val alpha = opacity / 100f
-        val backgroundColor = Color.argb(
-            (alpha * 255).toInt(),
-            0,
-            0,
-            0
-        )
+        val backgroundColor = Color.argb((alpha * 255).toInt(), 0, 0, 0)
         chatContainer.setBackgroundColor(backgroundColor)
     }
     
     /**
      * Applies opacity to the FAB button
+     * @param opacity Opacity percentage (0-100)
      */
     private fun applyFabOpacity(opacity: Int) {
-        val alpha = opacity / 100f
-        chatButton.alpha = alpha
+        chatButton.alpha = opacity / 100f
     }
     
     /**
      * Applies size to the FAB button
+     * @param sizeDp Size in DP
      */
     private fun applyFabSize(sizeDp: Int) {
         val sizePx = TypedValue.applyDimension(
@@ -136,7 +139,6 @@ class ChatOverlayManager(
             sizeDp.toFloat(),
             context.resources.displayMetrics
         ).toInt()
-        
         val layoutParams = chatButton.layoutParams
         layoutParams.width = sizePx
         layoutParams.height = sizePx
@@ -146,6 +148,7 @@ class ChatOverlayManager(
     
     /**
      * Applies shadow radius to chat messages
+     * @param radius Shadow radius in pixels
      */
     private fun applyShadowRadius(radius: Float) {
         chatAdapter.setShadowRadius(radius)
@@ -155,6 +158,8 @@ class ChatOverlayManager(
     
     /**
      * Displays a new chat message in the overlay
+     * @param type Message type from NetPlayManager.NetPlayStatus
+     * @param msg The message content
      */
     fun displayNewMessage(type: Int, msg: String) {
         val formattedMessage = formatMessageByType(type, msg)
@@ -183,7 +188,6 @@ class ChatOverlayManager(
     fun updateChatButtonVisibility() {
         val isNetPlayActive = NetPlayManager.netPlayIsJoined()
         chatButton.visibility = if (isNetPlayActive) View.VISIBLE else View.GONE
-        
         if (!isNetPlayActive) {
             clearAllMessages()
         }
@@ -199,6 +203,7 @@ class ChatOverlayManager(
     
     /**
      * Returns the chat adapter for external access if needed
+     * @return The ChatOverlayAdapter instance
      */
     fun getChatAdapter(): ChatOverlayAdapter = chatAdapter
     
@@ -214,6 +219,9 @@ class ChatOverlayManager(
     
     /**
      * Formats the message with appropriate prefix based on message type
+     * @param type Message type from NetPlayManager.NetPlayStatus
+     * @param msg The original message
+     * @return Formatted message string
      */
     private fun formatMessageByType(type: Int, msg: String): String {
         return when (type) {
@@ -245,20 +253,15 @@ class ChatOverlayManager(
                 MotionEvent.ACTION_MOVE -> {
                     val deltaX = kotlin.math.abs(event.rawX - initialTouchX)
                     val deltaY = kotlin.math.abs(event.rawY - initialTouchY)
-                    
                     if (deltaX > 8 || deltaY > 8) {
                         isDragging = true
                     }
-
                     if (isDragging) {
                         val parent = view.parent as View
-                        val newX = (event.rawX + view.x - initialTouchX)
+                        view.x = (event.rawX + view.x - initialTouchX)
                             .coerceIn(0f, (parent.width - view.width).toFloat())
-                        val newY = (event.rawY + view.y - initialTouchY)
+                        view.y = (event.rawY + view.y - initialTouchY)
                             .coerceIn(0f, (parent.height - view.height).toFloat())
-                        
-                        view.x = newX
-                        view.y = newY
                     }
                     true
                 }
@@ -304,54 +307,85 @@ class ChatOverlayManager(
         }
         mainHandler.postDelayed(autoHideRunnable!!, 10000)
     }
+}
+
+/**
+ * Adapter for displaying chat messages in the overlay RecyclerView.
+ * Handles message storage, text formatting, and view binding.
+ */
+class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolder>() {
     
-    // ==================== INNER ADAPTER CLASS ====================
+    /** List of chat messages */
+    private val messages = mutableListOf<String>()
     
+    /** Current text size in SP */
+    private var textSize = 14f
+    
+    /** Current shadow radius in pixels */
+    private var shadowRadius = 2f
+
     /**
-     * Inner adapter class for chat messages
+     * ViewHolder for chat message items
      */
-    inner class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolder>() {
-        
-        private val messages = mutableListOf<String>()
-        private var textSize = 14f
-        private var shadowRadius = 2f
+    class ChatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val textView: TextView = itemView.findViewById(R.id.chat_overlay_message_text)
+    }
 
-        class ChatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            val textView: TextView = itemView.findViewById(R.id.chat_overlay_message_text)
-        }
+    /**
+     * Creates a new ViewHolder for chat messages
+     */
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_chat_overlay, parent, false)
+        return ChatViewHolder(view)
+    }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_chat_overlay, parent, false)
-            return ChatViewHolder(view)
-        }
+    /**
+     * Binds message data to the ViewHolder
+     */
+    override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
+        holder.textView.text = messages[position]
+        holder.textView.textSize = textSize
+        holder.textView.setShadowLayer(shadowRadius, 1f, 1f, Color.BLACK)
+    }
 
-        override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
-            holder.textView.text = messages[position]
-            holder.textView.textSize = textSize
-            holder.textView.setShadowLayer(shadowRadius, 1f, 1f, Color.BLACK)
-        }
+    /**
+     * Returns the total number of messages
+     */
+    override fun getItemCount(): Int = messages.size
 
-        override fun getItemCount(): Int = messages.size
+    /**
+     * Adds a new message to the list
+     * @param message The message to add
+     */
+    fun add(message: String) {
+        messages.add(message)
+        notifyItemInserted(messages.size - 1)
+    }
 
-        fun add(message: String) {
-            messages.add(message)
-            notifyItemInserted(messages.size - 1)
-        }
+    /**
+     * Clears all messages from the list
+     */
+    fun clear() {
+        messages.clear()
+        notifyDataSetChanged()
+    }
 
-        fun clear() {
-            messages.clear()
-            notifyDataSetChanged()
-        }
+    /**
+     * Sets the text size for all messages
+     * @param size Text size in SP
+     */
+    fun setTextSize(size: Float) {
+        textSize = size
+        notifyDataSetChanged()
+    }
 
-        fun setTextSize(size: Float) {
-            textSize = size
-            notifyDataSetChanged()
-        }
-
-        fun setShadowRadius(radius: Float) {
-            shadowRadius = radius
-            notifyDataSetChanged()
-        }
+    /**
+     * Sets the shadow radius for all messages
+     * @param radius Shadow radius in pixels
+     */
+    fun setShadowRadius(radius: Float) {
+        shadowRadius = radius
+        notifyDataSetChanged()
     }
 }
