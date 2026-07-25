@@ -3,7 +3,7 @@
 export NDK_CCACHE=$(which ccache)
 
 if [ -z "${ANDROID_KEYSTORE_B64}" ]; then
-    echo "::error::ANDROID_KEYSTORE_B64 is empty — refusing to build with debug signing"
+    echo "::error::ANDROID_KEYSTORE_B64 is empty â€” refusing to build with debug signing"
     exit 1
 fi
 
@@ -21,8 +21,8 @@ fi
 
 cd src/android
 chmod +x ./gradlew
-./gradlew assembleRelease
-./gradlew bundleRelease
+./gradlew assembleGooglePlayRelease
+./gradlew bundleGooglePlayRelease
 
 ccache -s -v
 
