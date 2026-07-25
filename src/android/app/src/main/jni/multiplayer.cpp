@@ -295,7 +295,7 @@ std::vector<std::string> AndroidMultiplayer::NetPlayRoomInfo() {
             // all members
             for (const auto& member : members) {
                 info_list.push_back(member.nickname + "|" + std::to_string(member.game_info.id) +
-                    "|" + member.game_info.name);
+                                    "|" + member.game_info.name);
             }
         }
     }

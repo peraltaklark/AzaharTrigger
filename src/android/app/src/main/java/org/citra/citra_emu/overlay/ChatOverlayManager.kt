@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.citra.citra_emu.R
 import org.citra.citra_emu.dialogs.ChatDialog
-import org.citra.citra_emu.features.settings.utils.IntSetting
+import org.citra.citra_emu.features.settings.model.IntSetting
 import org.citra.citra_emu.utils.NetPlayManager
 
 /**
