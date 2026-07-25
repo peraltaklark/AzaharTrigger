@@ -106,10 +106,6 @@ object NetPlayManager {
         messageListeners.remove(listener)
     }
 
-    fun notifyMessageListeners(type: Int, msg: String) {
-        messageListeners.forEach { it(type, msg) }
-    }
-
     fun setOnAdapterRefreshListener(listener: (Int, String) -> Unit) {
         adapterRefreshListener = listener
     }
@@ -254,8 +250,9 @@ object NetPlayManager {
         }
 
         // Notify all listeners
-        messageListeners.forEach { it(type, msg) }
-        adapterRefreshListener?.invoke(type, msg)
+        // Notify all listeners
+        messageListeners.forEach { it(type, message) }
+        adapterRefreshListener?.invoke(type, message)
     }
 
     private fun formatNetPlayStatus(context: Context, type: Int, msg: String): String {
