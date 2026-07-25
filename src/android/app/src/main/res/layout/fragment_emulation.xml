@@ -156,8 +156,7 @@
             android:layout_margin="20dp"
             android:src="@android:drawable/ic_dialog_email"
             android:contentDescription="Chat"
-            android:visibility="gone"
-            app:backgroundTint="?attr/colorPrimary"/>
+            android:visibility="gone"/>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

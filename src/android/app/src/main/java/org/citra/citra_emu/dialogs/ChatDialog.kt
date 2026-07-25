@@ -23,8 +23,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class ChatMessage(
-    val nickname: String, // This is the common name youll see on private servers
-    val username: String, // Username is the community/forum username
+    val nickname: String,
+    val username: String,
     val message: String,
     val timestamp: String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
 ) {
@@ -34,6 +34,13 @@ class ChatDialog(context: Context) : BottomSheetDialog(context) {
     private lateinit var binding: DialogChatBinding
     private lateinit var chatAdapter: ChatAdapter
     private val handler = Handler(Looper.getMainLooper())
+
+    private val messageListener: (Int, String) -> Unit = { _, _ ->
+        handler.post {
+            chatAdapter.notifyDataSetChanged()
+            scrollToBottom()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,7 +54,6 @@ class ChatDialog(context: Context) : BottomSheetDialog(context) {
         behavior.state = BottomSheetBehavior.STATE_EXPANDED
         behavior.skipCollapsed = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-
         handler.post {
             chatAdapter.notifyDataSetChanged()
             binding.chatRecyclerView.post {
@@ -55,12 +61,7 @@ class ChatDialog(context: Context) : BottomSheetDialog(context) {
             }
         }
 
-        NetPlayManager.setOnMessageReceivedListener { type, message ->
-            handler.post {
-                chatAdapter.notifyDataSetChanged()
-                scrollToBottom()
-            }
-        }
+        NetPlayManager.addOnMessageReceivedListener(messageListener)
 
         binding.sendButton.setOnClickListener {
             val message = binding.chatInput.text.toString()
@@ -73,6 +74,7 @@ class ChatDialog(context: Context) : BottomSheetDialog(context) {
 
     override fun dismiss() {
         NetPlayManager.setChatOpen(false)
+        NetPlayManager.removeOnMessageReceivedListener(messageListener)
         super.dismiss()
     }
 
@@ -101,7 +103,9 @@ class ChatDialog(context: Context) : BottomSheetDialog(context) {
     }
 
     private fun scrollToBottom() {
-        binding.chatRecyclerView.scrollToPosition(chatAdapter.itemCount - 1)
+        if (chatAdapter.itemCount > 0) {
+            binding.chatRecyclerView.scrollToPosition(chatAdapter.itemCount - 1)
+        }
     }
 }
 

@@ -1,3 +1,7 @@
+// Copyright 2025 Azahar Project
+// Licensed under GPLv2 or any later version
+// Refer to the license.txt file included
+
 package org.citra.citra_emu.overlay
 
 import android.content.Context
@@ -40,6 +44,19 @@ class ChatOverlayManager(
     /** Runnable for auto-hiding chat container */
     private var autoHideRunnable: Runnable? = null
     
+    /** Listener for netplay messages */
+    private val messageListener: (Int, String) -> Unit = { type, msg ->
+        (context as? android.app.Activity)?.runOnUiThread {
+            if (!NetPlayManager.netPlayIsJoined()) {
+                clearAllMessages()
+                updateChatButtonVisibility()
+                return@runOnUiThread
+            }
+            displayNewMessage(type, msg)
+            updateChatButtonVisibility()
+        }
+    }
+    
     // ==================== INIT ====================
     
     init {
@@ -77,17 +94,7 @@ class ChatOverlayManager(
      * Sets up the NetPlay message listener to receive chat messages
      */
     private fun setupNetPlayListener() {
-        NetPlayManager.setOnMessageReceivedListener { type, msg ->
-            (context as? android.app.Activity)?.runOnUiThread {
-                if (!NetPlayManager.netPlayIsJoined()) {
-                    clearAllMessages()
-                    updateChatButtonVisibility()
-                    return@runOnUiThread
-                }
-                displayNewMessage(type, msg)
-                updateChatButtonVisibility()
-            }
-        }
+        NetPlayManager.addOnMessageReceivedListener(messageListener)
     }
     
     // ==================== SETTINGS METHODS ====================
@@ -211,7 +218,7 @@ class ChatOverlayManager(
      * Cleans up resources when the fragment is destroyed
      */
     fun cleanup() {
-        NetPlayManager.setOnMessageReceivedListener(null)
+        NetPlayManager.removeOnMessageReceivedListener(messageListener)
         clearAllMessages()
     }
     
@@ -238,35 +245,38 @@ class ChatOverlayManager(
      * Makes the chat button draggable within its parent bounds
      */
     private fun setupDraggableChatButton() {
-        var initialTouchX = 0f
-        var initialTouchY = 0f
-        var isDragging = false
+        var dX = 0f
+        var dY = 0f
+        var downRawX = 0f
+        var downRawY = 0f
+        var dragging = false
 
         chatButton.setOnTouchListener { view, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    initialTouchX = event.rawX
-                    initialTouchY = event.rawY
-                    isDragging = false
+                    downRawX = event.rawX
+                    downRawY = event.rawY
+                    dX = view.x - downRawX
+                    dY = view.y - downRawY
+                    dragging = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val deltaX = kotlin.math.abs(event.rawX - initialTouchX)
-                    val deltaY = kotlin.math.abs(event.rawY - initialTouchY)
-                    if (deltaX > 8 || deltaY > 8) {
-                        isDragging = true
+                    if (kotlin.math.abs(event.rawX - downRawX) > 8 ||
+                        kotlin.math.abs(event.rawY - downRawY) > 8) {
+                        dragging = true
                     }
-                    if (isDragging) {
+                    if (dragging) {
                         val parent = view.parent as View
-                        view.x = (event.rawX + view.x - initialTouchX)
+                        view.x = (event.rawX + dX)
                             .coerceIn(0f, (parent.width - view.width).toFloat())
-                        view.y = (event.rawY + view.y - initialTouchY)
+                        view.y = (event.rawY + dY)
                             .coerceIn(0f, (parent.height - view.height).toFloat())
                     }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) {
+                    if (!dragging) {
                         view.performClick()
                     }
                     true
@@ -288,7 +298,10 @@ class ChatOverlayManager(
      * Scrolls the RecyclerView to show the latest message
      */
     private fun scrollToLatestMessage() {
-        chatRecycler.scrollToPosition(chatAdapter.itemCount - 1)
+        val itemCount = chatAdapter.itemCount
+        if (itemCount > 0) {
+            chatRecycler.scrollToPosition(itemCount - 1)
+        }
     }
     
     /**

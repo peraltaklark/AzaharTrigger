@@ -94,11 +94,20 @@ object NetPlayManager {
         val gameName: String
     )
 
-    private var messageListener: ((Int, String) -> Unit)? = null
+    // Changed from single listener to list of listeners
+    private val messageListeners = mutableListOf<(Int, String) -> Unit>()
     private var adapterRefreshListener: ((Int, String) -> Unit)? = null
 
-    fun setOnMessageReceivedListener(listener: ((Int, String) -> Unit)?) {
-        messageListener = listener
+    fun addOnMessageReceivedListener(listener: (Int, String) -> Unit) {
+        messageListeners.add(listener)
+    }
+
+    fun removeOnMessageReceivedListener(listener: (Int, String) -> Unit) {
+        messageListeners.remove(listener)
+    }
+
+    fun setOnAdapterRefreshListener(listener: (Int, String) -> Unit) {
+        adapterRefreshListener = listener
     }
 
     fun getPublicRooms(): List<RoomInfo> {
@@ -144,10 +153,6 @@ object NetPlayManager {
                 callback(rooms)
             }
         }.start()
-    }
-
-    fun setOnAdapterRefreshListener(listener: (Int, String) -> Unit) {
-        adapterRefreshListener = listener
     }
 
     fun getUsername(activity: Context): String {
@@ -214,10 +219,10 @@ object NetPlayManager {
                     val chatMessage = parts[1].trim()
                     addChatMessage(
                         ChatMessage(
-                        nickname = nickname,
-                        username = "",
-                        message = chatMessage
-                    )
+                            nickname = nickname,
+                            username = "",
+                            message = chatMessage
+                        )
                     )
                 }
             }
@@ -227,22 +232,25 @@ object NetPlayManager {
             NetPlayStatus.MEMBER_BANNED -> {
                 addChatMessage(
                     ChatMessage(
-                    nickname = "System",
-                    username = "",
-                    message = message
-                )
+                        nickname = "System",
+                        username = "",
+                        message = message
+                    )
                 )
             }
         }
 
+        // Show toast for everything except chat messages
+        if (type != NetPlayStatus.CHAT_MESSAGE) {
             Handler(Looper.getMainLooper()).post {
                 if (!isChatOpen && message.isNotEmpty()) {
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
             }
+        }
 
-
-        messageListener?.invoke(type, msg)
+        // Notify all listeners
+        messageListeners.forEach { it(type, msg) }
         adapterRefreshListener?.invoke(type, msg)
     }
 
