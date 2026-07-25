@@ -56,7 +56,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.preference.PreferenceManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.slider.Slider
 import java.io.File
 import kotlinx.coroutines.flow.collectLatest
@@ -80,6 +82,7 @@ import org.citra.citra_emu.features.settings.model.SettingsViewModel
 import org.citra.citra_emu.features.settings.ui.SettingsActivity
 import org.citra.citra_emu.features.settings.utils.SettingsFile
 import org.citra.citra_emu.model.Game
+import org.citra.citra_emu.overlay.ChatOverlayManager
 import org.citra.citra_emu.utils.AmiiboDatabase.Companion.amiibos
 import org.citra.citra_emu.utils.AmiiboDatabase.Companion.amiibos_series
 import org.citra.citra_emu.utils.AmiiboUsageDatabase
@@ -122,6 +125,8 @@ class EmulationFragment :
 
     private val onPause = Runnable { togglePause() }
     private val onShutdown = Runnable { emulationState.stop() }
+
+    private lateinit var chatOverlayManager: ChatOverlayManager
 
     // Only used if a game is passed through intent on google play variant
     private var gameFd: Int? = null
@@ -244,6 +249,18 @@ class EmulationFragment :
             binding.doneControlConfig.visibility = View.GONE
             binding.surfaceInputOverlay.setIsInEditMode(false)
         }
+
+        // Initialize Chat Overlay Manager
+        val chatContainer = view.findViewById<View>(R.id.chatContainer)
+        val chatRecycler = view.findViewById<RecyclerView>(R.id.chatRecycler)
+        val chatButton = view.findViewById<FloatingActionButton>(R.id.chatButton)
+        
+        chatOverlayManager = ChatOverlayManager(
+            chatContainer,
+            chatRecycler,
+            chatButton,
+            requireContext()
+        )
 
         // Show/hide the "Stats" overlay
         updateShowPerformanceOverlay()
@@ -540,6 +557,7 @@ class EmulationFragment :
 
     override fun onResume() {
         super.onResume()
+
         Choreographer.getInstance().postFrameCallback(this)
         if (NativeLibrary.isRunning()) {
             emulationState.unpause()
@@ -563,6 +581,11 @@ class EmulationFragment :
             emulationState.run(emulationActivity.isActivityRecreated)
         } else {
             setupCitraDirectoriesThenStartEmulation()
+        }
+
+        // Resume chat overlay
+        if (::chatOverlayManager.isInitialized) {
+            chatOverlayManager.onFragmentResume()
         }
     }
 
@@ -588,6 +611,11 @@ class EmulationFragment :
         if (gameFd != null) {
             ParcelFileDescriptor.adoptFd(gameFd!!).close()
             gameFd = null
+        }
+
+        // Cleanup chat overlay
+        if (::chatOverlayManager.isInitialized) {
+            chatOverlayManager.cleanup()
         }
         super.onDestroy()
     }

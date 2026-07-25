@@ -128,6 +128,37 @@
             android:textSize="12sp"
             tools:ignore="RtlHardcoded" />
 
+        <!-- Chat Container -->
+        <FrameLayout
+            android:id="@+id/chatContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            android:layout_gravity="top|start"
+            android:padding="8dp"
+            android:background="#66000000"
+            android:visibility="gone">
+            
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/chatRecycler"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:overScrollMode="never"/>
+
+        </FrameLayout>
+
+        <!-- Chat FAB Button -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/chatButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="20dp"
+            android:src="@android:drawable/ic_dialog_email"
+            android:contentDescription="Chat"
+            android:visibility="gone"
+            app:backgroundTint="?attr/colorPrimary"/>
+
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <com.google.android.material.navigation.NavigationView

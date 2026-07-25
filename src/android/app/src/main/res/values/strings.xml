@@ -425,6 +425,13 @@
 	<string name="aspect_ratio_16_10_fullscreen_stretched">16:10</string>
 	<string name="aspect_ratio_stretch">Stretch</string>
 
+	<!-- Chat Overlay Settings -->
+    <string name="chat_text_size">Chat Text Size</string>
+    <string name="chat_shadow_radius">Chat Shadow Radius</string>
+    <string name="chat_background_opacity">Chat Background Opacity</string>
+    <string name="chat_fab_opacity">Chat Button Opacity</string>
+    <string name="chat_fab_size">Chat Button Size</string>
+
 	<!-- Miscellaneous -->
 	<string name="clear">Clear</string>
 	<string name="slider_default">Default</string>
