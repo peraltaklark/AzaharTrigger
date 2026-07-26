@@ -128,22 +128,6 @@ class EmulationFragment :
 
     private lateinit var chatOverlayManager: ChatOverlayManager
 
-    private val settingsListener = object : SharedPreferences.OnSharedPreferenceChangeListener {
-        override fun onSharedPreferenceChanged(
-            sharedPreferences: SharedPreferences?,
-            key: String?
-        ) {
-            when (key) {
-                IntSetting.CHAT_TEXT_SIZE.key, IntSetting.CHAT_BACKGROUND_OPACITY.key,
-                IntSetting.CHAT_FAB_OPACITY.key, IntSetting.CHAT_FAB_SIZE.key,
-                IntSetting.CHAT_SHADOW_RADIUS.key, IntSetting.CHAT_SHADOW_DX.key,
-                IntSetting.CHAT_SHADOW_DY.key -> {
-                    chatOverlayManager.loadSettings()
-                }
-            }
-        }
-    }
-
     // Only used if a game is passed through intent on google play variant
     private var gameFd: Int? = null
 
@@ -576,9 +560,12 @@ class EmulationFragment :
 
         Choreographer.getInstance().postFrameCallback(this)
 
-        PreferenceManager.getDefaultSharedPreferences(requireContext())
-            .registerOnSharedPreferenceChangeListener(settingsListener)
-        
+        // Resume chat overlay
+        if (::chatOverlayManager.isInitialized) {
+            NativeLibrary.reloadSettings()
+            chatOverlayManager.loadSettings()
+        }
+
         if (NativeLibrary.isRunning()) {
             emulationState.unpause()
 
@@ -602,13 +589,6 @@ class EmulationFragment :
         } else {
             setupCitraDirectoriesThenStartEmulation()
         }
-
-        // Resume chat overlay
-        binding.root.post {
-            if (::chatOverlayManager.isInitialized) {
-                chatOverlayManager.loadSettings()
-            }
-        }
     }
 
     override fun onPause() {
@@ -617,9 +597,6 @@ class EmulationFragment :
         }
         Choreographer.getInstance().removeFrameCallback(this)
         super.onPause()
-
-        PreferenceManager.getDefaultSharedPreferences(requireContext())
-            .unregisterOnSharedPreferenceChangeListener(settingsListener)
     }
 
     override fun onDetach() {
