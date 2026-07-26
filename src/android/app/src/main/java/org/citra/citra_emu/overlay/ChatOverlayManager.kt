@@ -110,7 +110,7 @@ class ChatOverlayManager(
         applyBackgroundOpacity(IntSetting.CHAT_BACKGROUND_OPACITY.int)
         applyFabOpacity(IntSetting.CHAT_FAB_OPACITY.int)
         applyFabSize(IntSetting.CHAT_FAB_SIZE.int)
-        applyShadowRadius(IntSetting.CHAT_SHADOW_RADIUS.int.toFloat())
+        applyShadow(IntSetting.CHAT_SHADOW_RADIUS.int.toFloat(), IntSetting.CHAT_SHADOW_DX.int.toFloat(), IntSetting.CHAT_SHADOW_DY.int.toFloat())
     }
     
     /**
@@ -161,8 +161,8 @@ class ChatOverlayManager(
      * Applies shadow radius to chat messages
      * @param radius Shadow radius in pixels
      */
-    private fun applyShadowRadius(radius: Float) {
-        chatAdapter.setShadowRadius(radius)
+    private fun applyShadow(radius: Float, dx: Float, dy: Float) {
+        chatAdapter.setShadow(radius, dx, dy)
     }
     
     // ==================== PUBLIC METHODS ====================
@@ -354,6 +354,8 @@ class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolde
     
     /** Current shadow radius in pixels */
     private var shadowRadius = 2f
+    private var shadowDx = 1f
+    private var shadowDy = 1f
 
     /**
      * ViewHolder for chat message items
@@ -377,7 +379,7 @@ class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolde
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
         holder.textView.text = messages[position]
         holder.textView.textSize = textSize
-        holder.textView.setShadowLayer(shadowRadius, 1f, 1f, Color.BLACK)
+        holder.textView.setShadowLayer(shadowRadius, shadowDx, shadowDy, Color.BLACK)
     }
 
     /**
@@ -422,8 +424,10 @@ class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolde
      * Sets the shadow radius for all messages
      * @param radius Shadow radius in pixels
      */
-    fun setShadowRadius(radius: Float) {
+    fun setShadow(radius: Float, dx: Float, dy: Float) {
         shadowRadius = radius
+        shadowDx = dx
+        shadowDy = dy
         notifyDataSetChanged()
     }
 }

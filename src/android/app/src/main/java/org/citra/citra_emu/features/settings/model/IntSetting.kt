@@ -67,6 +67,8 @@ enum class IntSetting(
     ASPECT_RATIO(SettingKeys.aspect_ratio(), Settings.SECTION_LAYOUT, 0),
     CHAT_TEXT_SIZE("chat_text_size", Settings.SECTION_CORE, 14),
     CHAT_SHADOW_RADIUS("chat_shadow_radius", Settings.SECTION_CORE, 2),
+    CHAT_SHADOW_DX("chat_shadow_dx", Settings.SECTION_CORE, 1),
+    CHAT_SHADOW_DY("chat_shadow_dy", Settings.SECTION_CORE, 1),
     CHAT_BACKGROUND_OPACITY("chat_background_opacity", Settings.SECTION_CORE, 40),
     CHAT_FAB_OPACITY("chat_fab_opacity", Settings.SECTION_CORE, 100),
     CHAT_FAB_SIZE("chat_fab_size", Settings.SECTION_CORE, 56);

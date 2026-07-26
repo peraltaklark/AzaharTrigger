@@ -432,6 +432,10 @@
     <string name="chat_text_size_description">Change the size of chat messages displayed on screen.</string>
     <string name="chat_shadow_radius">Chat Shadow Radius</string>
     <string name="chat_shadow_radius_description">Adjust the shadow around chat text.</string>
+	<string name="chat_shadow_dx">Chat Shadow X Offset</string>
+    <string name="chat_shadow_dx_description">Controls the horizontal shadow offset.</string>
+    <sDdtring name="chat_shadow_dy">Chat Shadow Y Offset</string>
+    <string name="chat_shadow_dy_description">Controls the vertical shadow offset.</string>
     <string name="chat_background_opacity">Chat Background Opacity</string>
     <string name="chat_background_opacity_description">Adjust the transparency of the chat background.</string>
     <string name="chat_fab_opacity">Chat Button Opacity</string>
