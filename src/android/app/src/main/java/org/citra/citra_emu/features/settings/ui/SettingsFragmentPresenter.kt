@@ -1859,6 +1859,18 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
                     IntSetting.CHAT_FAB_SIZE.defaultValue.toFloat()
                 )
             )
+            add(
+                SliderSetting(
+                    IntSetting.CHAT_MAX_LINES,
+                    R.string.chat_max_lines,
+                    R.string.chat_max_lines_description,
+                    1,
+                    20,
+                    "",
+                    IntSetting.CHAT_MAX_LINES.key,
+                    IntSetting.CHAT_MAX_LINES.defaultValue.toFloat()
+                )
+            )
         }
     }
 
