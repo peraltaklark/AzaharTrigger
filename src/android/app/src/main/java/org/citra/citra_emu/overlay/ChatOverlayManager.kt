@@ -170,12 +170,26 @@ class ChatOverlayManager(
      * @param msg The message content
      */
     fun displayNewMessage(type: Int, msg: String) {
-        val formattedMessage = formatMessageByType(type, msg)
+        val formattedMessage = formatMessageByType(type, msg).trim()
+
+        // Ignore empty messages
+        if (formattedMessage.isEmpty()) {
+            return
+        }
+
         chatAdapter.add(formattedMessage)
+
+        // Keep only the latest 8 messages
+        if (chatAdapter.itemCount > 8) {
+        chatAdapter.removeFirst()
+        }
+
         showChatContainer()
         scrollToLatestMessage()
         scheduleAutoHide()
     }
+
+
     
     /**
      * Clears all chat messages and hides the overlay
