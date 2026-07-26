@@ -247,12 +247,12 @@ class ChatOverlayManager(
      */
     private fun formatMessageByType(type: Int, msg: String): String {
         return when (type) {
-            NetPlayManager.NetPlayStatus.CHAT_MESSAGE -> msg
+            NetPlayManager.NetPlayStatus.CHAT_MESSAGE -> msg.trim()
             NetPlayManager.NetPlayStatus.MEMBER_JOIN -> "➕ ${msg.trim()}"
             NetPlayManager.NetPlayStatus.MEMBER_LEAVE -> "➖ ${msg.trim()}"
             NetPlayManager.NetPlayStatus.MEMBER_KICKED -> "❌ ${msg.trim()}"
             NetPlayManager.NetPlayStatus.MEMBER_BANNED -> "🚫 ${msg.trim()}"
-            else -> msg
+            else -> msg.trim()
         }
     }
     
@@ -389,6 +389,13 @@ class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolde
     fun add(message: String) {
         messages.add(message)
         notifyItemInserted(messages.size - 1)
+    }
+
+    fun removeFirst() {
+        if (messages.isNotEmpty()) {
+            messages.removeAt(0)
+            notifyItemRemoved(0)
+        }
     }
 
     /**
