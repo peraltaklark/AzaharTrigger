@@ -207,6 +207,10 @@ public:
 
         void MoveEvents();
 
+        void ReduceDowncountSlice(u32 value) {
+            downcount_slice = value;
+        }
+
     private:
         friend class Timing;
         // The queue is a min-heap using std::make_heap/push_heap/pop_heap.
