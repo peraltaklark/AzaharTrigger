@@ -72,7 +72,8 @@ enum class IntSetting(
     CHAT_BACKGROUND_OPACITY("chat_background_opacity", Settings.SECTION_CORE, 40),
     CHAT_FAB_OPACITY("chat_fab_opacity", Settings.SECTION_CORE, 100),
     CHAT_FAB_SIZE("chat_fab_size", Settings.SECTION_CORE, 56),
-    CHAT_MAX_LINES("chat_max_lines", Settings.SECTION_CORE, 8);
+    CHAT_MAX_LINES("chat_max_lines", Settings.SECTION_CORE, 8),
+    REDUCE_DOWNCOUNT_SLICE("reduce_downcount_slice", Settings.SECTION_CORE, 0);
 
     override var int: Int = defaultValue
 

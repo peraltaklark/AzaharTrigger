@@ -2065,6 +2065,16 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
                     BooleanSetting.DETERMINISTIC_ASYNC_OPERATIONS.defaultValue
                 )
             )
+            add(HeaderSetting(R.string.miscellaneous))
+            add(
+                SwitchSetting(
+                    IntSetting.REDUCE_DOWNCOUNT_SLICE,
+                    R.string.reduce_downcount_slice,
+                    R.string.reduce_downcount_slice_description,
+                    IntSetting.REDUCE_DOWNCOUNT_SLICE.key,
+                    IntSetting.REDUCE_DOWNCOUNT_SLICE.defaultValue
+                )
+            )
         }
     }
 

@@ -444,6 +444,10 @@
     <string name="chat_fab_size_description">Adjust the size of the floating chat button.</string>
 	<string name="chat_max_lines">Chat message lines</string>
     <string name="chat_max_lines_description">Sets the maximum number of chat messages displayed in the overlay.</string>
+    
+    <!-- Tweaks -->
+    <string name="reduce_downcount_slice">Reduce Downcount Slice</string>
+    <string name="reduce_downcount_slice_description">Reduces core timing downcount to a smaller time slice, reducing CPU usage. This may improve performance in some games.</string>
 
 	<!-- Miscellaneous -->
 	<string name="clear">Clear</string>

@@ -30,7 +30,7 @@ class ChatOverlayManager(
     private val chatContainer: View,
     private val chatRecycler: RecyclerView,
     private val chatButton: FloatingActionButton,
-    private val context: Context
+    private val context: Context,
     /**
      * Maximum number of chat lines/messages kept visible in the overlay.
      * Older messages are removed when this limit is exceeded.

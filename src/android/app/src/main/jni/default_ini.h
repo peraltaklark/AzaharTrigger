@@ -94,6 +94,10 @@ static const char* android_config_default_file_content = (BOOST_HANA_STRING(R"(
 # Range is any positive integer (but we suspect 25 - 400 is a good idea) Default is 100
 )") DECLARE_KEY(cpu_clock_percentage) BOOST_HANA_STRING(R"(
 
+# Downcount will be limited to a smaller time slice.
+# 0 (default): Off, 1: On
+reduce_downcount_slice =
+
 [Renderer]
 # Whether to render using OpenGL
 # 1: OpenGL ES (default), 2: Vulkan
