@@ -87,6 +87,8 @@ class ChatOverlayManager(
         chatButton.setOnClickListener {
             ChatDialog(context).show()
         }
+        chatButton.setPadding(0, 0, 0, 0)
+        chatButton.scaleType = android.widget.ImageView.ScaleType.CENTER
         setupDraggableChatButton()
         chatButton.visibility = if (NetPlayManager.netPlayIsJoined()) View.VISIBLE else View.GONE
     }
@@ -152,6 +154,7 @@ class ChatOverlayManager(
         layoutParams.height = sizePx
         chatButton.layoutParams = layoutParams
         chatButton.requestLayout()
+        chatButton.setPadding(0, 0, 0, 0)
     }
     
     /**
