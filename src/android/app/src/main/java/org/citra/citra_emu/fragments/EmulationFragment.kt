@@ -599,8 +599,7 @@ class EmulationFragment :
 
         // Resume chat overlay
         if (::chatOverlayManager.isInitialized) {
-            chatOverlayManager.onFragmentResume()
-                chatOverlayManager.loadSettings()
+            chatOverlayManager.loadSettings()
         }
 
         PreferenceManager.getDefaultSharedPreferences(requireContext())
