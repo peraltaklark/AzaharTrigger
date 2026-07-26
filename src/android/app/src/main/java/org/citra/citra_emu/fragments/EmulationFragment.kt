@@ -575,6 +575,10 @@ class EmulationFragment :
         super.onResume()
 
         Choreographer.getInstance().postFrameCallback(this)
+
+        PreferenceManager.getDefaultSharedPreferences(requireContext())
+            .registerOnSharedPreferenceChangeListener(settingsListener)
+        
         if (NativeLibrary.isRunning()) {
             emulationState.unpause()
 
@@ -605,9 +609,6 @@ class EmulationFragment :
                 chatOverlayManager.loadSettings()
             }
         }
-        
-        PreferenceManager.getDefaultSharedPreferences(requireContext())
-            .registerOnSharedPreferenceChangeListener(settingsListener)
     }
 
     override fun onPause() {
