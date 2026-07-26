@@ -1794,6 +1794,32 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
                     IntSetting.CHAT_SHADOW_RADIUS.defaultValue.toFloat()
                 )
             )
+            
+            add(
+                SliderSetting(
+                    IntSetting.CHAT_SHADOW_DX,
+                    R.string.chat_shadow_dx,
+                    R.string.chat_shadow_dx_description,
+                    0,
+                    10,
+                    "",
+                    IntSetting.CHAT_SHADOW_DX.key,
+                    IntSetting.CHAT_SHADOW_DX.defaultValue.toFloat()
+                )
+            )
+            
+            add(
+                SliderSetting(
+                    IntSetting.CHAT_SHADOW_DY,
+                    R.string.chat_shadow_dy,
+                    R.string.chat_shadow_dy_description,
+                    0,
+                    10,
+                    "",
+                    IntSetting.CHAT_SHADOW_DY.key,
+                    IntSetting.CHAT_SHADOW_DY.defaultValue.toFloat()
+                )
+            )
 
             add(
                 SliderSetting(
