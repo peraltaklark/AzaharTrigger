@@ -111,6 +111,7 @@ class ChatOverlayManager(
         applyFabOpacity(IntSetting.CHAT_FAB_OPACITY.int)
         applyFabSize(IntSetting.CHAT_FAB_SIZE.int)
         applyShadow(IntSetting.CHAT_SHADOW_RADIUS.int.toFloat(), IntSetting.CHAT_SHADOW_DX.int.toFloat(), IntSetting.CHAT_SHADOW_DY.int.toFloat())
+        maxChatLines = IntSetting.CHAT_MAX_LINES.int
     }
     
     /**
