@@ -5,9 +5,11 @@
 package org.citra.citra_emu.overlay
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
+import android.preference.PreferenceManager
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -57,6 +59,11 @@ class ChatOverlayManager(
         }
     }
     
+    /** Listener for settings changes */
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        loadSettings()
+    }
+    
     // ==================== INIT ====================
     
     init {
@@ -65,6 +72,7 @@ class ChatOverlayManager(
         setupNetPlayListener()
         updateChatButtonVisibility()
         loadSettings()
+        registerPrefsListener()
     }
     
     // ==================== SETUP METHODS ====================
@@ -98,6 +106,22 @@ class ChatOverlayManager(
      */
     private fun setupNetPlayListener() {
         NetPlayManager.addOnMessageReceivedListener(messageListener)
+    }
+    
+    /**
+     * Registers the SharedPreferences listener for real-time settings updates
+     */
+    private fun registerPrefsListener() {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .registerOnSharedPreferenceChangeListener(prefsListener)
+    }
+    
+    /**
+     * Unregisters the SharedPreferences listener
+     */
+    private fun unregisterPrefsListener() {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .unregisterOnSharedPreferenceChangeListener(prefsListener)
     }
     
     // ==================== SETTINGS METHODS ====================
@@ -158,8 +182,10 @@ class ChatOverlayManager(
     }
     
     /**
-     * Applies shadow radius to chat messages
+     * Applies shadow effect to chat messages
      * @param radius Shadow radius in pixels
+     * @param dx Shadow horizontal offset in pixels (positive = right, negative = left)
+     * @param dy Shadow vertical offset in pixels (positive = down, negative = up)
      */
     private fun applyShadow(radius: Float, dx: Float, dy: Float) {
         chatAdapter.setShadow(radius, dx, dy)
@@ -184,15 +210,13 @@ class ChatOverlayManager(
 
         // Keep only the latest 8 messages
         if (chatAdapter.itemCount > 8) {
-        chatAdapter.removeFirst()
+            chatAdapter.removeFirst()
         }
 
         showChatContainer()
         scrollToLatestMessage()
         scheduleAutoHide()
     }
-
-
     
     /**
      * Clears all chat messages and hides the overlay
@@ -237,6 +261,7 @@ class ChatOverlayManager(
      */
     fun cleanup() {
         NetPlayManager.removeOnMessageReceivedListener(messageListener)
+        unregisterPrefsListener()
         clearAllMessages()
     }
     
@@ -354,7 +379,11 @@ class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolde
     
     /** Current shadow radius in pixels */
     private var shadowRadius = 2f
+    
+    /** Shadow horizontal offset in pixels (positive = right, negative = left) */
     private var shadowDx = 1f
+    
+    /** Shadow vertical offset in pixels (positive = down, negative = up) */
     private var shadowDy = 1f
 
     /**
@@ -421,8 +450,10 @@ class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolde
     }
 
     /**
-     * Sets the shadow radius for all messages
+     * Sets the shadow effect for all messages
      * @param radius Shadow radius in pixels
+     * @param dx Shadow horizontal offset in pixels (positive = right, negative = left)
+     * @param dy Shadow vertical offset in pixels (positive = down, negative = up)
      */
     fun setShadow(radius: Float, dx: Float, dy: Float) {
         shadowRadius = radius
