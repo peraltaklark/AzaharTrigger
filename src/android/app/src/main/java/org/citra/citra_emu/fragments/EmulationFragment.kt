@@ -601,10 +601,11 @@ class EmulationFragment :
 
         // Resume chat overlay
         binding.root.post {
-        if (::chatOverlayManager.isInitialized) {
-            chatOverlayManager.loadSettings()
+            if (::chatOverlayManager.isInitialized) {
+                chatOverlayManager.loadSettings()
+            }
         }
-
+        
         PreferenceManager.getDefaultSharedPreferences(requireContext())
             .registerOnSharedPreferenceChangeListener(settingsListener)
     }
