@@ -426,16 +426,18 @@
 	<string name="aspect_ratio_stretch">Stretch</string>
 
 	<!-- Chat Overlay Settings -->
-    <string name="chat_text_size">Chat Text Size</string>
+    <string name="chat_overlay_settings">Chat Overlay</string>
+    <string name="chat_overlay_settings_description">Customize the appearance of the in-game chat overlay.</string>
+	<string name="chat_text_size">Chat Text Size</string>
+    <string name="chat_text_size_description">Change the size of chat messages displayed on screen.</string>
     <string name="chat_shadow_radius">Chat Shadow Radius</string>
+    <string name="chat_shadow_radius_description">Adjust the shadow around chat text.</string>
     <string name="chat_background_opacity">Chat Background Opacity</string>
+    <string name="chat_background_opacity_description">Adjust the transparency of the chat background.</string>
     <string name="chat_fab_opacity">Chat Button Opacity</string>
+	<string name="chat_fab_opacity_description">Adjust the transparency of the chat button.</string>
     <string name="chat_fab_size">Chat Button Size</string>
-	<string name="chat_text_size_description">Chat text size in overlay</string>
-    <string name="chat_shadow_radius_description">Text shadow radius for chat messages</string>
-    <string name="chat_background_opacity_description">Background opacity for chat overlay</string>
-    <string name="chat_fab_opacity_description">Opacity for the chat FAB button</string>
-    <string name="chat_fab_size_description">Size of the chat FAB button</string>
+    <string name="chat_fab_size_description">Adjust the size of the floating chat button.</string>
 
 	<!-- Miscellaneous -->
 	<string name="clear">Clear</string>
