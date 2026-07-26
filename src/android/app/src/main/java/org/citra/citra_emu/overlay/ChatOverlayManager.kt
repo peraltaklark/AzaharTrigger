@@ -5,11 +5,9 @@
 package org.citra.citra_emu.overlay
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
-import android.preference.PreferenceManager
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -59,11 +57,6 @@ class ChatOverlayManager(
         }
     }
     
-    /** Listener for settings changes */
-    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-        loadSettings()
-    }
-    
     // ==================== INIT ====================
     
     init {
@@ -72,7 +65,6 @@ class ChatOverlayManager(
         setupNetPlayListener()
         updateChatButtonVisibility()
         loadSettings()
-        registerPrefsListener()
     }
     
     // ==================== SETUP METHODS ====================
@@ -106,22 +98,6 @@ class ChatOverlayManager(
      */
     private fun setupNetPlayListener() {
         NetPlayManager.addOnMessageReceivedListener(messageListener)
-    }
-    
-    /**
-     * Registers the SharedPreferences listener for real-time settings updates
-     */
-    private fun registerPrefsListener() {
-        PreferenceManager.getDefaultSharedPreferences(context)
-            .registerOnSharedPreferenceChangeListener(prefsListener)
-    }
-    
-    /**
-     * Unregisters the SharedPreferences listener
-     */
-    private fun unregisterPrefsListener() {
-        PreferenceManager.getDefaultSharedPreferences(context)
-            .unregisterOnSharedPreferenceChangeListener(prefsListener)
     }
     
     // ==================== SETTINGS METHODS ====================
@@ -243,7 +219,7 @@ class ChatOverlayManager(
     }
     
     /**
-     * Called when the fragment resumes - refreshes chat state
+     * Called when the fragment resumes - refreshes chat state and settings
      */
     fun onFragmentResume() {
         updateChatButtonVisibility()
@@ -261,7 +237,6 @@ class ChatOverlayManager(
      */
     fun cleanup() {
         NetPlayManager.removeOnMessageReceivedListener(messageListener)
-        unregisterPrefsListener()
         clearAllMessages()
     }
     
