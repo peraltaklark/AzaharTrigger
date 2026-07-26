@@ -442,6 +442,8 @@
 	<string name="chat_fab_opacity_description">Adjust the transparency of the chat button.</string>
     <string name="chat_fab_size">Chat Button Size</string>
     <string name="chat_fab_size_description">Adjust the size of the floating chat button.</string>
+	<string name="chat_max_lines">Chat message lines</string>
+    <string name="chat_max_lines_description">Sets the maximum number of chat messages displayed in the overlay.</string>
 
 	<!-- Miscellaneous -->
 	<string name="clear">Clear</string>
