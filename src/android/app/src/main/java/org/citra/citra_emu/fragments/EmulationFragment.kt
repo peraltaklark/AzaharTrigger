@@ -598,6 +598,7 @@ class EmulationFragment :
         }
 
         // Resume chat overlay
+        binding.root.post {
         if (::chatOverlayManager.isInitialized) {
             chatOverlayManager.loadSettings()
         }
