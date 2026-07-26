@@ -76,6 +76,7 @@ class ChatOverlayManager(
         chatRecycler.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = chatAdapter
+            itemAnimator = null
         }
     }
     
