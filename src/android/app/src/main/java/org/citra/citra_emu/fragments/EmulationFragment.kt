@@ -129,14 +129,16 @@ class EmulationFragment :
     private lateinit var chatOverlayManager: ChatOverlayManager
 
     private val settingsListener = object : SharedPreferences.OnSharedPreferenceChangeListener {
-        override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        override fun onSharedPreferenceChanged(
+            sharedPreferences: SharedPreferences?,
+            key: String?
+        ) {
             when (key) {
-                "CHAT_TEXT_SIZE",
-                "CHAT_BACKGROUND_OPACITY",
-                "CHAT_FAB_OPACITY",
-                "CHAT_FAB_SIZE",
-                "CHAT_SHADOW_RADIUS" -> {
-                    chatOverlayManager?.loadSettings()
+                IntSetting.CHAT_TEXT_SIZE.key, IntSetting.CHAT_BACKGROUND_OPACITY.key,
+                IntSetting.CHAT_FAB_OPACITY.key, IntSetting.CHAT_FAB_SIZE.key,
+                IntSetting.CHAT_SHADOW_RADIUS.key, IntSetting.CHAT_SHADOW_DX.key,
+                IntSetting.CHAT_SHADOW_DY.key -> {
+                    chatOverlayManager.loadSettings()
                 }
             }
         }
