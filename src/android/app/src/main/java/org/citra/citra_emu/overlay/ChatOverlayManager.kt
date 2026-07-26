@@ -184,8 +184,8 @@ class ChatOverlayManager(
 
         chatAdapter.add(formattedMessage)
 
-        // Keep only the latest 8 messages
-        if (chatAdapter.itemCount > 8) {
+        // Keep only the latest configured number of messages
+        while (chatAdapter.itemCount > maxChatLines) {
             chatAdapter.removeFirst()
         }
 
@@ -360,6 +360,12 @@ class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolde
     
     /** Shadow vertical offset in pixels (positive = down, negative = up) */
     private var shadowDy = 1f
+
+    /**
+     * Maximum number of chat lines/messages kept visible in the overlay.
+     * Older messages are removed when this limit is exceeded.
+     */
+    private var maxChatLines = 8
 
     /**
      * ViewHolder for chat message items
