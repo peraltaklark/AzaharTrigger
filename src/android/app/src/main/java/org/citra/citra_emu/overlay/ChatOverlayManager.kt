@@ -233,10 +233,10 @@ class ChatOverlayManager(
     private fun formatMessageByType(type: Int, msg: String): String {
         return when (type) {
             NetPlayManager.NetPlayStatus.CHAT_MESSAGE -> msg
-            NetPlayManager.NetPlayStatus.MEMBER_JOIN -> "➕ $msg"
-            NetPlayManager.NetPlayStatus.MEMBER_LEAVE -> "➖ $msg"
-            NetPlayManager.NetPlayStatus.MEMBER_KICKED -> "❌ $msg"
-            NetPlayManager.NetPlayStatus.MEMBER_BANNED -> "🚫 $msg"
+            NetPlayManager.NetPlayStatus.MEMBER_JOIN -> "➕ ${msg.trim()}"
+            NetPlayManager.NetPlayStatus.MEMBER_LEAVE -> "➖ ${msg.trim()}"
+            NetPlayManager.NetPlayStatus.MEMBER_KICKED -> "❌ ${msg.trim()}"
+            NetPlayManager.NetPlayStatus.MEMBER_BANNED -> "🚫 ${msg.trim()}"
             else -> msg
         }
     }

@@ -255,8 +255,8 @@ object NetPlayManager {
 
         // Notify all listeners
         // Notify all listeners
-        messageListeners.forEach { it(type, message) }
-        adapterRefreshListener?.invoke(type, message)
+        messageListeners.forEach { it(type, msg) }
+        adapterRefreshListener?.invoke(type, msg)
     }
 
     private fun formatNetPlayStatus(context: Context, type: Int, msg: String): String {
