@@ -665,7 +665,7 @@ struct Values {
     // Miscellaneous
     Setting<std::string> log_filter{"*:Info", Keys::log_filter};
     Setting<std::string> log_regex_filter{"", Keys::log_regex_filter};
-    
+
     // Tweaks
     SwitchableSetting<bool> reduce_downcount_slice{false, "reduce_downcount_slice"};
 
