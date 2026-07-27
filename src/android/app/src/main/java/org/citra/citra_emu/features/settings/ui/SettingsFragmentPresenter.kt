@@ -2075,6 +2075,15 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
                     BooleanSetting.REDUCE_DOWNCOUNT_SLICE.defaultValue
                 )
             )
+            add(
+                SwitchSetting(
+                    BooleanSetting.PRIORITY_BOOST_STARVED_THREADS,
+                    R.string.priority_boost_starved_threads,
+                    R.string.priority_boost_starved_threads_description,
+                    BooleanSetting.PRIORITY_BOOST_STARVED_THREADS.key,
+                    BooleanSetting.PRIORITY_BOOST_STARVED_THREADS.defaultValue
+                )
+            )
         }
     }
 
