@@ -98,6 +98,10 @@ static const char* android_config_default_file_content = (BOOST_HANA_STRING(R"(
 # 0 (default): Off, 1: On
 reduce_downcount_slice =
 
+# Boost low priority starved threads during kernel rescheduling.
+# 0: Off, 1 (default): On
+priority_boost_starved_threads =
+
 [Renderer]
 # Whether to render using OpenGL
 # 1: OpenGL ES (default), 2: Vulkan
