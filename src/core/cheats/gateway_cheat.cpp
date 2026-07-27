@@ -565,31 +565,6 @@ std::vector<std::shared_ptr<CheatBase>> GatewayCheat::LoadFile(const std::string
         }
     }
 
-    if (cheats_json.contains(titleId)) {
-        nlohmann::json gameJs = cheats_json[titleId];
-
-        for (auto i : gameJs) {
-            name = i[0];
-
-            if (!cheatNames[name]) {
-                cheatNames[name] = true;
-                cheat_lines.clear();
-                comments.erase();
-
-                for (auto l : i[1]) {
-                    cheat_lines.emplace_back(std::move(l));
-                }
-
-                for (auto c : i[2]) {
-                    comments += std::string(c) + "\n";
-                }
-
-                cheats.push_back(std::make_shared<GatewayCheat>(name, cheat_lines, comments));
-                cheats.back()->SetBuiltIn(true);
-            }
-        }
-    }
-
     return cheats;
 }
 } // namespace Cheats
