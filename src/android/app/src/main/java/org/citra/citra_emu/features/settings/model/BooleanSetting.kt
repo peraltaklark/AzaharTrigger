@@ -77,6 +77,11 @@ enum class BooleanSetting(
         Settings.SECTION_DEBUG,
         false
     ),
+    PRIORITY_BOOST_STARVED_THREADS(
+        SettingKeys.priority_boost_starved_threads(),
+        Settings.SECTION_DEBUG,
+        true
+    ),
     REQUIRED_ONLINE_LLE_MODULES(
         SettingKeys.enable_required_online_lle_modules(),
         Settings.SECTION_SYSTEM,

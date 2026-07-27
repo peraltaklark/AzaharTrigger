@@ -138,6 +138,7 @@ void Config::ReadValues() {
     ReadSetting("Core", Settings::values.use_cpu_jit);
     ReadSetting("Core", Settings::values.cpu_clock_percentage);
     ReadSetting("Core", Settings::values.reduce_downcount_slice);
+    ReadSetting("Core", Settings::values.priority_boost_starved_threads);
 
     // Renderer
     Settings::values.use_gles = android_config->GetBoolean("Renderer", "use_gles", true);

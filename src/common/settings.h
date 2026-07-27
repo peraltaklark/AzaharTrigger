@@ -668,6 +668,7 @@ struct Values {
 
     // Tweaks
     SwitchableSetting<bool> reduce_downcount_slice{false, "reduce_downcount_slice"};
+    SwitchableSetting<bool> priority_boost_starved_threads{true, "priority_boost_starved_threads"};
 
     // Video Dumping
     std::string output_format;

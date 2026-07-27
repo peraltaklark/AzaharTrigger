@@ -14,6 +14,7 @@ foreach(KEY IN ITEMS
     "lle_applets"
     "deterministic_async_operations"
     "reduce_downcount_slice"
+    "priority_boost_starved_threads"
     "enable_required_online_lle_modules"
     "use_virtual_sd"
     "use_custom_storage"
