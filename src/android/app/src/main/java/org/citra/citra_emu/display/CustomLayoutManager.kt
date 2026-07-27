@@ -307,53 +307,50 @@ class CustomLayoutEditorView @JvmOverloads constructor(
     private fun applyLayoutChanges() {
         val scaleX = framebufferWidth / width.toFloat()
         val scaleY = framebufferHeight / height.toFloat()
-        
+
+        val topX = (topScreenRect.left * scaleX).toInt()
+        val topY = (topScreenRect.top * scaleY).toInt()
+        val topWidth = (topScreenRect.width() * scaleX).toInt()
+        val topHeight = (topScreenRect.height() * scaleY).toInt()
+
+        val bottomX = (bottomScreenRect.left * scaleX).toInt()
+        val bottomY = (bottomScreenRect.top * scaleY).toInt()
+        val bottomWidth = (bottomScreenRect.width() * scaleX).toInt()
+        val bottomHeight = (bottomScreenRect.height() * scaleY).toInt()
+
         if (NativeLibrary.isPortraitMode()) {
-            IntSetting.PORTRAIT_TOP_X.int = (topScreenRect.left * scaleX).toInt()
-            IntSetting.PORTRAIT_TOP_Y.int = (topScreenRect.top * scaleY).toInt()
-            IntSetting.PORTRAIT_TOP_WIDTH.int = (topScreenRect.width() * scaleX).toInt()
-            IntSetting.PORTRAIT_TOP_HEIGHT.int = (topScreenRect.height() * scaleY).toInt()
-            IntSetting.PORTRAIT_BOTTOM_X.int = (bottomScreenRect.left * scaleX).toInt()
-            IntSetting.PORTRAIT_BOTTOM_Y.int = (bottomScreenRect.top * scaleY).toInt()
-            IntSetting.PORTRAIT_BOTTOM_WIDTH.int = (bottomScreenRect.width() * scaleX).toInt()
-            IntSetting.PORTRAIT_BOTTOM_HEIGHT.int = (bottomScreenRect.height() * scaleY).toInt()
+            IntSetting.PORTRAIT_TOP_X.int = topX
+            IntSetting.PORTRAIT_TOP_Y.int = topY
+            IntSetting.PORTRAIT_TOP_WIDTH.int = topWidth
+            IntSetting.PORTRAIT_TOP_HEIGHT.int = topHeight
+
+            IntSetting.PORTRAIT_BOTTOM_X.int = bottomX
+            IntSetting.PORTRAIT_BOTTOM_Y.int = bottomY
+            IntSetting.PORTRAIT_BOTTOM_WIDTH.int = bottomWidth
+            IntSetting.PORTRAIT_BOTTOM_HEIGHT.int = bottomHeight
         } else {
-            IntSetting.LANDSCAPE_TOP_X.int = (topScreenRect.left * scaleX).toInt()
-            IntSetting.LANDSCAPE_TOP_Y.int = (topScreenRect.top * scaleY).toInt()
-            IntSetting.LANDSCAPE_TOP_WIDTH.int = (topScreenRect.width() * scaleX).toInt()
-            IntSetting.LANDSCAPE_TOP_HEIGHT.int = (topScreenRect.height() * scaleY).toInt()
-            IntSetting.LANDSCAPE_BOTTOM_X.int = (bottomScreenRect.left * scaleX).toInt()
-            IntSetting.LANDSCAPE_BOTTOM_Y.int = (bottomScreenRect.top * scaleY).toInt()
-            IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = (bottomScreenRect.width() * scaleX).toInt()
-            IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = (bottomScreenRect.height() * scaleY).toInt()
+            IntSetting.LANDSCAPE_TOP_X.int = topX
+            IntSetting.LANDSCAPE_TOP_Y.int = topY
+            IntSetting.LANDSCAPE_TOP_WIDTH.int = topWidth
+            IntSetting.LANDSCAPE_TOP_HEIGHT.int = topHeight
+
+            IntSetting.LANDSCAPE_BOTTOM_X.int = bottomX
+            IntSetting.LANDSCAPE_BOTTOM_Y.int = bottomY
+            IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = bottomWidth
+            IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = bottomHeight
         }
-        
-        // ✅ FIXED: Use IntSetting values (already scaled) instead of raw rect values
-        if (NativeLibrary.isPortraitMode()) {
-            NativeLibrary.setCustomLayout(
-                IntSetting.PORTRAIT_TOP_X.int,
-                IntSetting.PORTRAIT_TOP_Y.int,
-                IntSetting.PORTRAIT_TOP_WIDTH.int,
-                IntSetting.PORTRAIT_TOP_HEIGHT.int,
-                IntSetting.PORTRAIT_BOTTOM_X.int,
-                IntSetting.PORTRAIT_BOTTOM_Y.int,
-                IntSetting.PORTRAIT_BOTTOM_WIDTH.int,
-                IntSetting.PORTRAIT_BOTTOM_HEIGHT.int,
-                NativeLibrary.isPortraitMode()
-            )
-        } else {
-            NativeLibrary.setCustomLayout(
-                IntSetting.LANDSCAPE_TOP_X.int,
-                IntSetting.LANDSCAPE_TOP_Y.int,
-                IntSetting.LANDSCAPE_TOP_WIDTH.int,
-                IntSetting.LANDSCAPE_TOP_HEIGHT.int,
-                IntSetting.LANDSCAPE_BOTTOM_X.int,
-                IntSetting.LANDSCAPE_BOTTOM_Y.int,
-                IntSetting.LANDSCAPE_BOTTOM_WIDTH.int,
-                IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int,
-                NativeLibrary.isPortraitMode()
-            )
-        }
+
+        NativeLibrary.setCustomLayout(
+            topX,
+            topY,
+            topWidth,
+            topHeight,
+            bottomX,
+            bottomY,
+            bottomWidth,
+            bottomHeight,
+            NativeLibrary.isPortraitMode()
+        )
     }
 
     /** Restores default screen positions. */
