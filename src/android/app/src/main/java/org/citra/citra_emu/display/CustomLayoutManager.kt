@@ -178,12 +178,6 @@ class CustomLayoutEditorView @JvmOverloads constructor(
     /** Snap distance between screens */
     private val snapDistance = 12f
 
-    /** Original framebuffer width */
-    private val framebufferWidth = 800f
-
-    /** Original framebuffer height */
-    private val framebufferHeight = 960f
-
     // ==================== EDITOR STATE ====================
 
     /** Currently selected screen */
@@ -308,61 +302,74 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
     if (NativeLibrary.isPortraitMode()) {
 
-        IntSetting.PORTRAIT_TOP_X.int = topScreenRect.left.toInt()
-        IntSetting.PORTRAIT_TOP_Y.int = topScreenRect.top.toInt()
-        IntSetting.PORTRAIT_TOP_WIDTH.int = topScreenRect.width().toInt()
-        IntSetting.PORTRAIT_TOP_HEIGHT.int = topScreenRect.height().toInt()
+            IntSetting.PORTRAIT_TOP_X.int = topScreenRect.left.toInt()
+            IntSetting.PORTRAIT_TOP_Y.int = topScreenRect.top.toInt()
+            IntSetting.PORTRAIT_TOP_WIDTH.int = topScreenRect.width().toInt()
+            IntSetting.PORTRAIT_TOP_HEIGHT.int = topScreenRect.height().toInt()
 
-        IntSetting.PORTRAIT_BOTTOM_X.int = bottomScreenRect.left.toInt()
-        IntSetting.PORTRAIT_BOTTOM_Y.int = bottomScreenRect.top.toInt()
-        IntSetting.PORTRAIT_BOTTOM_WIDTH.int = bottomScreenRect.width().toInt()
-        IntSetting.PORTRAIT_BOTTOM_HEIGHT.int = bottomScreenRect.height().toInt()
+            IntSetting.PORTRAIT_BOTTOM_X.int = bottomScreenRect.left.toInt()
+            IntSetting.PORTRAIT_BOTTOM_Y.int = bottomScreenRect.top.toInt()
+            IntSetting.PORTRAIT_BOTTOM_WIDTH.int = bottomScreenRect.width().toInt()
+            IntSetting.PORTRAIT_BOTTOM_HEIGHT.int = bottomScreenRect.height().toInt()
 
-    } else {
+        } else {
 
-        IntSetting.LANDSCAPE_TOP_X.int = topScreenRect.left.toInt()
-        IntSetting.LANDSCAPE_TOP_Y.int = topScreenRect.top.toInt()
-        IntSetting.LANDSCAPE_TOP_WIDTH.int = topScreenRect.width().toInt()
-        IntSetting.LANDSCAPE_TOP_HEIGHT.int = topScreenRect.height().toInt()
+            IntSetting.LANDSCAPE_TOP_X.int = topScreenRect.left.toInt()
+            IntSetting.LANDSCAPE_TOP_Y.int = topScreenRect.top.toInt()
+            IntSetting.LANDSCAPE_TOP_WIDTH.int = topScreenRect.width().toInt()
+            IntSetting.LANDSCAPE_TOP_HEIGHT.int = topScreenRect.height().toInt()
 
-        IntSetting.LANDSCAPE_BOTTOM_X.int = bottomScreenRect.left.toInt()
-        IntSetting.LANDSCAPE_BOTTOM_Y.int = bottomScreenRect.top.toInt()
-        IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = bottomScreenRect.width().toInt()
-        IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = bottomScreenRect.height().toInt()
+            IntSetting.LANDSCAPE_BOTTOM_X.int = bottomScreenRect.left.toInt()
+            IntSetting.LANDSCAPE_BOTTOM_Y.int = bottomScreenRect.top.toInt()
+            IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = bottomScreenRect.width().toInt()
+            IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = bottomScreenRect.height().toInt()
+        }
+
+        NativeLibrary.setCustomLayout(
+            topScreenRect.left.toInt(),
+            topScreenRect.top.toInt(),
+            topScreenRect.width().toInt(),
+            topScreenRect.height().toInt(),
+
+            bottomScreenRect.left.toInt(),
+            bottomScreenRect.top.toInt(),
+            bottomScreenRect.width().toInt(),
+            bottomScreenRect.height().toInt(),
+
+            NativeLibrary.isPortraitMode()
+        )
     }
-
-
-    NativeLibrary.setCustomLayout(
-        topScreenRect.left.toInt(),
-        topScreenRect.top.toInt(),
-        topScreenRect.width().toInt(),
-        topScreenRect.height().toInt(),
-
-        bottomScreenRect.left.toInt(),
-        bottomScreenRect.top.toInt(),
-        bottomScreenRect.width().toInt(),
-        bottomScreenRect.height().toInt(),
-
-        NativeLibrary.isPortraitMode()
-    )
-}
 
     /** Restores default screen positions. */
     fun resetToDefaultLayout() {
         if (NativeLibrary.isPortraitMode()) {
-            IntSetting.PORTRAIT_TOP_X.int = 0; IntSetting.PORTRAIT_TOP_Y.int = 0
-            IntSetting.PORTRAIT_TOP_WIDTH.int = 800; IntSetting.PORTRAIT_TOP_HEIGHT.int = 480
-            IntSetting.PORTRAIT_BOTTOM_X.int = 80; IntSetting.PORTRAIT_BOTTOM_Y.int = 480
-            IntSetting.PORTRAIT_BOTTOM_WIDTH.int = 640; IntSetting.PORTRAIT_BOTTOM_HEIGHT.int = 480
+            IntSetting.PORTRAIT_TOP_X.int = 0
+            IntSetting.PORTRAIT_TOP_Y.int = 0
+            IntSetting.PORTRAIT_TOP_WIDTH.int = 800
+            IntSetting.PORTRAIT_TOP_HEIGHT.int = 480
+
+            IntSetting.PORTRAIT_BOTTOM_X.int = 80
+            IntSetting.PORTRAIT_BOTTOM_Y.int = 480
+            IntSetting.PORTRAIT_BOTTOM_WIDTH.int = 640
+            IntSetting.PORTRAIT_BOTTOM_HEIGHT.int = 480
         } else {
-            IntSetting.LANDSCAPE_TOP_X.int = 0; IntSetting.LANDSCAPE_TOP_Y.int = 0
-            IntSetting.LANDSCAPE_TOP_WIDTH.int = 800; IntSetting.LANDSCAPE_TOP_HEIGHT.int = 480
-            IntSetting.LANDSCAPE_BOTTOM_X.int = 80; IntSetting.LANDSCAPE_BOTTOM_Y.int = 480
-            IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = 640; IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = 480
+            IntSetting.LANDSCAPE_TOP_X.int = 0
+            IntSetting.LANDSCAPE_TOP_Y.int = 0
+            IntSetting.LANDSCAPE_TOP_WIDTH.int = 800
+            IntSetting.LANDSCAPE_TOP_HEIGHT.int = 480
+
+            IntSetting.LANDSCAPE_BOTTOM_X.int = 80
+            IntSetting.LANDSCAPE_BOTTOM_Y.int = 480
+            IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = 640
+            IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = 480
         }
+
+        // Update editor rectangles
         loadLayoutSettings()
-        NativeLibrary.reloadSettings()
-        NativeLibrary.updateFramebuffer(NativeLibrary.isPortraitMode())
+
+        // Apply immediately to emulator renderer
+        applyLayoutChanges()
+
         invalidate()
     }
 
