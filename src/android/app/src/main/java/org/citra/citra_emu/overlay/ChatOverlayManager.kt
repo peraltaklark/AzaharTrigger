@@ -61,7 +61,7 @@ class ChatOverlayManager(
      * Maximum number of chat lines/messages kept visible in the overlay.
      * Older messages are removed when this limit is exceeded.
      */
-    private var maxChatLines = Int = 8
+    private var maxChatLines = 8
     
     // ==================== INIT ====================
     
