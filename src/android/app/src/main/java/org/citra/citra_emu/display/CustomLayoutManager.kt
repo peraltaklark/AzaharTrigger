@@ -305,53 +305,47 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
     /** Applies current screen positions to emulator settings. */
     private fun applyLayoutChanges() {
-        val scaleX = framebufferWidth / width.toFloat()
-        val scaleY = framebufferHeight / height.toFloat()
 
-        val topX = (topScreenRect.left * scaleX).toInt()
-        val topY = (topScreenRect.top * scaleY).toInt()
-        val topWidth = (topScreenRect.width() * scaleX).toInt()
-        val topHeight = (topScreenRect.height() * scaleY).toInt()
+    if (NativeLibrary.isPortraitMode()) {
 
-        val bottomX = (bottomScreenRect.left * scaleX).toInt()
-        val bottomY = (bottomScreenRect.top * scaleY).toInt()
-        val bottomWidth = (bottomScreenRect.width() * scaleX).toInt()
-        val bottomHeight = (bottomScreenRect.height() * scaleY).toInt()
+        IntSetting.PORTRAIT_TOP_X.int = topScreenRect.left.toInt()
+        IntSetting.PORTRAIT_TOP_Y.int = topScreenRect.top.toInt()
+        IntSetting.PORTRAIT_TOP_WIDTH.int = topScreenRect.width().toInt()
+        IntSetting.PORTRAIT_TOP_HEIGHT.int = topScreenRect.height().toInt()
 
-        if (NativeLibrary.isPortraitMode()) {
-            IntSetting.PORTRAIT_TOP_X.int = topX
-            IntSetting.PORTRAIT_TOP_Y.int = topY
-            IntSetting.PORTRAIT_TOP_WIDTH.int = topWidth
-            IntSetting.PORTRAIT_TOP_HEIGHT.int = topHeight
+        IntSetting.PORTRAIT_BOTTOM_X.int = bottomScreenRect.left.toInt()
+        IntSetting.PORTRAIT_BOTTOM_Y.int = bottomScreenRect.top.toInt()
+        IntSetting.PORTRAIT_BOTTOM_WIDTH.int = bottomScreenRect.width().toInt()
+        IntSetting.PORTRAIT_BOTTOM_HEIGHT.int = bottomScreenRect.height().toInt()
 
-            IntSetting.PORTRAIT_BOTTOM_X.int = bottomX
-            IntSetting.PORTRAIT_BOTTOM_Y.int = bottomY
-            IntSetting.PORTRAIT_BOTTOM_WIDTH.int = bottomWidth
-            IntSetting.PORTRAIT_BOTTOM_HEIGHT.int = bottomHeight
-        } else {
-            IntSetting.LANDSCAPE_TOP_X.int = topX
-            IntSetting.LANDSCAPE_TOP_Y.int = topY
-            IntSetting.LANDSCAPE_TOP_WIDTH.int = topWidth
-            IntSetting.LANDSCAPE_TOP_HEIGHT.int = topHeight
+    } else {
 
-            IntSetting.LANDSCAPE_BOTTOM_X.int = bottomX
-            IntSetting.LANDSCAPE_BOTTOM_Y.int = bottomY
-            IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = bottomWidth
-            IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = bottomHeight
-        }
+        IntSetting.LANDSCAPE_TOP_X.int = topScreenRect.left.toInt()
+        IntSetting.LANDSCAPE_TOP_Y.int = topScreenRect.top.toInt()
+        IntSetting.LANDSCAPE_TOP_WIDTH.int = topScreenRect.width().toInt()
+        IntSetting.LANDSCAPE_TOP_HEIGHT.int = topScreenRect.height().toInt()
 
-        NativeLibrary.setCustomLayout(
-            topX,
-            topY,
-            topWidth,
-            topHeight,
-            bottomX,
-            bottomY,
-            bottomWidth,
-            bottomHeight,
-            NativeLibrary.isPortraitMode()
-        )
+        IntSetting.LANDSCAPE_BOTTOM_X.int = bottomScreenRect.left.toInt()
+        IntSetting.LANDSCAPE_BOTTOM_Y.int = bottomScreenRect.top.toInt()
+        IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = bottomScreenRect.width().toInt()
+        IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = bottomScreenRect.height().toInt()
     }
+
+
+    NativeLibrary.setCustomLayout(
+        topScreenRect.left.toInt(),
+        topScreenRect.top.toInt(),
+        topScreenRect.width().toInt(),
+        topScreenRect.height().toInt(),
+
+        bottomScreenRect.left.toInt(),
+        bottomScreenRect.top.toInt(),
+        bottomScreenRect.width().toInt(),
+        bottomScreenRect.height().toInt(),
+
+        NativeLibrary.isPortraitMode()
+    )
+}
 
     /** Restores default screen positions. */
     fun resetToDefaultLayout() {
@@ -366,9 +360,9 @@ class CustomLayoutEditorView @JvmOverloads constructor(
             IntSetting.LANDSCAPE_BOTTOM_X.int = 80; IntSetting.LANDSCAPE_BOTTOM_Y.int = 480
             IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = 640; IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = 480
         }
+        loadLayoutSettings()
         NativeLibrary.reloadSettings()
         NativeLibrary.updateFramebuffer(NativeLibrary.isPortraitMode())
-        loadLayoutSettings()
         invalidate()
     }
 
