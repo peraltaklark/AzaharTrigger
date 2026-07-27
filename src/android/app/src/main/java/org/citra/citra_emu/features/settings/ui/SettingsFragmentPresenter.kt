@@ -2068,11 +2068,11 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
             add(HeaderSetting(R.string.miscellaneous))
             add(
                 SwitchSetting(
-                    IntSetting.REDUCE_DOWNCOUNT_SLICE,
+                    BooleanSetting.REDUCE_DOWNCOUNT_SLICE,
                     R.string.reduce_downcount_slice,
                     R.string.reduce_downcount_slice_description,
-                    IntSetting.REDUCE_DOWNCOUNT_SLICE.key,
-                    IntSetting.REDUCE_DOWNCOUNT_SLICE.defaultValue
+                    BooleanSetting.REDUCE_DOWNCOUNT_SLICE.key,
+                    BooleanSetting.REDUCE_DOWNCOUNT_SLICE.defaultValue
                 )
             )
         }

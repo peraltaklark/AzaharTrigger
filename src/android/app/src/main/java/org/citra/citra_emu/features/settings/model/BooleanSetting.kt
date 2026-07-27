@@ -72,6 +72,11 @@ enum class BooleanSetting(
         Settings.SECTION_DEBUG,
         false
     ),
+    REDUCE_DOWNCOUNT_SLICE(
+        SettingKeys.reduce_downcount_slice(),
+        Settings.SECTION_DEBUG,
+        false
+    ),
     REQUIRED_ONLINE_LLE_MODULES(
         SettingKeys.enable_required_online_lle_modules(),
         Settings.SECTION_SYSTEM,
@@ -153,6 +158,7 @@ enum class BooleanSetting(
             ASYNC_SHADERS,
             DELAY_START_LLE_MODULES,
             DETERMINISTIC_ASYNC_OPERATIONS,
+            REDUCE_DOWNCOUNT_SLICE,
             REQUIRED_ONLINE_LLE_MODULES,
             NEW_3DS,
             LLE_APPLETS,

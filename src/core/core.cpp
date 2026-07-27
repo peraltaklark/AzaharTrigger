@@ -543,7 +543,7 @@ System::ResultStatus System::Init(Frontend::EmuWindow& emu_window,
 
     kernel->SetCPUs(cpu_cores);
     kernel->SetRunningCPU(cpu_cores[0].get());
-    
+
     if (Settings::values.reduce_downcount_slice) {
         ReduceDowncountSlice(true, num_cores);
     }
