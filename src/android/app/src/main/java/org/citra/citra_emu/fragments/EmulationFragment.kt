@@ -71,6 +71,7 @@ import org.citra.citra_emu.activities.EmulationActivity
 import org.citra.citra_emu.databinding.DialogCheckboxBinding
 import org.citra.citra_emu.databinding.DialogSliderBinding
 import org.citra.citra_emu.databinding.FragmentEmulationBinding
+import org.citra.citra_emu.display.CustomLayoutManager
 import org.citra.citra_emu.display.PortraitScreenLayout
 import org.citra.citra_emu.display.ScreenAdjustmentUtil
 import org.citra.citra_emu.display.ScreenLayout
@@ -127,6 +128,8 @@ class EmulationFragment :
     private val onShutdown = Runnable { emulationState.stop() }
 
     private lateinit var chatOverlayManager: ChatOverlayManager
+    
+    private lateinit var customLayoutManager: CustomLayoutManager
 
     // Only used if a game is passed through intent on google play variant
     private var gameFd: Int? = null
@@ -261,6 +264,16 @@ class EmulationFragment :
             chatButton,
             requireContext()
         )
+        
+        customLayoutManager = CustomLayoutManager(
+            binding.customLayoutEditor,
+            binding.doneButton,
+            binding.cancelButton,
+            binding.resetButton,
+            binding.customLayoutToolbar
+        )
+
+        customLayoutManager.setupControls()
 
         // Show/hide the "Stats" overlay
         updateShowPerformanceOverlay()
@@ -1109,13 +1122,9 @@ class EmulationFragment :
                     true
                 }
 
-                R.id.menu_screen_layout_custom -> {
-                    Toast.makeText(
-                        requireContext(),
-                        R.string.emulation_adjust_custom_layout,
-                        Toast.LENGTH_LONG
-                    ).show()
+                R.id.menu_screen_layout_custom -> {               
                     screenAdjustmentUtil.changeScreenOrientation(ScreenLayout.CUSTOM_LAYOUT.int)
+                    openCustomLayoutEditor()                 
                     true
                 }
 
@@ -1167,16 +1176,10 @@ class EmulationFragment :
                 }
 
                 R.id.menu_portrait_layout_custom -> {
-                    Toast.makeText(
-                        requireContext(),
-                        R.string.emulation_adjust_custom_layout,
-                        Toast.LENGTH_LONG
-                    ).show()
-                    screenAdjustmentUtil.changePortraitOrientation(
-                        PortraitScreenLayout.CUSTOM_PORTRAIT_LAYOUT.int
-                    )
+                    screenAdjustmentUtil.changePortraitOrientation(PortraitScreenLayout.CUSTOM_PORTRAIT_LAYOUT.int)
+                    openCustomLayoutEditor()
                     true
-                }
+                }              
 
                 else -> true
             }
