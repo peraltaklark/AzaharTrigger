@@ -448,6 +448,8 @@
     <!-- Tweaks -->
     <string name="reduce_downcount_slice">Reduce Downcount Slice</string>
     <string name="reduce_downcount_slice_description">Reduces core timing downcount to a smaller time slice, reducing CPU usage. This may improve performance in some games.</string>
+	<string name="priority_boost_starved_threads">Priority Boost Starved Threads</string>
+    <string name="priority_boost_starved_threads_description">Boost low priority starved threads during kernel rescheduling. This may improve the performance.</string>
 
 	<!-- Miscellaneous -->
 	<string name="clear">Clear</string>
