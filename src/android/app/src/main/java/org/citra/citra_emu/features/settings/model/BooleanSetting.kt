@@ -91,6 +91,11 @@ enum class BooleanSetting(
     NEW_3DS(SettingKeys.is_new_3ds(), Settings.SECTION_SYSTEM, true),
     LINEAR_FILTERING(SettingKeys.filter_mode(), Settings.SECTION_RENDERER, true),
     SHADERS_ACCURATE_MUL(SettingKeys.shaders_accurate_mul(), Settings.SECTION_RENDERER, false),
+    ADRENO_GPU_BOOST(
+         SettingKeys.adreno_gpu_boost(),
+        Settings.SECTION_RENDERER,
+        false
+    ),
     DISK_SHADER_CACHE(SettingKeys.use_disk_shader_cache(), Settings.SECTION_RENDERER, true),
     DUMP_TEXTURES(SettingKeys.dump_textures(), Settings.SECTION_UTILITY, false),
     CUSTOM_TEXTURES(SettingKeys.custom_textures(), Settings.SECTION_UTILITY, false),
@@ -161,6 +166,7 @@ enum class BooleanSetting(
             PLUGIN_LOADER,
             ALLOW_PLUGIN_LOADER,
             ASYNC_SHADERS,
+            ADRENO_GPU_BOOST,
             DELAY_START_LLE_MODULES,
             DETERMINISTIC_ASYNC_OPERATIONS,
             REDUCE_DOWNCOUNT_SLICE,

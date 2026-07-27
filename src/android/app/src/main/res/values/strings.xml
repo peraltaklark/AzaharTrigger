@@ -442,7 +442,7 @@
 	<string name="chat_fab_opacity_description">Adjust the transparency of the chat button.</string>
     <string name="chat_fab_size">Chat Button Size</string>
     <string name="chat_fab_size_description">Adjust the size of the floating chat button.</string>
-	<string name="chat_max_lines">Chat message lines</string>
+	<string name="chat_max_lines">Chat Message Lines</string>
     <string name="chat_max_lines_description">Sets the maximum number of chat messages displayed in the overlay.</string>
     
     <!-- Tweaks -->
@@ -450,6 +450,8 @@
     <string name="reduce_downcount_slice_description">Reduces core timing downcount to a smaller time slice, reducing CPU usage. This may improve performance in some games.</string>
 	<string name="priority_boost_starved_threads">Priority Boost Starved Threads</string>
     <string name="priority_boost_starved_threads_description">Boost low priority starved threads during kernel rescheduling. This may improve the performance.</string>
+	<string name="adreno_gpu_boost">Adreno GPU Boost (Experimental)</string>
+	<string name="adreno_gpu_boost_description">Increases graphics throughput on supported devices, improving performance. Use of this setting can increase power usage and temperature. May cause stability issues on certain devices.</string>
 
 	<!-- Miscellaneous -->
 	<string name="clear">Clear</string>

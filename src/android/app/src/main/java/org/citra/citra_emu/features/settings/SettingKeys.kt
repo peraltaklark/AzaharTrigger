@@ -15,8 +15,6 @@ object SettingKeys {
     external fun is_new_3ds(): String
     external fun lle_applets(): String
     external fun deterministic_async_operations(): String
-    external fun reduce_downcount_slice(): String
-    external fun priority_boost_starved_threads(): String
     external fun enable_required_online_lle_modules(): String
     external fun use_virtual_sd(): String
     external fun compress_cia_installs(): String
@@ -38,6 +36,7 @@ object SettingKeys {
     external fun async_shader_compilation(): String
     external fun async_presentation(): String
     external fun use_hw_shader(): String
+    external fun adreno_gpu_boost(): String
     external fun use_disk_shader_cache(): String
     external fun shaders_accurate_mul(): String
     external fun use_vsync(): String

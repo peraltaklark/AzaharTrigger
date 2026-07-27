@@ -145,6 +145,10 @@ priority_boost_starved_threads =
 # 0: Off, 1 (default): On
 )") DECLARE_KEY(use_skip_duplicate_frames) BOOST_HANA_STRING(R"(
 
+# Increases graphics throughput on supported devices, improving performance.
+# 0 (default): Off, 1: On
+adreno_gpu_boost =
+
 # Reduce stuttering by storing and loading generated shaders to disk
 # 0: Off, 1 (default. On)
 )") DECLARE_KEY(use_disk_shader_cache) BOOST_HANA_STRING(R"(

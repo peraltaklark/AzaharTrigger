@@ -106,6 +106,7 @@ class EmulationActivity : AppCompatActivity() {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
 
         super.onCreate(savedInstanceState)
+        NativeLibrary.enableAdrenoTurboMode(BooleanSetting.ADRENO_GPU_BOOST.boolean)
         NativeLibrary.initMultiplayer()
         secondaryDisplayManager = SecondaryDisplay(this)
         secondaryDisplayManager.updateDisplay()
@@ -232,6 +233,7 @@ class EmulationActivity : AppCompatActivity() {
         secondaryDisplayManager.releasePresentation()
         secondaryDisplayManager.releaseVD()
         NetPlayDialog.stopWifiDirect()
+        NativeLibrary.enableAdrenoTurboMode(false)
 
         super.onDestroy()
     }
