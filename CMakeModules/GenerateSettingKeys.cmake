@@ -13,6 +13,7 @@ foreach(KEY IN ITEMS
     "is_new_3ds"
     "lle_applets"
     "deterministic_async_operations"
+    "reduce_downcount_slice"
     "enable_required_online_lle_modules"
     "use_virtual_sd"
     "use_custom_storage"
