@@ -1124,7 +1124,7 @@ class EmulationFragment :
 
                 R.id.menu_screen_layout_custom -> {               
                     screenAdjustmentUtil.changeScreenOrientation(ScreenLayout.CUSTOM_LAYOUT.int)
-                    openCustomLayoutEditor()                 
+                    customLayoutManager.openEditor()
                     true
                 }
 
@@ -1177,7 +1177,7 @@ class EmulationFragment :
 
                 R.id.menu_portrait_layout_custom -> {
                     screenAdjustmentUtil.changePortraitOrientation(PortraitScreenLayout.CUSTOM_PORTRAIT_LAYOUT.int)
-                    openCustomLayoutEditor()
+                    customLayoutManager.openEditor()
                     true
                 }              
 

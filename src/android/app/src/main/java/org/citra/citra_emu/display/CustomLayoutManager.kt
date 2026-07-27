@@ -63,7 +63,7 @@ class CustomLayoutManager(
             editorView.saveLayoutSettings()
             saveLayoutConfiguration()
             NativeLibrary.reloadSettings()
-            NativeLibrary.updateFramebuffer(NativeLibrary.isPortraitMode)
+            NativeLibrary.updateFramebuffer(NativeLibrary.isPortraitMode())
             closeEditor()
         }
     }
@@ -83,7 +83,7 @@ class CustomLayoutManager(
      * Saves either portrait or landscape layout settings.
      */
     private fun saveLayoutConfiguration() {
-        if (NativeLibrary.isPortraitMode) {
+        if (NativeLibrary.isPortraitMode()) {
             SettingsFile.saveFile(SettingsFile.FILE_NAME_CONFIG, IntSetting.PORTRAIT_TOP_X)
             SettingsFile.saveFile(SettingsFile.FILE_NAME_CONFIG, IntSetting.PORTRAIT_TOP_Y)
             SettingsFile.saveFile(SettingsFile.FILE_NAME_CONFIG, IntSetting.PORTRAIT_TOP_WIDTH)
@@ -244,7 +244,7 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
     /** Loads screen positions from emulator settings. */
     fun loadLayoutSettings() {
-        if (NativeLibrary.isPortraitMode) {
+        if (NativeLibrary.isPortraitMode()) {
             topScreenRect.set(
                 IntSetting.PORTRAIT_TOP_X.int.toFloat(),
                 IntSetting.PORTRAIT_TOP_Y.int.toFloat(),
@@ -308,7 +308,7 @@ class CustomLayoutEditorView @JvmOverloads constructor(
         val scaleX = framebufferWidth / width.toFloat()
         val scaleY = framebufferHeight / height.toFloat()
         
-        if (NativeLibrary.isPortraitMode) {
+        if (NativeLibrary.isPortraitMode()) {
             IntSetting.PORTRAIT_TOP_X.int = (topScreenRect.left * scaleX).toInt()
             IntSetting.PORTRAIT_TOP_Y.int = (topScreenRect.top * scaleY).toInt()
             IntSetting.PORTRAIT_TOP_WIDTH.int = (topScreenRect.width() * scaleX).toInt()
@@ -329,7 +329,7 @@ class CustomLayoutEditorView @JvmOverloads constructor(
         }
         
         // ✅ FIXED: Use IntSetting values (already scaled) instead of raw rect values
-        if (NativeLibrary.isPortraitMode) {
+        if (NativeLibrary.isPortraitMode()) {
             NativeLibrary.setCustomLayout(
                 IntSetting.PORTRAIT_TOP_X.int,
                 IntSetting.PORTRAIT_TOP_Y.int,
@@ -339,7 +339,7 @@ class CustomLayoutEditorView @JvmOverloads constructor(
                 IntSetting.PORTRAIT_BOTTOM_Y.int,
                 IntSetting.PORTRAIT_BOTTOM_WIDTH.int,
                 IntSetting.PORTRAIT_BOTTOM_HEIGHT.int,
-                NativeLibrary.isPortraitMode
+                NativeLibrary.isPortraitMode()
             )
         } else {
             NativeLibrary.setCustomLayout(
@@ -351,14 +351,14 @@ class CustomLayoutEditorView @JvmOverloads constructor(
                 IntSetting.LANDSCAPE_BOTTOM_Y.int,
                 IntSetting.LANDSCAPE_BOTTOM_WIDTH.int,
                 IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int,
-                NativeLibrary.isPortraitMode
+                NativeLibrary.isPortraitMode()
             )
         }
     }
 
     /** Restores default screen positions. */
     fun resetToDefaultLayout() {
-        if (NativeLibrary.isPortraitMode) {
+        if (NativeLibrary.isPortraitMode()) {
             IntSetting.PORTRAIT_TOP_X.int = 0; IntSetting.PORTRAIT_TOP_Y.int = 0
             IntSetting.PORTRAIT_TOP_WIDTH.int = 800; IntSetting.PORTRAIT_TOP_HEIGHT.int = 480
             IntSetting.PORTRAIT_BOTTOM_X.int = 80; IntSetting.PORTRAIT_BOTTOM_Y.int = 480
@@ -369,9 +369,9 @@ class CustomLayoutEditorView @JvmOverloads constructor(
             IntSetting.LANDSCAPE_BOTTOM_X.int = 80; IntSetting.LANDSCAPE_BOTTOM_Y.int = 480
             IntSetting.LANDSCAPE_BOTTOM_WIDTH.int = 640; IntSetting.LANDSCAPE_BOTTOM_HEIGHT.int = 480
         }
-        loadLayoutSettings()
         NativeLibrary.reloadSettings()
-        NativeLibrary.updateFramebuffer(NativeLibrary.isPortraitMode)
+        NativeLibrary.updateFramebuffer(NativeLibrary.isPortraitMode())
+        loadLayoutSettings()
         invalidate()
     }
 
