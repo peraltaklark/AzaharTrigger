@@ -2,7 +2,7 @@ name: citra-build
 
 on:
   push:
-    branches: [ "Game-Title-on-Multiplayer" ]
+    branches: [ "Ludashi-Benchmark-Test" ]
     tags: [ "v*" ]
   pull_request:
     branches: [ "*" ]
