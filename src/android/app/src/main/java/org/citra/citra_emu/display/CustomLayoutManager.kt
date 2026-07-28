@@ -145,7 +145,7 @@ class CustomLayoutEditorView @JvmOverloads constructor(
      * Uses the same blue color as the outline.
      */
     private val topScreenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(90, 42, 119, 240) // #2A77F0
+        color = Color.argb(20, 42, 119, 240) // #2A77F0 with low transparency
     }
 
     /**
@@ -153,7 +153,7 @@ class CustomLayoutEditorView @JvmOverloads constructor(
      * Uses the same orange color as the outline.
      */
     private val bottomScreenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(90, 203, 79, 3) // #CB4F03
+        color = Color.argb(20, 203, 79, 3) // #CB4F03 with low transparency
     }
 
     /**
@@ -209,6 +209,31 @@ class CustomLayoutEditorView @JvmOverloads constructor(
     }
 
     /**
+     * White outline behind resize handles.
+     */
+    private val handleOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+
+    /**
+     * Selected top handle.
+     */
+    private val selectedTopHandlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(42, 119, 240)
+        style = Paint.Style.FILL
+    }
+
+/**
+ * Selected bottom handle.
+ */
+private val selectedBottomHandlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = Color.rgb(203, 79, 3)
+    style = Paint.Style.FILL
+}
+
+    /**
      * Text used to label top and bottom screens.
      */
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -227,7 +252,7 @@ class CustomLayoutEditorView @JvmOverloads constructor(
     // ==================== CONSTANTS ====================
 
     /** Resize handle display size */
-    private val handleSize = 48f
+    private val handleSize =36f
 
     /** Touch area around resize handles */
     private val touchHandleSize = 80f
@@ -315,6 +340,22 @@ class CustomLayoutEditorView @JvmOverloads constructor(
     // ==================== TOUCH HANDLING ====================
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+       bif (event.pointerCount == 2) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    activeRectangle = findTouchedRectangle(event.getX(0), event.getY(0))
+                    if (activeRectangle != null) {
+                        initialPinchDistance = getPinchDistance(event)
+                        initialPinchWidth = activeRectangle!!.width()
+                        initialPinchHeight = activeRectangle!!.height()
+                    }
+                }
+                MotionEvent.ACTION_MOVE -> resizeWithPinch(event)
+                MotionEvent.ACTION_POINTER_UP -> activeRectangle = null
+            }
+            return true
+        }
+
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 activeRectangle = findTouchedRectangle(event.x, event.y)
@@ -446,15 +487,12 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
         canvas.drawText(title, rect.left + 20f, rect.top + 50f, labelPaint)
 
-        drawResizeHandles(
-            canvas,
-            rect,
-            if (selected) {
-                if (borderPaint == topBorderPaint) selectedTopBorderPaint else selectedBottomBorderPaint
-            } else {
-                handlePaint
-            }
-        )
+        val finalHandlePaint = when {
+            selected && borderPaint == topBorderPaint -> selectedTopHandlePaint
+            selected && borderPaint == bottomBorderPaint -> selectedBottomHandlePaint
+            else -> handlePaint
+        }
+        drawResizeHandles(canvas, rect, finalHandlePaint)
     }
 
     /**
@@ -462,16 +500,17 @@ class CustomLayoutEditorView @JvmOverloads constructor(
      *
      * Handles use the same color as the screen outline.
      */
-fun drawResizeHandles(canvas: Canvas, rect: RectF, handlePaint: Paint) {
-    val points = listOf(
-        rect.left to rect.top, rect.centerX() to rect.top, rect.right to rect.top,
-        rect.left to rect.centerY(), rect.right to rect.centerY(),
-        rect.left to rect.bottom, rect.centerX() to rect.bottom, rect.right to rect.bottom
-    )
-    for ((x, y) in points) {
-        canvas.drawCircle(x, y, handleSize, handlePaint)
+    fun drawResizeHandles(canvas: Canvas, rect: RectF, handlePaint: Paint) {
+        val points = listOf(
+            rect.left to rect.top, rect.centerX() to rect.top, rect.right to rect.top,
+            rect.left to rect.centerY(), rect.right to rect.centerY(),
+            rect.left to rect.bottom, rect.centerX() to rect.bottom, rect.right to rect.bottom
+        )
+        for ((x, y) in points) {
+            canvas.drawCircle(x, y, handleSize, handleOutlinePaint)
+            canvas.drawCircle(x, y, handleSize - 3f, handlePaint)
+        }
     }
-}
 
     // ==================== DRAG PROCESSING ====================
 
@@ -573,6 +612,66 @@ fun drawResizeHandles(canvas: Canvas, rect: RectF, handlePaint: Paint) {
     private fun finishResize(rect: RectF) {
         clampRectangle(rect)
         snapAfterResize(rect)
+        applyLayoutChanges()
+        invalidate()
+    }
+    
+    // ==================== PINCH RESIZE ====================
+
+    /**
+     * Stores the distance between two fingers when pinch starts.
+     */
+    private var initialPinchDistance = 0f
+
+    /**
+     * Stores the screen size before pinch starts.
+     */
+    private var initialPinchWidth = 0f
+    private var initialPinchHeight = 0f
+
+    /**
+     * Calculates the distance between two fingers.
+     *
+     * Used to detect pinch in/out gestures.
+     */
+    private fun getPinchDistance(event: MotionEvent): Float {
+        val dx = event.getX(0) - event.getX(1)
+        val dy = event.getY(0) - event.getY(1)
+        return kotlin.math.sqrt(dx * dx + dy * dy)
+    }
+
+    /**
+     * Resizes the currently touched screen using pinch gesture.
+     *
+     * Pinching outward enlarges the screen.
+     * Pinching inward shrinks the screen.
+     *
+     * This does not affect drag handles because it only
+     * activates when two fingers are detected.
+     */
+    private fun resizeWithPinch(event: MotionEvent) {
+        if (activeRectangle == null) return
+        if (initialPinchDistance <= 0f) return
+
+        val currentDistance = getPinchDistance(event)
+        val scale = currentDistance / initialPinchDistance
+
+        val newWidth = initialPinchWidth * scale
+        val newHeight = initialPinchHeight * scale
+
+        val rect = activeRectangle ?: return
+
+        val centerX = rect.centerX()
+        val centerY = rect.centerY()
+
+        rect.set(
+            centerX - newWidth / 2f,
+            centerY - newHeight / 2f,
+            centerX + newWidth / 2f,
+            centerY + newHeight / 2f
+        )
+
+        clampRectangle(rect)
         applyLayoutChanges()
         invalidate()
     }
