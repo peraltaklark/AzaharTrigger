@@ -14,6 +14,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -62,6 +63,16 @@ class ChatOverlayManager(
      * Older messages are removed when this limit is exceeded.
      */
     private var maxChatLines = 8
+
+    /**
+     * Stores the chat button position so it can be restored
+     * after closing and reopening the emulator.
+     */
+    private val chatButtonPreferences =
+        PreferenceManager.getDefaultSharedPreferences(context)
+
+    private val chatButtonXKey = "chat_button_position_x"
+    private val chatButtonYKey = "chat_button_position_y"
     
     // ==================== INIT ====================
     
@@ -90,9 +101,12 @@ class ChatOverlayManager(
      * Configures the chat button click listener and drag functionality
      */
     private fun setupChatButton() {
+
         chatButton.setOnClickListener {
             ChatDialog(context).show()
         }
+
+        restoreChatButtonPosition()
         chatButton.setPadding(0, 0, 0, 0)
         chatButton.scaleType = android.widget.ImageView.ScaleType.CENTER
         setupDraggableChatButton()
@@ -265,6 +279,39 @@ class ChatOverlayManager(
             else -> msg.trim()
         }
     }
+
+    /**
+     * Restores the last saved chat button position.
+     *
+     * If no previous position exists, the default XML position
+     * is kept.
+     */
+    private fun restoreChatButtonPosition() {
+
+        val savedX = chatButtonPreferences.getFloat(chatButtonXKey, Float.NaN)
+        val savedY = chatButtonPreferences.getFloat(chatButtonYKey, Float.NaN)
+
+        if (!savedX.isNaN() && !savedY.isNaN()) {
+            chatButton.post {
+                chatButton.x = savedX
+                chatButton.y = savedY
+            }
+        }
+    }
+
+    /**
+     * Saves the current chat button position.
+     *
+     * The position is stored as screen coordinates so it can
+     * be restored the next time the overlay is created.
+     */
+    private fun saveChatButtonPosition() {
+
+        chatButtonPreferences.edit()
+            .putFloat(chatButtonXKey, chatButton.x)
+            .putFloat(chatButtonYKey, chatButton.y)
+            .apply()
+    }
     
     /**
      * Makes the chat button draggable within its parent bounds
@@ -301,7 +348,9 @@ class ChatOverlayManager(
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!dragging) {
+                    if (dragging) {
+                        saveChatButtonPosition()
+                    } else {
                         view.performClick()
                     }
                     true
