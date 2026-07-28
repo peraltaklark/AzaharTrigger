@@ -106,11 +106,12 @@ class ChatOverlayManager(
             ChatDialog(context).show()
         }
 
-        restoreChatButtonPosition()
         chatButton.setPadding(0, 0, 0, 0)
         chatButton.scaleType = android.widget.ImageView.ScaleType.CENTER
         setupDraggableChatButton()
-        chatButton.visibility = if (NetPlayManager.netPlayIsJoined()) View.VISIBLE else View.GONE
+        chatButton.visibility = View.GONE
+        restoreChatButtonPosition()
+        updateChatButtonVisibility()
     }
     
     /**
@@ -287,7 +288,6 @@ class ChatOverlayManager(
      * is kept.
      */
     private fun restoreChatButtonPosition() {
-
         val savedX = chatButtonPreferences.getFloat(chatButtonXKey, Float.NaN)
         val savedY = chatButtonPreferences.getFloat(chatButtonYKey, Float.NaN)
 
@@ -306,10 +306,15 @@ class ChatOverlayManager(
      * be restored the next time the overlay is created.
      */
     private fun saveChatButtonPosition() {
+        val parent = chatButton.parent as? View ?: return
+        if (parent.width == 0 || parent.height == 0) return
+
+        val xPercent = chatButton.x / parent.width.toFloat()
+        val yPercent = chatButton.y / parent.height.toFloat()
 
         chatButtonPreferences.edit()
-            .putFloat(chatButtonXKey, chatButton.x)
-            .putFloat(chatButtonYKey, chatButton.y)
+            .putFloat(chatButtonXKey, xPercent)
+            .putFloat(chatButtonYKey, yPercent)
             .apply()
     }
     
