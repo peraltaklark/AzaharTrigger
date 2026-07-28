@@ -345,7 +345,7 @@ class CustomLayoutEditorView @JvmOverloads constructor(
      * updates IntSetting values, and sends the new layout
      * to the renderer for live preview.
      */
-    private fun applyLayoutChanges() {
+    fun applyLayoutChanges() {
 
     if (NativeLibrary.isPortraitMode()) {
 
