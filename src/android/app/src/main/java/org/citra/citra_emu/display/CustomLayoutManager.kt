@@ -60,7 +60,6 @@ class CustomLayoutManager(
      * Hides the editor and toolbar while keeping
      * the current layout settings unchanged.
      */
-fun hideEditor()
     fun hideEditor() {
         editorView.visibility = View.GONE
         toolbar.visibility = View.GONE
@@ -78,14 +77,14 @@ fun hideEditor()
     private fun setupSaveButton() {
         doneButton.setOnClickListener {
             editorView.applyLayoutChanges()
-            saveLayou,Settings()
+            saveLayoutSettings()
             hideEditor()
         }
     }
 
     /** Configures the cancel button. Discards current changes and closes the editor. */
     private fun setupCancelButton() {
-        cancelButton.setOnClickListener { closeEditor() }
+        cancelButton.setOnClickListener { hideEditor() }
     }
 
     /** Configures the reset button. Restores default screen positions. */
@@ -99,7 +98,7 @@ fun hideEditor()
      * Saves either portrait or landscape layout settings depending
      * on the current orientation.
      */
-    private fun saveLayoutSettings() {
+    fun saveLayoutSettings() {
         if (NativeLibrary.isPortraitMode()) {
             SettingsFile.saveFile(SettingsFile.FILE_NAME_CONFIG, IntSetting.PORTRAIT_TOP_X)
             SettingsFile.saveFile(SettingsFile.FILE_NAME_CONFIG, IntSetting.PORTRAIT_TOP_Y)
@@ -141,39 +140,80 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
     // ==================== PAINTS ====================
 
-    /** Border paint used for screen outlines */
-    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = 5f
-    }
-
-    /** Handle paint used for resize points */
-    private val handlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE; style = Paint.Style.FILL
-    }
-
-    /** Top screen preview color */
+    /**
+     * Transparent preview fill for the top screen.
+     * Uses the same blue color as the outline.
+     */
     private val topScreenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(90, 0, 120, 255)
+        color = Color.argb(90, 42, 119, 240) // #2A77F0
     }
 
-    /** Bottom screen preview color */
+    /**
+     * Transparent preview fill for the bottom screen.
+     * Uses the same orange color as the outline.
+     */
     private val bottomScreenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(90, 0, 255, 120)
+        color = Color.argb(90, 203, 79, 3) // #CB4F03
     }
 
-    /** Selected screen border */
-    private val selectedBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.YELLOW; style = Paint.Style.STROKE; strokeWidth = 10f
+    /**
+     * Normal outline for the top screen.
+     */
+    private val topBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(42, 119, 240)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
     }
 
-    /** Selected resize handle */
-    private val selectedHandlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.YELLOW; style = Paint.Style.FILL
+    /**
+     * Normal outline for the bottom screen.
+     */
+    private val bottomBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(203, 79, 3)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
     }
 
-    /** Screen title text */
+    /**
+     * Thicker outline used when the top screen is selected.
+     */
+    private val selectedTopBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(42, 119, 240)
+        style = Paint.Style.STROKE
+        strokeWidth = 10f
+    }
+
+    /**
+     * Thicker outline used when the bottom screen is selected.
+     */
+    private val selectedBottomBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(203, 79, 3)
+        style = Paint.Style.STROKE
+        strokeWidth = 10f
+    }
+
+    /**
+     * Resize handles for the top screen.
+     */
+    private val topHandlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(42, 119, 240)
+        style = Paint.Style.FILL
+    }
+
+    /**
+     * Resize handles for the bottom screen.
+     */
+    private val bottomHandlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(203, 79, 3)
+        style = Paint.Style.FILL
+    }
+
+    /**
+     * Text used to label top and bottom screens.
+     */
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE; textSize = 42f
+        color = Color.WHITE
+        textSize = 42f
     }
 
     // ==================== SCREEN RECTANGLES ====================
@@ -210,17 +250,6 @@ class CustomLayoutEditorView @JvmOverloads constructor(
     private var activeHandleX = -1f
     private var activeHandleY = -1f
 
-    // ==================== GUIDE STATE ====================
-
-    /** Shows vertical alignment guide */
-    private var showVerticalGuide = false
-
-    /** Shows horizontal alignment guide */
-    private var showHorizontalGuide = false
-
-    private var guideX = 0f
-    private var guideY = 0f
-
     // ==================== ENUMS ====================
 
     /** Represents which screen is selected. */
@@ -245,10 +274,8 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        drawScreen(canvas, topScreenRect, topScreenPaint, "Top Screen")
-        drawScreen(canvas, bottomScreenRect, bottomScreenPaint, "Bottom Screen")
-        drawSelectedBorder(canvas)
-        drawGuideLines(canvas)
+        drawScreen(canvas, topScreenRect, topScreenPaint, topBorderPaint, topHandlePaint, selectedScreen == SelectedScreen.TOP, "Top Screen")
+        drawScreen(canvas, bottomScreenRect, bottomScreenPaint, bottomBorderPaint, bottomHandlePaint, selectedScreen == SelectedScreen.BOTTOM, "Bottom Screen")
     }
 
     // ==================== SETTINGS ====================
@@ -400,41 +427,51 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
     // ==================== DRAWING ====================
 
-    /** Draws a single screen preview. */
-    private fun drawScreen(canvas: Canvas, rect: RectF, paint: Paint, title: String) {
-        canvas.drawRect(rect, paint)
-        canvas.drawRect(rect, borderPaint)
+    /**
+     * Draws a single screen preview.
+     *
+     * Top screen: blue tint, blue outline
+     * Bottom screen: orange tint, orange outline
+     * Selected screens use a thicker outline.
+     */
+    fun drawScreen(canvas: Canvas, rect: RectF, fillPaint: Paint, borderPaint: Paint, handlePaint: Paint, selected: Boolean, title: String) {
+        canvas.drawRect(rect, fillPaint)
+
+        val outlinePaint = when {
+            selected && borderPaint == topBorderPaint -> selectedTopBorderPaint
+            selected && borderPaint == bottomBorderPaint -> selectedBottomBorderPaint
+            else -> borderPaint
+        }
+        canvas.drawRect(rect, outlinePaint)
+
         canvas.drawText(title, rect.left + 20f, rect.top + 50f, labelPaint)
-        drawResizeHandles(canvas, rect)
-    }
 
-    /** Draws resize handles around a screen. */
-    private fun drawResizeHandles(canvas: Canvas, rect: RectF) {
-        val points = listOf(
-            rect.left to rect.top, rect.centerX() to rect.top, rect.right to rect.top,
-            rect.left to rect.centerY(), rect.right to rect.centerY(),
-            rect.left to rect.bottom, rect.centerX() to rect.bottom, rect.right to rect.bottom
+        drawResizeHandles(
+            canvas,
+            rect,
+            if (selected) {
+                if (borderPaint == topBorderPaint) selectedTopBorderPaint else selectedBottomBorderPaint
+            } else {
+                handlePaint
+            }
         )
-        for ((x, y) in points) {
-            val paint = if (isActiveHandle(x, y)) selectedHandlePaint else handlePaint
-            canvas.drawCircle(x, y, handleSize, paint)
-        }
     }
 
-    /** Draws selected screen outline. */
-    private fun drawSelectedBorder(canvas: Canvas) {
-        when (selectedScreen) {
-            SelectedScreen.TOP -> canvas.drawRect(topScreenRect, selectedBorderPaint)
-            SelectedScreen.BOTTOM -> canvas.drawRect(bottomScreenRect, selectedBorderPaint)
-            else -> Unit
-        }
+    /**
+     * Draws resize handles around a screen.
+     *
+     * Handles use the same color as the screen outline.
+     */
+fun drawResizeHandles(canvas: Canvas, rect: RectF, handlePaint: Paint) {
+    val points = listOf(
+        rect.left to rect.top, rect.centerX() to rect.top, rect.right to rect.top,
+        rect.left to rect.centerY(), rect.right to rect.centerY(),
+        rect.left to rect.bottom, rect.centerX() to rect.bottom, rect.right to rect.bottom
+    )
+    for ((x, y) in points) {
+        canvas.drawCircle(x, y, handleSize, handlePaint)
     }
-
-    /** Draws alignment guide lines. */
-    private fun drawGuideLines(canvas: Canvas) {
-        if (showVerticalGuide) canvas.drawLine(guideX, 0f, guideX, height.toFloat(), selectedBorderPaint)
-        if (showHorizontalGuide) canvas.drawLine(0f, guideY, width.toFloat(), guideY, selectedBorderPaint)
-    }
+}
 
     // ==================== DRAG PROCESSING ====================
 
@@ -641,26 +678,12 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
     // ==================== SNAP SYSTEM ====================
 
-    /** Snaps a moving screen to another screen. */
-    private fun snapScreens(moving: RectF, target: RectF) {
-        showVerticalGuide = false
-        showHorizontalGuide = false
-        if (kotlin.math.abs(moving.left - target.left) < snapDistance) {
-            moving.offset(target.left - moving.left, 0f)
-            showVerticalGuide = true; guideX = target.left
-        }
-        if (kotlin.math.abs(moving.right - target.right) < snapDistance) {
-            moving.offset(target.right - moving.right, 0f)
-            showVerticalGuide = true; guideX = target.right
-        }
-        if (kotlin.math.abs(moving.top - target.top) < snapDistance) {
-            moving.offset(0f, target.top - moving.top)
-            showHorizontalGuide = true; guideY = target.top
-        }
-        if (kotlin.math.abs(moving.bottom - target.bottom) < snapDistance) {
-            moving.offset(0f, target.bottom - moving.bottom)
-            showHorizontalGuide = true; guideY = target.bottom
-        }
+    /** Snaps a moving screen to another screen.  */
+    fun snapScreens(moving: RectF, target: RectF) {
+        if (kotlin.math.abs(moving.left - target.left) < snapDistance) moving.offset(target.left - moving.left, 0f)
+        if (kotlin.math.abs(moving.right - target.right) < snapDistance) moving.offset(target.right - moving.right, 0f)
+        if (kotlin.math.abs(moving.top - target.top) < snapDistance) moving.offset(0f, target.top - moving.top)
+        if (kotlin.math.abs(moving.bottom - target.bottom) < snapDistance) moving.offset(0f, target.bottom - moving.bottom)
     }
 
     /** Snaps a resized screen. */
