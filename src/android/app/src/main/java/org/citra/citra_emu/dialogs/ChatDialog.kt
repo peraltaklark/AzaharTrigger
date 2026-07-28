@@ -31,6 +31,15 @@ class ChatMessage(
 }
 
 class ChatDialog(context: Context) : BottomSheetDialog(context) {
+    /**
+     * Stores unfinished text typed by the user.
+     *
+     * This keeps the message draft when the chat window is closed
+     * without pressing the send button.
+     */
+    companion object {
+        private var pendingMessageDraft = ""
+    }
     private lateinit var binding: DialogChatBinding
     private lateinit var chatAdapter: ChatAdapter
     private val handler = Handler(Looper.getMainLooper())
@@ -46,6 +55,15 @@ class ChatDialog(context: Context) : BottomSheetDialog(context) {
         super.onCreate(savedInstanceState)
         binding = DialogChatBinding.inflate(LayoutInflater.from(context))
         setContentView(binding.root)
+        
+        /**
+         * Restores the previous unfinished message.
+         *
+         * Allows users to close the chat window and continue
+         * typing the same message later.
+         */
+        binding.chatInput.setText(pendingMessageDraft)
+        binding.chatInput.setSelection(binding.chatInput.length())
 
         NetPlayManager.setChatOpen(true)
         setupRecyclerView()
@@ -63,18 +81,36 @@ class ChatDialog(context: Context) : BottomSheetDialog(context) {
 
         NetPlayManager.addOnMessageReceivedListener(messageListener)
 
+        /**
+         * Sends the message and clears the saved draft.
+         *
+         * The draft is only kept for unfinished messages.
+         */
         binding.sendButton.setOnClickListener {
-            val message = binding.chatInput.text.toString()
+            val message = binding.chatInput.text.toString()     
             if (message.isNotBlank()) {
                 sendMessage(message)
                 binding.chatInput.text?.clear()
+
+                // Remove saved unfinished message after sending
+                pendingMessageDraft = ""
             }
         }
     }
 
+    /**
+     * Saves unfinished text before closing the chat window.
+     *
+     * Sent messages are cleared separately after sending.
+     * This only preserves unsent drafts.
+     */
     override fun dismiss() {
+
+        pendingMessageDraft = binding.chatInput.text.toString()
+
         NetPlayManager.setChatOpen(false)
         NetPlayManager.removeOnMessageReceivedListener(messageListener)
+
         super.dismiss()
     }
 
