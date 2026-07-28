@@ -71,8 +71,8 @@ class ChatOverlayManager(
     private val chatButtonPreferences =
         PreferenceManager.getDefaultSharedPreferences(context)
 
-    private val chatButtonXKey = "chat_button_position_x"
-    private val chatButtonYKey = "chat_button_position_y"
+    private val chatButtonXPercentKey = "chat_button_position_x_percent"
+    private val chatButtonYPercentKey = "chat_button_position_y_percent"
     
     // ==================== INIT ====================
     
@@ -101,16 +101,15 @@ class ChatOverlayManager(
      * Configures the chat button click listener and drag functionality
      */
     private fun setupChatButton() {
-
-        chatButton.setOnClickListener {
-            ChatDialog(context).show()
-        }
-
+        chatButton.setOnClickListener { ChatDialog(context).show() }
         chatButton.setPadding(0, 0, 0, 0)
-        chatButton.scaleType = android.widget.ImageView.ScaleType.CENTER
+        chatButton.scaleType = ImageView.ScaleType.CENTER
+
         setupDraggableChatButton()
-        chatButton.visibility = View.GONE
-        restoreChatButtonPosition()
+
+        // Restore saved position after the parent layout has been measured
+        chatButton.post { restoreChatButtonPosition() }
+
         updateChatButtonVisibility()
     }
     
@@ -282,39 +281,39 @@ class ChatOverlayManager(
     }
 
     /**
-     * Restores the last saved chat button position.
-     *
-     * If no previous position exists, the default XML position
-     * is kept.
+     * Restores the chat button position using percentage coordinates.
+     * This keeps the button in the same place after resolution,
+     * orientation, or window size changes.
      */
     private fun restoreChatButtonPosition() {
-        val savedX = chatButtonPreferences.getFloat(chatButtonXKey, Float.NaN)
-        val savedY = chatButtonPreferences.getFloat(chatButtonYKey, Float.NaN)
+
+        val savedX = chatButtonPreferences.getFloat(chatButtonXPercentKey, Float.NaN)
+        val savedY = chatButtonPreferences.getFloat(chatButtonYPercentKey, Float.NaN)
 
         if (!savedX.isNaN() && !savedY.isNaN()) {
+
             chatButton.post {
-                chatButton.x = savedX
-                chatButton.y = savedY
+                val parent = chatButton.parent as? View ?: return@post
+
+                chatButton.x = savedX * (parent.width - chatButton.width)
+                chatButton.y = savedY * (parent.height - chatButton.height)
             }
         }
     }
 
     /**
-     * Saves the current chat button position.
-     *
-     * The position is stored as screen coordinates so it can
-     * be restored the next time the overlay is created.
+     * Saves the chat button position as percentages of its parent size.
+     * This prevents position loss when the screen size changes.
      */
     private fun saveChatButtonPosition() {
         val parent = chatButton.parent as? View ?: return
-        if (parent.width == 0 || parent.height == 0) return
 
-        val xPercent = chatButton.x / parent.width.toFloat()
-        val yPercent = chatButton.y / parent.height.toFloat()
+        val xPercent = chatButton.x / (parent.width - chatButton.width).toFloat()
+        val yPercent = chatButton.y / (parent.height - chatButton.height).toFloat()
 
         chatButtonPreferences.edit()
-            .putFloat(chatButtonXKey, xPercent)
-            .putFloat(chatButtonYKey, yPercent)
+            .putFloat(chatButtonXPercentKey, xPercent)
+            .putFloat(chatButtonYPercentKey, yPercent)
             .apply()
     }
     
