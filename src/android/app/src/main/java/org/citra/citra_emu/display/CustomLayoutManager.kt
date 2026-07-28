@@ -31,8 +31,12 @@ class CustomLayoutManager(
     private val resetButton: View,
     private val toolbar: View
 ) {
-    /** Initializes all editor button controls. */
-    fun setupControls() {
+    /**
+     * Initializes editor controls and connects button actions.
+     *
+     * Sets up save, cancel, and reset button behavior.
+     */
+    fun bindControls() {
         setupSaveButton()
         setupCancelButton()
         setupResetButton()
@@ -40,31 +44,42 @@ class CustomLayoutManager(
 
     /**
      * Opens the custom layout editor.
-     * Loads the current framebuffer positions from emulator settings.
+     *
+     * Makes the editor and toolbar visible and loads
+     * the current framebuffer layout settings.
      */
-    fun openEditor() {
+    fun showEditor() {
         editorView.visibility = View.VISIBLE
         toolbar.visibility = View.VISIBLE
         editorView.post { editorView.loadLayoutSettings() }
     }
 
-    /** Closes the custom layout editor. */
-    fun closeEditor() {
+    /**
+     * Closes the custom layout editor.
+     *
+     * Hides the editor and toolbar while keeping
+     * the current layout settings unchanged.
+     */
+fun hideEditor()
+    fun hideEditor() {
         editorView.visibility = View.GONE
         toolbar.visibility = View.GONE
     }
 
     /**
      * Configures the save button.
-     * Saves the edited layout and reloads the framebuffer configuration.
+     *
+     * Applies the edited screen positions to the emulator layout,
+     * saves the layout settings, and closes the editor.
+     *
+     * The framebuffer is updated automatically through
+     * NativeLibrary.setCustomLayout().
      */
     private fun setupSaveButton() {
         doneButton.setOnClickListener {
-            editorView.saveLayoutSettings()
-            saveLayoutConfiguration()
-            NativeLibrary.reloadSettings()
-            NativeLibrary.updateFramebuffer(NativeLibrary.isPortraitMode())
-            closeEditor()
+            editorView.applyLayoutChanges()
+            saveLayou,Settings()
+            hideEditor()
         }
     }
 
@@ -79,10 +94,12 @@ class CustomLayoutManager(
     }
 
     /**
-     * Saves current layout values into the config file.
-     * Saves either portrait or landscape layout settings.
+     * Saves the current custom layout values to the configuration file.
+     *
+     * Saves either portrait or landscape layout settings depending
+     * on the current orientation.
      */
-    private fun saveLayoutConfiguration() {
+    private fun saveLayoutSettings() {
         if (NativeLibrary.isPortraitMode()) {
             SettingsFile.saveFile(SettingsFile.FILE_NAME_CONFIG, IntSetting.PORTRAIT_TOP_X)
             SettingsFile.saveFile(SettingsFile.FILE_NAME_CONFIG, IntSetting.PORTRAIT_TOP_Y)
@@ -281,7 +298,7 @@ class CustomLayoutEditorView @JvmOverloads constructor(
                     else -> SelectedScreen.NONE
                 }
             }
-            MotionEvent.ACTION_MOVE -> processDrag(event)
+            MotionEvent.ACTION_MOVE -> handleDrag(event)
             MotionEvent.ACTION_UP -> {
                 dragMode = DragMode.NONE
                 activeRectangle = null
@@ -294,10 +311,13 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
     // ==================== SAVING ====================
 
-    /** Saves current editor positions into settings. */
-    fun saveLayoutSettings() = applyLayoutChanges()
-
-    /** Applies current screen positions to emulator settings. */
+    /**
+     * Applies the current editor positions to emulator settings.
+     *
+     * Converts the edited screen rectangles into layout values,
+     * updates IntSetting values, and sends the new layout
+     * to the renderer for live preview.
+     */
     private fun applyLayoutChanges() {
 
     if (NativeLibrary.isPortraitMode()) {
@@ -340,7 +360,12 @@ class CustomLayoutEditorView @JvmOverloads constructor(
         )
     }
 
-    /** Restores default screen positions. */
+    /**
+     * Restores the default top and bottom screen positions.
+     *
+     * Updates the editor preview and immediately applies
+     * the default layout to the emulator.
+     */
     fun resetToDefaultLayout() {
         if (NativeLibrary.isPortraitMode()) {
             IntSetting.PORTRAIT_TOP_X.int = 0
@@ -413,8 +438,13 @@ class CustomLayoutEditorView @JvmOverloads constructor(
 
     // ==================== DRAG PROCESSING ====================
 
-    /** Processes current drag operation. */
-    private fun processDrag(event: MotionEvent) {
+    /**
+     * Handles screen movement and resizing while editing.
+     *
+     * Applies the active drag operation and updates
+     * the live layout preview.
+     */
+    private fun handleDrag(event: MotionEvent) {
         when (dragMode) {
             DragMode.MOVE_TOP -> moveScreen(topScreenRect, event)
             DragMode.MOVE_BOTTOM -> moveScreen(bottomScreenRect, event)

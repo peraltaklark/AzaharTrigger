@@ -495,18 +495,12 @@ void Java_org_citra_citra_1emu_NativeLibrary_updateFramebuffer([[maybe_unused]] 
     }
 }
 
-void Java_org_citra_citra_1emu_NativeLibrary_setCustomLayout(
-    JNIEnv* env,
-    jobject obj,
-    jint top_x,
-    jint top_y,
-    jint top_width,
-    jint top_height,
-    jint bottom_x,
-    jint bottom_y,
-    jint bottom_width,
-    jint bottom_height,
-    jboolean is_portrait_mode) {
+void Java_org_citra_citra_1emu_NativeLibrary_setCustomLayout(JNIEnv* env, jobject obj, jint top_x,
+                                                             jint top_y, jint top_width,
+                                                             jint top_height, jint bottom_x,
+                                                             jint bottom_y, jint bottom_width,
+                                                             jint bottom_height,
+                                                             jboolean is_portrait_mode) {
 
     if (is_portrait_mode) {
         Settings::values.custom_portrait_top_x = top_x;
@@ -533,9 +527,7 @@ void Java_org_citra_citra_1emu_NativeLibrary_setCustomLayout(
     auto& system = Core::System::GetInstance();
 
     if (system.IsPoweredOn()) {
-        system.GPU()
-            .Renderer()
-            .UpdateCurrentFramebufferLayout(is_portrait_mode);
+        system.GPU().Renderer().UpdateCurrentFramebufferLayout(is_portrait_mode);
     }
 }
 

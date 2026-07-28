@@ -273,7 +273,7 @@ class EmulationFragment :
             binding.customLayoutToolbar
         )
 
-        customLayoutManager.setupControls()
+        customLayoutManager.bindControls()
 
         // Show/hide the "Stats" overlay
         updateShowPerformanceOverlay()
@@ -1124,7 +1124,7 @@ class EmulationFragment :
 
                 R.id.menu_screen_layout_custom -> {               
                     screenAdjustmentUtil.changeScreenOrientation(ScreenLayout.CUSTOM_LAYOUT.int)
-                    customLayoutManager.openEditor()
+                    customLayoutManager.showEditor()
                     true
                 }
 
@@ -1177,7 +1177,7 @@ class EmulationFragment :
 
                 R.id.menu_portrait_layout_custom -> {
                     screenAdjustmentUtil.changePortraitOrientation(PortraitScreenLayout.CUSTOM_PORTRAIT_LAYOUT.int)
-                    customLayoutManager.openEditor()
+                    customLayoutManager.showEditor()
                     true
                 }              
 
