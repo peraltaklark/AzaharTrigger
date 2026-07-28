@@ -105,7 +105,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             binding.emptyView.visibility = if (rooms.isEmpty()) View.VISIBLE else View.GONE
             binding.roomList.visibility = if (rooms.isEmpty()) View.GONE else View.VISIBLE
             binding.appbar.visibility = if (rooms.isEmpty()) View.GONE else View.VISIBLE
-            adapter.updateRooms(moveLastVisitedRoomToTop(rooms))
+            adapter.updateRooms(rooms)
             adapter.filterAndSearch()
             binding.refreshButton.isEnabled = true
             binding.progressBar.visibility = View.GONE
@@ -240,48 +240,42 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             notifyDataSetChanged()
         }
 
+        /**
+         * Filters rooms by selected options and search text.
+         * Also keeps the last visited room at the top of the list.
+         */
         fun filterAndSearch() {
-            if (binding.searchText.text.toString().isEmpty() &&
-                binding.chipGroup.checkedChipId == View.NO_ID
-            ) {
-                adapter.updateRooms(NetPlayManager.getPublicRooms())
-                return
-            }
-
             val baseList = NetPlayManager.getPublicRooms()
             var filteredList: List<NetPlayManager.RoomInfo> = baseList
 
-            if(binding.chipHideEmpty.isChecked){
+            if (binding.chipHideEmpty.isChecked) {
                 filteredList = filteredList.filter { it.members.isNotEmpty() }
             }
-            if(binding.chipHideFull.isChecked){
+
+            if (binding.chipHideFull.isChecked) {
                 filteredList = filteredList.filter { it.members.size < it.maxPlayers }
             }
-            if(binding.chipHideLocked.isChecked){
+
+            if (binding.chipHideLocked.isChecked) {
                 filteredList = filteredList.filter { !it.hasPassword }
             }
-            
-            if (binding.searchText.text.toString().isEmpty()) {
-                adapter.updateRooms(filteredList)
-                return
+
+            val searchText = binding.searchText.text.toString().lowercase(Locale.getDefault())
+
+            if (searchText.isNotEmpty()) {
+                val searchAlgorithm = if (searchText.length > 1) Jaccard(2) else JaroWinkler()
+
+                filteredList = filteredList.mapNotNull { room ->
+                    val roomName = room.name.lowercase(Locale.getDefault())
+                    val score = searchAlgorithm.similarity(roomName, searchText)
+
+                    if (score > 0.03) ScoreItem(score, room) else null
+                }
+                .sortedByDescending { it.score }
+                .map { it.item }
             }
 
-            val searchTerm = binding.searchText.text.toString().lowercase(Locale.getDefault())
-            val searchAlgorithm = if (searchTerm.length > 1) Jaccard(2) else JaroWinkler()
-            val sortedList: List<NetPlayManager.RoomInfo> = filteredList.mapNotNull { room ->
-                    val roomName = room.name.lowercase(Locale.getDefault())
-
-                    val score = searchAlgorithm.similarity(roomName, searchTerm)
-                    if (score > 0.03) {
-                        ScoreItem(score, room)
-                    } else {
-                        null
-                    }
-                }.sortedByDescending { it ->
-                    it.score
-                }.map { it.item }
-            adapter.updateRooms(sortedList)
-
+            adapter.updateRooms(moveLastVisitedRoomToTop(filteredList))
         }
     }
 
