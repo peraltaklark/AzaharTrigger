@@ -5,6 +5,7 @@
 package org.citra.citra_emu.dialogs
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
@@ -33,6 +34,8 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     private lateinit var binding: DialogLobbyBrowserBinding
     private lateinit var adapter: LobbyRoomAdapter
     private val handler = Handler(Looper.getMainLooper())
+    /** Stores the last visited lobby room. */
+    private val preferences: SharedPreferences = context.getSharedPreferences("lobby_history", Context.MODE_PRIVATE)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,7 +105,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             binding.emptyView.visibility = if (rooms.isEmpty()) View.VISIBLE else View.GONE
             binding.roomList.visibility = if (rooms.isEmpty()) View.GONE else View.VISIBLE
             binding.appbar.visibility = if (rooms.isEmpty()) View.GONE else View.VISIBLE
-            adapter.updateRooms(rooms)
+            adapter.updateRooms(moveLastVisitedRoomToTop(rooms))
             adapter.filterAndSearch()
             binding.refreshButton.isEnabled = true
             binding.progressBar.visibility = View.GONE
@@ -131,6 +134,47 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             .show()
     }
 
+    /**
+     * Saves the selected room as the last visited room.
+     *
+     * Stores room IP and port so it can be restored
+     * when the lobby list is refreshed.
+     */
+    private fun saveLastVisitedRoom(room: NetPlayManager.RoomInfo) {
+        preferences.edit()
+            .putString("last_room_ip", room.ip)
+            .putInt("last_room_port", room.port)
+            .apply()
+    }
+
+    /**
+     * Moves the last visited room to the top of the list.
+     *
+     * If the saved room is no longer available,
+     * the list order remains unchanged.
+     */
+     private fun moveLastVisitedRoomToTop(
+        rooms: List<NetPlayManager.RoomInfo>
+     ): List<NetPlayManager.RoomInfo> {
+
+        val lastIp = preferences.getString("last_room_ip", null)
+        val lastPort = preferences.getInt("last_room_port", -1)
+
+        if (lastIp == null || lastPort == -1) {
+            return rooms
+        }
+
+        val lastRoom = rooms.find {
+            it.ip == lastIp && it.port == lastPort
+        }
+
+        return if (lastRoom != null) {
+            listOf(lastRoom) + rooms.filter { it != lastRoom }
+        } else {
+            rooms
+        }
+    }
+
     private fun joinRoom(room: NetPlayManager.RoomInfo, password: String) {
         val username = NetPlayManager.getUsername(context)
 
@@ -139,6 +183,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
 
             handler.post {
                 if (result == 0) {
+                    saveLastVisitedRoom(room)
                     dismiss()
                     NetPlayDialog(context).show()
                 }
