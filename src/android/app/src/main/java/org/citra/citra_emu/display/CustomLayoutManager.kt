@@ -340,7 +340,7 @@ private val selectedBottomHandlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     // ==================== TOUCH HANDLING ====================
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-       bif (event.pointerCount == 2) {
+       if (event.pointerCount == 2) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_POINTER_DOWN -> {
                     activeRectangle = findTouchedRectangle(event.getX(0), event.getY(0))
