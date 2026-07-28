@@ -55,7 +55,7 @@
                 android:id="@+id/cancelButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Cancel" />
+                android:text="@string/warning_cancel" />
 
             <Space
                 android:layout_width="8dp"
@@ -65,7 +65,7 @@
                 android:id="@+id/resetButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Reset" />
+                android:text="@string/option_default" />
 
             <Space
                 android:layout_width="8dp"
@@ -75,7 +75,7 @@
                 android:id="@+id/doneButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Done" />
+                android:text="@string/done" />
 
         </LinearLayout>
 
