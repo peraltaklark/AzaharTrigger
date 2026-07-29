@@ -47,11 +47,19 @@ class ChatOverlayManager(
     /** Listener for netplay messages */
     private val messageListener: (Int, String) -> Unit = { type, msg ->
         (context as? android.app.Activity)?.runOnUiThread {
-            if (!NetPlayManager.netPlayIsJoined()) {
+
+            if (type == NetPlayManager.NetPlayStatus.ROOM_IDLE) {
                 clearAllMessages()
-                updateChatButtonVisibility()
+                chatButton.visibility = View.GONE
                 return@runOnUiThread
             }
+
+            if (!NetPlayManager.netPlayIsJoined()) {
+                clearAllMessages()
+                chatButton.visibility = View.GONE
+                return@runOnUiThread
+            }
+
             displayNewMessage(type, msg)
             updateChatButtonVisibility()
         }
