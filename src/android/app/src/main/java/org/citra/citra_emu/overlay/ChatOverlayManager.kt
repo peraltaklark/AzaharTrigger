@@ -103,7 +103,6 @@ class ChatOverlayManager(
     private fun setupChatButton() {
         chatButton.setOnClickListener { ChatDialog(context).show() }
         chatButton.setPadding(0, 0, 0, 0)
-        chatButton.scaleType = ImageView.ScaleType.CENTER
 
         setupDraggableChatButton()
 
