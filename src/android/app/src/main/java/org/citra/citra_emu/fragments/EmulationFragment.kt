@@ -573,14 +573,15 @@ class EmulationFragment :
 
         Choreographer.getInstance().postFrameCallback(this)
 
-        // Resume chat overlay
-        if (::chatOverlayManager.isInitialized) {
-            NativeLibrary.reloadSettings()
-            chatOverlayManager.loadSettings()
-        }
-
         if (NativeLibrary.isRunning()) {
             emulationState.unpause()
+
+            // Resume chat overlay
+            if (::chatOverlayManager.isInitialized) {
+                NativeLibrary.reloadSettings()
+                chatOverlayManager.loadSettings()
+                chatOverlayManager.updateChatButtonVisibility()
+            }
 
             // If the overlay is enabled, we need to update the position if changed
             val position = IntSetting.PERFORMANCE_OVERLAY_POSITION.int
