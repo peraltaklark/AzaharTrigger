@@ -45,16 +45,24 @@ class ChatOverlayManager(
     /** Runnable for auto-hiding chat container */
     private var autoHideRunnable: Runnable? = null
     
-    /** Listener for netplay messages */
+    /**
+     * Receives netplay status and chat messages.
+     * Updates FAB visibility when joining or leaving rooms.
+     */
     private val messageListener: (Int, String) -> Unit = { type, msg ->
-        (context as? android.app.Activity)?.runOnUiThread {
+        (context as? Activity)?.runOnUiThread {
+            // Always refresh button state first
+            updateChatButtonVisibility()
+
             if (!NetPlayManager.netPlayIsJoined()) {
                 clearAllMessages()
-                updateChatButtonVisibility()
                 return@runOnUiThread
             }
-            displayNewMessage(type, msg)
-            updateChatButtonVisibility()
+
+            // Only display actual messages
+            if (msg.isNotEmpty()) {
+                displayNewMessage(type, msg)
+            }
         }
     }
 
@@ -107,9 +115,10 @@ class ChatOverlayManager(
         setupDraggableChatButton()
 
         // Restore saved position after the parent layout has been measured
-        chatButton.post { restoreChatButtonPosition() }
-
-        updateChatButtonVisibility()
+        chatButton.post {
+            restoreChatButtonPosition() 
+            updateChatButtonVisibility()
+        }
     }
     
     /**
@@ -237,7 +246,7 @@ class ChatOverlayManager(
             clearAllMessages()
         }
     }
-    
+
     /**
      * Called when the fragment resumes - refreshes chat state and settings
      */
