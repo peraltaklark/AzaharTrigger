@@ -113,9 +113,6 @@ class ChatOverlayManager(
 
         setupDraggableChatButton()
 
-        // Restore position after FAB size and layout are ready
-        chatButton.post { restoreChatButtonPosition() }
-
         chatButton.visibility = if (NetPlayManager.netPlayIsJoined()) View.VISIBLE else View.GONE
     }
     
@@ -138,6 +135,8 @@ class ChatOverlayManager(
         applyFabSize(IntSetting.CHAT_FAB_SIZE.int)
         applyShadow(IntSetting.CHAT_SHADOW_RADIUS.int.toFloat(), IntSetting.CHAT_SHADOW_DX.int.toFloat(), IntSetting.CHAT_SHADOW_DY.int.toFloat())
         maxChatLines = IntSetting.CHAT_MAX_LINES.int
+        chatButton.post {
+            restoreChatButtonPosition()
     }
     
     /**
@@ -354,7 +353,7 @@ class ChatOverlayManager(
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!dragging) {
+                    if (dragging) {
                         saveChatButtonPosition()
                     } else {
                         view.performClick()
