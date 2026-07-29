@@ -103,7 +103,7 @@ class ChatOverlayManager(
     private fun setupChatButton() {
         chatButton.setOnClickListener { ChatDialog(context).show() }
         chatButton.setPadding(0, 0, 0, 0)
-
+        chatButton.scaleType = android.widget.ImageView.ScaleType.CENTER
         setupDraggableChatButton()
 
         // Restore saved position after the parent layout has been measured
