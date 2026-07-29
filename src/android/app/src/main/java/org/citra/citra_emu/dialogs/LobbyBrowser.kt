@@ -137,13 +137,14 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     /**
      * Saves the selected room as the last visited room.
      *
-     * Stores room IP and port so it can be restored
-     * when the lobby list is refreshed.
+     * Stores room identity information so it can be restored
+     * and moved to the top of the lobby list later.
      */
     private fun saveLastVisitedRoom(room: NetPlayManager.RoomInfo) {
         preferences.edit()
             .putString("last_room_ip", room.ip)
             .putInt("last_room_port", room.port)
+            .putString("last_room_name", room.name)
             .apply()
     }
 
@@ -164,8 +165,12 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             return rooms
         }
 
+        val lastName = preferences.getString("last_room_name", "")
+
         val lastRoom = rooms.find {
-            it.ip == lastIp && it.port == lastPort
+            it.ip == lastIp &&
+            it.port == lastPort &&
+            (lastName.isNullOrEmpty() || it.name == lastName)
         }
 
         return if (lastRoom != null) {
