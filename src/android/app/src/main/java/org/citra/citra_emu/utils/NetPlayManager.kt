@@ -35,6 +35,7 @@ object NetPlayManager {
         stopLANProcessing()
         melonLANEndSession()
         netPlayLeaveRoom()
+        notifyMessageListeners(NetPlayStatus.ROOM_IDLE, "")
     }
     external fun netPlayIsModerator(): Boolean
     external fun netPlayGetBanList(): Array<String>
