@@ -14,6 +14,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -71,14 +72,21 @@ class ChatOverlayManager(
      */
     private var maxChatLines = 8
     
+    /** Stores chat button position for restoration after app restart */
+    private val chatButtonPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+
+    /** Keys for storing FAB position as percentages */
+    private val chatButtonXKey = "chat_button_position_x"
+    private val chatButtonYKey = "chat_button_position_y"
+
     // ==================== INIT ====================
     
     init {
         setupRecyclerView()
         setupChatButton()
         setupNetPlayListener()
-        updateChatButtonVisibility()
         loadSettings()
+        updateChatButtonVisibility()
     }
     
     // ==================== SETUP METHODS ====================
@@ -95,15 +103,19 @@ class ChatOverlayManager(
     }
     
     /**
-     * Configures the chat button click listener and drag functionality
+     * Configures the chat button click listener, drag functionality,
+     * and restores its previous position.
      */
     private fun setupChatButton() {
-        chatButton.setOnClickListener {
-            ChatDialog(context).show()
-        }
+        chatButton.setOnClickListener { ChatDialog(context).show() }
         chatButton.setPadding(0, 0, 0, 0)
         chatButton.scaleType = android.widget.ImageView.ScaleType.CENTER
+
         setupDraggableChatButton()
+
+        // Restore position after FAB size and layout are ready
+        chatButton.post { restoreChatButtonPosition() }
+
         chatButton.visibility = if (NetPlayManager.netPlayIsJoined()) View.VISIBLE else View.GONE
     }
     
@@ -274,6 +286,39 @@ class ChatOverlayManager(
         }
     }
     
+    /** Saves button position as percentages of parent size */
+    private fun saveChatButtonPosition() {
+        val parent = chatButton.parent as? View ?: return
+        val maxX = parent.width - chatButton.width
+        val maxY = parent.height - chatButton.height
+        if (maxX <= 0 || maxY <= 0) return
+
+        val xPercent = (chatButton.x / maxX).coerceIn(0f, 1f)
+        val yPercent = (chatButton.y / maxY).coerceIn(0f, 1f)
+
+        chatButtonPreferences.edit()
+            .putFloat(chatButtonXKey, xPercent)
+            .putFloat(chatButtonYKey, yPercent)
+            .apply()
+    }
+
+    /** Restores button position from saved percentages */
+    private fun restoreChatButtonPosition() {
+        val xPercent = chatButtonPreferences.getFloat(chatButtonXKey, -1f)
+        val yPercent = chatButtonPreferences.getFloat(chatButtonYKey, -1f)
+        if (xPercent < 0 || yPercent < 0) return
+
+        val parent = chatButton.parent as? View ?: return
+        parent.post {
+            val maxX = parent.width - chatButton.width
+            val maxY = parent.height - chatButton.height
+            if (maxX > 0 && maxY > 0) {
+                chatButton.x = maxX * xPercent
+                chatButton.y = maxY * yPercent
+            }
+        }
+    }
+    
     /**
      * Makes the chat button draggable within its parent bounds
      */
@@ -310,6 +355,8 @@ class ChatOverlayManager(
                 }
                 MotionEvent.ACTION_UP -> {
                     if (!dragging) {
+                        saveChatButtonPosition()
+                    } else {
                         view.performClick()
                     }
                     true
