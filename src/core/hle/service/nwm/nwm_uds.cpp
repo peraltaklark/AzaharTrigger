@@ -223,11 +223,11 @@ void NWM_UDS::HandleEAPoLPacket(const Network::WifiPacket& packet) {
 
         ASSERT(connection_status.max_nodes != connection_status.total_nodes);
 
-        auto eapol_start = DeserializeEAPolStartPacket(packet.data);
+        auto eapol_start = ParseCompatibleEAPoLStart(packet.data);
 
-        auto node = DeserializeNodeInfo(eapol_start.node);
-
-        if (eapol_start.connection_type != ConnectionType::Spectator) {
+        auto node = DeserializeNodeInfo(eapol_start.packet.node);
+        
+        if (eapol_start.packet.connection_type == ConnectionType::Client) {
             // Get an unused network node id
             u16 node_id = GetNextAvailableNodeId();
             node.network_node_id = node_id;
@@ -245,13 +245,13 @@ void NWM_UDS::HandleEAPoLPacket(const Network::WifiPacket& packet) {
             node_map[packet.transmitter_address].spec = false;
 
             BroadcastNodeMap();
-        } else if (eapol_start.connection_type == ConnectionType::Spectator) {
+        } else if (eapol_start.packet.connection_type == ConnectionType::Spectator) {
             node_map[packet.transmitter_address].node_id = NodeIDSpec;
             node_map[packet.transmitter_address].connected = true;
             node_map[packet.transmitter_address].spec = true;
         } else {
             LOG_ERROR(Service_NWM, "Client tried connecting with unknown connection type: 0x{:x}",
-                      static_cast<u32>(eapol_start.connection_type));
+                      static_cast<u32>(eapol_start.packet.connection_type));
         }
 
         // Send the EAPoL-Logoff packet.
@@ -505,12 +505,7 @@ void NWM_UDS::HandleDeauthenticationFrame(const Network::WifiPacket& packet) {
         return;
     }
     if (node_map.find(packet.transmitter_address) == node_map.end()) {
-        LOG_ERROR(Service_NWM,
-                  "Got deauthentication frame from unknown node "
-                  "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-                  packet.transmitter_address[0], packet.transmitter_address[1],
-                  packet.transmitter_address[2], packet.transmitter_address[3],
-                  packet.transmitter_address[4], packet.transmitter_address[5]);
+        LOG_ERROR(Service_NWM, "Got deauthentication frame from unknown node");
         return;
     }
 
@@ -1613,21 +1608,6 @@ void NWM_UDS::DecryptBeaconData(Kernel::HLERequestContext& ctx) {
     rb.PushStaticBuffer(std::move(output_buffer), 0);
 }
 
-void NWM_UDS::SetProbeResponseParam(Kernel::HLERequestContext& ctx) {
-    IPC::RequestParser rp(ctx);
-    u32 oui = rp.Pop<u32>();
-    u8 data = static_cast<u8>(rp.Pop<u32>());
-
-    LOG_DEBUG(Service_NWM, "called oui=0x{:08X}, data=0x{:02X}", oui, data);
-
-    probe_oui = oui;
-    probe_data = data;
-
-    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
-
-    rb.Push(ResultSuccess);
-}
-
 void NWM_UDS::EjectSpectators(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx);
 
@@ -1644,7 +1624,25 @@ void NWM_UDS::BeaconBroadcastCallback(std::uintptr_t user_data, s64 cycles_late)
     if (connection_status.status != NetworkStatus::ConnectedAsHost)
         return;
 
-    std::vector<u8> frame = GenerateBeaconFrame(network_info, node_info, probe_oui, probe_data);
+    // ================= KEEPALIVE (INSERT HERE) =================
+    if (keepalive_enabled) {
+        keepalive_tick++;
+
+        if (keepalive_tick % 2 == 0) { // ~1 second depending on beacon interval
+            Network::WifiPacket keepalive;
+            keepalive.type = Network::WifiPacket::PacketType::Data;
+            keepalive.channel = network_channel;
+            keepalive.destination_address = Network::BroadcastMac;
+
+            // tiny harmless payload (does not affect UDS logic)
+            keepalive.data = std::vector<u8>{0x00};
+
+            SendPacket(keepalive);
+        }
+    }
+    // ==========================================================
+
+    std::vector<u8> frame = GenerateBeaconFrame(network_info, node_info);
 
     using Network::WifiPacket;
     WifiPacket packet;
@@ -1710,7 +1708,7 @@ NWM_UDS::NWM_UDS(Core::System& system) : ServiceFramework("nwm::UDS"), system(sy
         {0x001E, &NWM_UDS::ConnectToNetwork, "ConnectToNetwork"},
         {0x001F, &NWM_UDS::DecryptBeaconData, "DecryptBeaconData"},
         {0x0020, nullptr, "Flush"},
-        {0x0021, &NWM_UDS::SetProbeResponseParam, "SetProbeResponseParam"},
+        {0x0021, nullptr, "SetProbeResponseParam"},
         {0x0022, nullptr, "ScanOnConnection"},
         // clang-format on
     };

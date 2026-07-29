@@ -383,4 +383,37 @@ EAPoLStartPacket DeserializeEAPolStartPacket(std::span<const u8> frame) {
     return eapol_start;
 }
 
+ParsedEAPoLStart ParseCompatibleEAPoLStart(std::span<const u8> frame) {
+    ParsedEAPoLStart result{};
+
+    // Step 1: raw safe memcpy (NOT strict parser)
+    EAPoLStartPacket raw{};
+    std::memcpy(&raw, frame.data() + sizeof(LLCHeader), sizeof(raw));
+
+    result.packet = raw;
+
+    // Step 2: compatibility normalization
+    u8 raw_type = static_cast<u8>(raw.connection_type);
+
+    switch (raw_type) {
+        case 0:
+        case 1:
+            result.packet.connection_type = ConnectionType::Client;
+            result.legacy = true;
+            break;
+
+        case 2:
+            result.packet.connection_type = ConnectionType::Spectator;
+            result.legacy = true;
+            break;
+
+        default:
+            result.packet.connection_type = ConnectionType::Client;
+            result.legacy = true;
+            break;
+    }
+
+    return result;
+}
+
 } // namespace Service::NWM
