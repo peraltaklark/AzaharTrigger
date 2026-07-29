@@ -50,20 +50,27 @@ class ChatOverlayManager(
      * Receives netplay status and chat messages.
      * Updates FAB visibility when joining or leaving rooms.
      */
-    private val messageListener: (Int, String) -> Unit = { type, msg ->
-        (context as? Activity)?.runOnUiThread {
-            // Always refresh button state first
-            updateChatButtonVisibility()
+    private val messageListener: (Int, String) -> Unit = { type, message ->
+        (context as Activity).runOnUiThread {
+            when (type) {
+                NetPlayManager.NetPlayStatus.ROOM_IDLE -> {
+                    clearAllMessages()
+                    updateChatButtonVisibility()
+                    return@runOnUiThread
+                }
+                NetPlayManager.NetPlayStatus.ROOM_JOINED,
+                NetPlayManager.NetPlayStatus.ROOM_MODERATOR -> {
+                    updateChatButtonVisibility()
+                }
+            }
 
             if (!NetPlayManager.netPlayIsJoined()) {
                 clearAllMessages()
+                updateChatButtonVisibility()
                 return@runOnUiThread
             }
 
-            // Only display actual messages
-            if (msg.isNotEmpty()) {
-                displayNewMessage(type, msg)
-            }
+            addChatOverlayMessage(type, message)
         }
     }
 
@@ -88,9 +95,8 @@ class ChatOverlayManager(
     init {
         setupRecyclerView()
         setupChatButton()
-        setupNetPlayListener()
+        NetPlayManager.addOnMessageReceivedListener(messageListener)
         updateChatButtonVisibility()
-        loadSettings()
     }
     
     // ==================== SETUP METHODS ====================
