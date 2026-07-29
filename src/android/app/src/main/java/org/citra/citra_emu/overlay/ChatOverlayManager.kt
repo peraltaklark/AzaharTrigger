@@ -135,9 +135,6 @@ class ChatOverlayManager(
         applyFabSize(IntSetting.CHAT_FAB_SIZE.int)
         applyShadow(IntSetting.CHAT_SHADOW_RADIUS.int.toFloat(), IntSetting.CHAT_SHADOW_DX.int.toFloat(), IntSetting.CHAT_SHADOW_DY.int.toFloat())
         maxChatLines = IntSetting.CHAT_MAX_LINES.int
-        chatButton.post {
-            restoreChatButtonPosition()
-        }
     }
     
     /**
@@ -238,9 +235,11 @@ class ChatOverlayManager(
      * Updates the chat button visibility based on netplay status
      */
     fun updateChatButtonVisibility() {
-        val isNetPlayActive = NetPlayManager.netPlayIsJoined()
-        chatButton.visibility = if (isNetPlayActive) View.VISIBLE else View.GONE
-        if (!isNetPlayActive) {
+        if (NetPlayManager.netPlayIsJoined()) {
+            chatButton.visibility = View.VISIBLE
+            chatButton.post { restoreChatButtonPosition() }
+        } else {
+            chatButton.visibility = View.GONE
             clearAllMessages()
         }
     }
