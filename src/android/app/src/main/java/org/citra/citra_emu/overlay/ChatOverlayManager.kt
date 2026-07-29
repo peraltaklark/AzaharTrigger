@@ -4,7 +4,6 @@
 
 package org.citra.citra_emu.overlay
 
-import android.app.Activity
 import android.content.Context
 import android.graphics.Color
 import android.os.Handler
@@ -15,7 +14,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -46,31 +44,16 @@ class ChatOverlayManager(
     /** Runnable for auto-hiding chat container */
     private var autoHideRunnable: Runnable? = null
     
-    /**
-     * Receives netplay status and chat messages.
-     * Updates FAB visibility when joining or leaving rooms.
-     */
-    private val messageListener: (Int, String) -> Unit = { type, message ->
-        (context as Activity).runOnUiThread {
-            when (type) {
-                NetPlayManager.NetPlayStatus.ROOM_IDLE -> {
-                    clearAllMessages()
-                    updateChatButtonVisibility()
-                    return@runOnUiThread
-                }
-                NetPlayManager.NetPlayStatus.ROOM_JOINED,
-                NetPlayManager.NetPlayStatus.ROOM_MODERATOR -> {
-                    updateChatButtonVisibility()
-                }
-            }
-
+    /** Listener for netplay messages */
+    private val messageListener: (Int, String) -> Unit = { type, msg ->
+        (context as? Activity)?.runOnUiThread {
             if (!NetPlayManager.netPlayIsJoined()) {
                 clearAllMessages()
                 updateChatButtonVisibility()
                 return@runOnUiThread
             }
-
-            displayNewMessage(type, message)
+            displayNewMessage(type, msg)
+            updateChatButtonVisibility()
         }
     }
 
@@ -79,24 +62,15 @@ class ChatOverlayManager(
      * Older messages are removed when this limit is exceeded.
      */
     private var maxChatLines = 8
-
-    /**
-     * Stores the chat button position so it can be restored
-     * after closing and reopening the emulator.
-     */
-    private val chatButtonPreferences =
-        PreferenceManager.getDefaultSharedPreferences(context)
-
-    private val chatButtonXPercentKey = "chat_button_position_x_percent"
-    private val chatButtonYPercentKey = "chat_button_position_y_percent"
     
     // ==================== INIT ====================
     
     init {
         setupRecyclerView()
         setupChatButton()
-        NetPlayManager.addOnMessageReceivedListener(messageListener)
+        setupNetPlayListener()
         updateChatButtonVisibility()
+        loadSettings()
     }
     
     // ==================== SETUP METHODS ====================
@@ -116,16 +90,13 @@ class ChatOverlayManager(
      * Configures the chat button click listener and drag functionality
      */
     private fun setupChatButton() {
-        chatButton.setOnClickListener { ChatDialog(context).show() }
+        chatButton.setOnClickListener {
+            ChatDialog(context).show()
+        }
         chatButton.setPadding(0, 0, 0, 0)
         chatButton.scaleType = android.widget.ImageView.ScaleType.CENTER
         setupDraggableChatButton()
-
-        // Restore saved position after the parent layout has been measured
-        chatButton.post {
-            restoreChatButtonPosition() 
-            updateChatButtonVisibility()
-        }
+        chatButton.visibility = if (NetPlayManager.netPlayIsJoined()) View.VISIBLE else View.GONE
     }
     
     /**
@@ -253,7 +224,7 @@ class ChatOverlayManager(
             clearAllMessages()
         }
     }
-
+    
     /**
      * Called when the fragment resumes - refreshes chat state and settings
      */
@@ -294,51 +265,6 @@ class ChatOverlayManager(
             else -> msg.trim()
         }
     }
-
-    /**
-     * Restores the chat button position using percentage coordinates.
-     * This keeps the button in the same place after resolution,
-     * orientation, or window size changes.
-     */
-    private fun restoreChatButtonPosition() {
-        val savedX = chatButtonPreferences.getFloat(chatButtonXPercentKey, Float.NaN)
-        val savedY = chatButtonPreferences.getFloat(chatButtonYPercentKey, Float.NaN)
-
-        if (savedX.isNaN() || savedY.isNaN()) return
-
-        val parent = chatButton.parent as? View ?: return
-
-        parent.post {
-            val maxX = parent.width - chatButton.width
-            val maxY = parent.height - chatButton.height
-
-            if (maxX > 0 && maxY > 0) {
-                chatButton.x = savedX * maxX
-                chatButton.y = savedY * maxY
-            }
-        }
-    }
-
-    /**
-     * Saves the chat button position as percentages of its parent size.
-     * This prevents position loss when the screen size changes.
-     */
-    private fun saveChatButtonPosition() {
-        val parent = chatButton.parent as? View ?: return
-
-        val maxX = parent.width - chatButton.width
-        val maxY = parent.height - chatButton.height
-
-        if (maxX <= 0 || maxY <= 0) return
-
-        val xPercent = (chatButton.x / maxX).coerceIn(0f, 1f)
-        val yPercent = (chatButton.y / maxY).coerceIn(0f, 1f)
-
-        chatButtonPreferences.edit()
-            .putFloat(chatButtonXPercentKey, xPercent)
-            .putFloat(chatButtonYPercentKey, yPercent)
-            .apply()
-    }
     
     /**
      * Makes the chat button draggable within its parent bounds
@@ -375,9 +301,7 @@ class ChatOverlayManager(
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (dragging) {
-                        saveChatButtonPosition()
-                    } else {
+                    if (!dragging) {
                         view.performClick()
                     }
                     true
