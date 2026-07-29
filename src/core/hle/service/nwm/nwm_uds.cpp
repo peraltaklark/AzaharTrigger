@@ -1608,6 +1608,21 @@ void NWM_UDS::DecryptBeaconData(Kernel::HLERequestContext& ctx) {
     rb.PushStaticBuffer(std::move(output_buffer), 0);
 }
 
+void NWM_UDS::SetProbeResponseParam(Kernel::HLERequestContext& ctx) {
+    IPC::RequestParser rp(ctx);
+    u32 oui = rp.Pop<u32>();
+    u8 data = static_cast<u8>(rp.Pop<u32>());
+
+    LOG_DEBUG(Service_NWM, "called oui=0x{:08X}, data=0x{:02X}", oui, data);
+
+    probe_oui = oui;
+    probe_data = data;
+
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+
+    rb.Push(ResultSuccess);
+}
+
 void NWM_UDS::EjectSpectators(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx);
 
