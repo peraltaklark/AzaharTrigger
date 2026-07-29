@@ -1,6 +1,6 @@
-// Copyright 2025 Azahar Project
+// Copyright Citra Emulator Project / Azahar Emulator Project
 // Licensed under GPLv2 or any later version
-// Refer to the license.txt file included
+// Refer to the license.txt file included.
 
 package org.citra.citra_emu.overlay
 
@@ -70,7 +70,7 @@ class ChatOverlayManager(
                 return@runOnUiThread
             }
 
-            addChatOverlayMessage(type, message)
+            displayNewMessage(type, message)
         }
     }
 
