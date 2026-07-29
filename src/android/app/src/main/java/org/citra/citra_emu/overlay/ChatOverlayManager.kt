@@ -137,6 +137,7 @@ class ChatOverlayManager(
         maxChatLines = IntSetting.CHAT_MAX_LINES.int
         chatButton.post {
             restoreChatButtonPosition()
+        }
     }
     
     /**
