@@ -4,6 +4,7 @@
 
 package org.citra.citra_emu.overlay
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Color
 import android.os.Handler
@@ -294,17 +295,20 @@ class ChatOverlayManager(
      * orientation, or window size changes.
      */
     private fun restoreChatButtonPosition() {
-
         val savedX = chatButtonPreferences.getFloat(chatButtonXPercentKey, Float.NaN)
         val savedY = chatButtonPreferences.getFloat(chatButtonYPercentKey, Float.NaN)
 
-        if (!savedX.isNaN() && !savedY.isNaN()) {
+        if (savedX.isNaN() || savedY.isNaN()) return
 
-            chatButton.post {
-                val parent = chatButton.parent as? View ?: return@post
+        val parent = chatButton.parent as? View ?: return
 
-                chatButton.x = savedX * (parent.width - chatButton.width)
-                chatButton.y = savedY * (parent.height - chatButton.height)
+        parent.post {
+            val maxX = parent.width - chatButton.width
+            val maxY = parent.height - chatButton.height
+
+            if (maxX > 0 && maxY > 0) {
+                chatButton.x = savedX * maxX
+                chatButton.y = savedY * maxY
             }
         }
     }
@@ -316,8 +320,13 @@ class ChatOverlayManager(
     private fun saveChatButtonPosition() {
         val parent = chatButton.parent as? View ?: return
 
-        val xPercent = chatButton.x / (parent.width - chatButton.width).toFloat()
-        val yPercent = chatButton.y / (parent.height - chatButton.height).toFloat()
+        val maxX = parent.width - chatButton.width
+        val maxY = parent.height - chatButton.height
+
+        if (maxX <= 0 || maxY <= 0) return
+
+        val xPercent = (chatButton.x / maxX).coerceIn(0f, 1f)
+        val yPercent = (chatButton.y / maxY).coerceIn(0f, 1f)
 
         chatButtonPreferences.edit()
             .putFloat(chatButtonXPercentKey, xPercent)
