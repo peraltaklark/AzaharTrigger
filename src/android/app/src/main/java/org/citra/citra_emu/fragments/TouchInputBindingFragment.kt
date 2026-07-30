@@ -7,6 +7,7 @@ package org.citra.citra_emu.fragments
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.InputType
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -36,7 +37,12 @@ class TouchInputBindingFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var profileManager: TouchInputBindingProfileManager
-    private var currentProfile = "Default"
+    private var currentProfile = DEFAULT_PROFILE
+
+    companion object {
+        private const val DEFAULT_PROFILE = "Default"
+        private const val MASK_COORDINATE_FORMAT = "%.3f"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -65,16 +71,15 @@ class TouchInputBindingFragment : Fragment() {
         refreshBindingList()
     }
 
-    private fun setupFragmentResultListener() {
-        parentFragmentManager.setFragmentResultListener("touch_binding_added", viewLifecycleOwner) { _, _ ->
-            saveCurrentBindings()
-            refreshBindingList()
-        }
+    // --- State & Listener Setup ---
 
-        parentFragmentManager.setFragmentResultListener("touch_binding_removed", viewLifecycleOwner) { _, _ ->
-            saveCurrentBindings()
+    private fun setupFragmentResultListener() {
+        val resultListener = { _: String, _: Bundle ->
+            commitBindings()
             refreshBindingList()
         }
+        parentFragmentManager.setFragmentResultListener("touch_binding_added", viewLifecycleOwner, resultListener)
+        parentFragmentManager.setFragmentResultListener("touch_binding_removed", viewLifecycleOwner, resultListener)
     }
 
     private fun setupProfileSpinner() {
@@ -83,25 +88,13 @@ class TouchInputBindingFragment : Fragment() {
         binding.profileSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val selectedProfile = parent?.getItemAtPosition(position)?.toString() ?: return
-                if (selectedProfile == currentProfile) return
-
-                currentProfile = selectedProfile
-                profileManager.setCurrentProfile(currentProfile)
-                loadCurrentProfile()
+                if (selectedProfile != currentProfile) {
+                    selectProfile(selectedProfile)
+                }
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-    }
-
-    private fun updateProfileSpinner() {
-        val profiles = profileManager.getProfiles()
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, profiles)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.profileSpinner.adapter = adapter
-
-        val currentIndex = profiles.indexOf(currentProfile)
-        if (currentIndex >= 0) binding.profileSpinner.setSelection(currentIndex)
     }
 
     private fun setupProfileButtons() {
@@ -115,6 +108,14 @@ class TouchInputBindingFragment : Fragment() {
         binding.touchInputBindingView.onTouchPointSelected = { x, y -> showBindingDialog(x, y) }
     }
 
+    // --- Profile & Persistence Architecture ---
+
+    private fun selectProfile(profileName: String) {
+        currentProfile = profileName
+        profileManager.setCurrentProfile(currentProfile)
+        loadCurrentProfile()
+    }
+
     private fun loadCurrentProfile() {
         val bindings = profileManager.loadProfile(currentProfile)
         TouchInputBindingManager.setBindings(bindings)
@@ -122,8 +123,18 @@ class TouchInputBindingFragment : Fragment() {
         refreshBindingList()
     }
 
-    private fun saveCurrentBindings() {
+    private fun commitBindings() {
         profileManager.saveProfile(currentProfile, TouchInputBindingManager.getBindings())
+    }
+
+    private fun updateProfileSpinner() {
+        val profiles = profileManager.getProfiles()
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, profiles)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.profileSpinner.adapter = adapter
+
+        val currentIndex = profiles.indexOf(currentProfile)
+        if (currentIndex >= 0) binding.profileSpinner.setSelection(currentIndex)
     }
 
     private fun refreshBindingList() {
@@ -141,31 +152,7 @@ class TouchInputBindingFragment : Fragment() {
         }
     }
 
-    private fun showEmptyBindingList() {
-        val emptyContainer = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(16, 32, 16, 32)
-        }
-
-        val emptyTitle = TextView(requireContext()).apply {
-            text = getString(R.string.no_touch_input_bindings)
-            textSize = 16f
-            gravity = Gravity.CENTER
-            setTypeface(null, android.graphics.Typeface.BOLD)
-        }
-
-        val emptySubtitle = TextView(requireContext()).apply {
-            text = getString(R.string.no_touch_input_bindings_subtitle)
-            textSize = 14f
-            gravity = Gravity.CENTER
-            setPadding(0, 8, 0, 0)
-        }
-
-        emptyContainer.addView(emptyTitle)
-        emptyContainer.addView(emptySubtitle)
-        binding.bindingList.addView(emptyContainer)
-    }
+    // --- UI Component Generation ---
 
     private fun createBindingCard(number: Int, touchBinding: TouchInputBinding): View {
         val density = resources.displayMetrics.density
@@ -186,7 +173,6 @@ class TouchInputBindingFragment : Fragment() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding((16 * density).toInt(), (12 * density).toInt(), (16 * density).toInt(), (12 * density).toInt())
         }
-
         card.addView(row)
 
         val numberView = TextView(requireContext()).apply {
@@ -221,7 +207,11 @@ class TouchInputBindingFragment : Fragment() {
         }
 
         val coordinateText = TextView(requireContext()).apply {
-            text = getString(R.string.touch_input_coordinates, formatCoordinate(touchBinding.x), formatCoordinate(touchBinding.y))
+            text = getString(
+                R.string.touch_input_coordinates,
+                formatCoordinate(touchBinding.x),
+                formatCoordinate(touchBinding.y)
+            )
             textSize = 13f
             setPadding(0, (2 * density).toInt(), 0, 0)
             setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
@@ -232,10 +222,9 @@ class TouchInputBindingFragment : Fragment() {
         row.addView(infoContainer)
 
         val overflowButton = ImageView(requireContext()).apply {
-            setImageResource(R.drawable.ic_more_vert)
+            setImageResource(R.drawable.ic_overflow_menu)
             layoutParams = LinearLayout.LayoutParams((32 * density).toInt(), (32 * density).toInt())
             setPadding((4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt())
-            setBackgroundResource(R.drawable.bg_overflow_button)
             imageTintList = ColorStateList.valueOf(getThemeColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
             setOnClickListener { showBindingOptionsMenu(touchBinding, this) }
         }
@@ -243,6 +232,34 @@ class TouchInputBindingFragment : Fragment() {
 
         return card
     }
+
+    private fun showEmptyBindingList() {
+        val emptyContainer = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(16, 32, 16, 32)
+        }
+
+        val emptyTitle = TextView(requireContext()).apply {
+            text = getString(R.string.no_touch_input_bindings)
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+
+        val emptySubtitle = TextView(requireContext()).apply {
+            text = getString(R.string.no_touch_input_bindings_subtitle)
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setPadding(0, 8, 0, 0)
+        }
+
+        emptyContainer.addView(emptyTitle)
+        emptyContainer.addView(emptySubtitle)
+        binding.bindingList.addView(emptyContainer)
+    }
+
+    // --- Dialogs & Operations ---
 
     private fun showCreateProfileDialog() {
         val input = EditText(requireContext()).apply { hint = getString(R.string.profile_name) }
@@ -255,10 +272,8 @@ class TouchInputBindingFragment : Fragment() {
                 if (name.isEmpty()) return@setPositiveButton
 
                 if (profileManager.createProfile(name)) {
-                    currentProfile = name
-                    profileManager.setCurrentProfile(currentProfile)
+                    selectProfile(name)
                     updateProfileSpinner()
-                    loadCurrentProfile()
                 } else {
                     Toast.makeText(requireContext(), "Profile already exists", Toast.LENGTH_SHORT).show()
                 }
@@ -289,7 +304,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     private fun showDeleteProfileDialog() {
-        if (currentProfile == "Default") {
+        if (currentProfile == DEFAULT_PROFILE) {
             Toast.makeText(requireContext(), "Cannot delete Default profile", Toast.LENGTH_SHORT).show()
             return
         }
@@ -299,10 +314,8 @@ class TouchInputBindingFragment : Fragment() {
             .setMessage("Are you sure you want to delete \"$currentProfile\"?")
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 if (profileManager.deleteProfile(currentProfile)) {
-                    currentProfile = "Default"
-                    profileManager.setCurrentProfile(currentProfile)
+                    selectProfile(DEFAULT_PROFILE)
                     updateProfileSpinner()
-                    loadCurrentProfile()
                     Toast.makeText(requireContext(), "Profile deleted", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -316,7 +329,7 @@ class TouchInputBindingFragment : Fragment() {
             .setMessage(getString(R.string.delete_all_touch_input_confirm))
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 TouchInputBindingManager.clearBindings()
-                saveCurrentBindings()
+                commitBindings()
                 refreshBindingList()
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -377,7 +390,7 @@ class TouchInputBindingFragment : Fragment() {
                     val updatedBinding = touchBinding.copy(x = x, y = y)
                     TouchInputBindingManager.removeBinding(touchBinding)
                     TouchInputBindingManager.addBinding(updatedBinding)
-                    saveCurrentBindings()
+                    commitBindings()
                     refreshBindingList()
                 } else {
                     Toast.makeText(requireContext(), "Invalid coordinates (must be 0.0-1.0)", Toast.LENGTH_SHORT).show()
@@ -393,19 +406,25 @@ class TouchInputBindingFragment : Fragment() {
             .setMessage(getString(R.string.delete_touch_input_confirm))
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 TouchInputBindingManager.removeBinding(touchBinding)
-                saveCurrentBindings()
+                commitBindings()
                 refreshBindingList()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    private fun formatCoordinate(value: Float): String = String.format("%.3f", value)
+    // --- Helpers ---
+
+    private fun formatCoordinate(value: Float): String = String.format(MASK_COORDINATE_FORMAT, value)
 
     private fun getThemeColor(attr: Int): Int {
-        val typedValue = android.util.TypedValue()
+        val typedValue = TypedValue()
         requireContext().theme.resolveAttribute(attr, typedValue, true)
-        return if (typedValue.resourceId != 0) ContextCompat.getColor(requireContext(), typedValue.resourceId) else typedValue.data
+        return if (typedValue.resourceId != 0) {
+            ContextCompat.getColor(requireContext(), typedValue.resourceId)
+        } else {
+            typedValue.data
+        }
     }
 
     override fun onDestroyView() {

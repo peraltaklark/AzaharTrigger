@@ -134,7 +134,7 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="12dp">
 
-        <org.citra.citra_emu.features.settings.ui.viewholder.TouchscreenBindingView
+        <org.citra.citra_emu.features.touchinput.TouchInputBindingView
             android:id="@+id/touchscreenView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -204,7 +204,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:minHeight="36dp"
-            android:text="@string/delete_all_touch_input_bindings"
+            android:text="@string/delete_all"
             android:textColor="?attr/colorError"
             android:insetTop="0dp"
             android:insetBottom="0dp" />

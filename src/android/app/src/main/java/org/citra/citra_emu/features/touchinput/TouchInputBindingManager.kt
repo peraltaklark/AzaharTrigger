@@ -21,6 +21,17 @@ object TouchInputBindingManager {
     private const val TAG = "TouchInputBinding"
     private const val PREF_KEY = "TouchscreenBindings"
     private const val AXIS_DEADZONE = 0.15f
+    private const val TOUCH_PROXIMITY_THRESHOLD = 0.02f
+    private const val FRAMEBUFFER_MIN_SIZE = 6
+
+    // JSON Serialization Keys
+    private const val JSON_KEY_CODE = "keyCode"
+    private const val JSON_AXIS = "axis"
+    private const val JSON_POSITIVE = "positive"
+    private const val JSON_ANALOG = "analog"
+    private const val JSON_THRESHOLD = "threshold"
+    private const val JSON_X = "x"
+    private const val JSON_Y = "y"
 
     private val preferences: SharedPreferences
         get() = PreferenceManager.getDefaultSharedPreferences(
@@ -34,6 +45,8 @@ object TouchInputBindingManager {
     init {
         loadBindings()
     }
+
+    // --- State Accessors ---
 
     fun getBindings(): List<TouchInputBinding> = bindings.toList()
 
@@ -71,10 +84,12 @@ object TouchInputBindingManager {
         keyStates.clear()
     }
 
+    // --- Input Event Dispatching ---
+
     fun sendTouch(binding: TouchInputBinding, pressed: Boolean) {
         val layout = NativeLibrary.getFramebufferLayout()
 
-        if (layout.size < 6) {
+        if (layout.size < FRAMEBUFFER_MIN_SIZE) {
             Log.w(TAG, "sendTouch: framebuffer layout is too small")
             return
         }
@@ -92,11 +107,9 @@ object TouchInputBindingManager {
 
     fun handleKeyDown(event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN) return false
-        if (ControllerMappingHelper.shouldKeyBeIgnored(event.device, event.keyCode)) {
-            return false
-        }
         if (event.keyCode == KeyEvent.KEYCODE_BACK) return false
-        if (keyStates.contains(event.keyCode)) return false
+        if (ControllerMappingHelper.shouldKeyBeIgnored(event.device, event.keyCode)) return false
+        if (!keyStates.add(event.keyCode)) return false // Returns false if key was already present
 
         var handled = false
 
@@ -107,8 +120,8 @@ object TouchInputBindingManager {
             }
         }
 
-        if (handled) {
-            keyStates.add(event.keyCode)
+        if (!handled) {
+            keyStates.remove(event.keyCode)
         }
 
         return handled
@@ -116,11 +129,9 @@ object TouchInputBindingManager {
 
     fun handleKeyUp(event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_UP) return false
-        if (ControllerMappingHelper.shouldKeyBeIgnored(event.device, event.keyCode)) {
-            return false
-        }
         if (event.keyCode == KeyEvent.KEYCODE_BACK) return false
-        if (!keyStates.contains(event.keyCode)) return false
+        if (ControllerMappingHelper.shouldKeyBeIgnored(event.device, event.keyCode)) return false
+        if (!keyStates.remove(event.keyCode)) return false // Returns false if key was not tracked
 
         var handled = false
 
@@ -130,8 +141,6 @@ object TouchInputBindingManager {
                 handled = true
             }
         }
-
-        keyStates.remove(event.keyCode)
 
         return handled
     }
@@ -144,10 +153,11 @@ object TouchInputBindingManager {
         bindings.forEach { binding ->
             if (binding.axis < 0) return@forEach
 
+            val rawAxisValue = event.getAxisValue(binding.axis)
             val value = ControllerMappingHelper.scaleAxis(
                 event.device,
                 binding.axis,
-                event.getAxisValue(binding.axis)
+                rawAxisValue
             )
 
             val pressed = if (binding.analog) {
@@ -158,9 +168,7 @@ object TouchInputBindingManager {
                 value < -AXIS_DEADZONE
             }
 
-            val stateKey =
-                "${binding.axis}_${binding.positive}_${binding.analog}"
-
+            val stateKey = "${binding.axis}_${binding.positive}_${binding.analog}"
             val oldState = axisStates[stateKey] ?: false
 
             if (oldState != pressed) {
@@ -175,23 +183,26 @@ object TouchInputBindingManager {
 
     fun getBindingAt(x: Float, y: Float): TouchInputBinding? {
         return bindings.firstOrNull {
-            abs(it.x - x) < 0.02f &&
-                abs(it.y - y) < 0.02f
+            abs(it.x - x) < TOUCH_PROXIMITY_THRESHOLD &&
+                abs(it.y - y) < TOUCH_PROXIMITY_THRESHOLD
         }
     }
+
+    // --- Persistence ---
 
     private fun saveBindings() {
         val array = JSONArray()
 
         bindings.forEach { binding ->
-            val obj = JSONObject()
-            obj.put("keyCode", binding.keyCode)
-            obj.put("axis", binding.axis)
-            obj.put("positive", binding.positive)
-            obj.put("analog", binding.analog)
-            obj.put("threshold", binding.threshold)
-            obj.put("x", binding.x)
-            obj.put("y", binding.y)
+            val obj = JSONObject().apply {
+                put(JSON_KEY_CODE, binding.keyCode)
+                put(JSON_AXIS, binding.axis)
+                put(JSON_POSITIVE, binding.positive)
+                put(JSON_ANALOG, binding.analog)
+                put(JSON_THRESHOLD, binding.threshold)
+                put(JSON_X, binding.x)
+                put(JSON_Y, binding.y)
+            }
             array.put(obj)
         }
 
@@ -212,13 +223,13 @@ object TouchInputBindingManager {
 
                 bindings.add(
                     TouchInputBinding(
-                        keyCode = obj.optInt("keyCode", -1),
-                        axis = obj.optInt("axis", -1),
-                        positive = obj.optBoolean("positive", true),
-                        analog = obj.optBoolean("analog", false),
-                        threshold = obj.optDouble("threshold", 0.5).toFloat(),
-                        x = obj.optDouble("x", 0.5).toFloat(),
-                        y = obj.optDouble("y", 0.5).toFloat()
+                        keyCode = obj.optInt(JSON_KEY_CODE, -1),
+                        axis = obj.optInt(JSON_AXIS, -1),
+                        positive = obj.optBoolean(JSON_POSITIVE, true),
+                        analog = obj.optBoolean(JSON_ANALOG, false),
+                        threshold = obj.optDouble(JSON_THRESHOLD, 0.5).toFloat(),
+                        x = obj.optDouble(JSON_X, 0.5).toFloat(),
+                        y = obj.optDouble(JSON_Y, 0.5).toFloat()
                     )
                 )
             }

@@ -1,4 +1,4 @@
-// Copyright 2025 Azahar Project
+// Copyright Citra Emulator Project / Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -15,7 +15,7 @@ class TouchInputBindingProfileManager(context: Context) {
 
     private val preferences: SharedPreferences =
         PreferenceManager.getDefaultSharedPreferences(
-            CitraApplication.appContext
+            context.applicationContext ?: CitraApplication.appContext
         )
 
     companion object {
@@ -23,11 +23,27 @@ class TouchInputBindingProfileManager(context: Context) {
         private const val KEY_PROFILES_LIST = "profiles_list"
         private const val KEY_BINDINGS_PREFIX = "bindings_profile_"
         private const val DEFAULT_PROFILE = "Default"
+
+        // JSON Serialization Keys
+        private const val JSON_KEY_CODE = "keyCode"
+        private const val JSON_AXIS = "axis"
+        private const val JSON_POSITIVE = "positive"
+        private const val JSON_ANALOG = "analog"
+        private const val JSON_THRESHOLD = "threshold"
+        private const val JSON_X = "x"
+        private const val JSON_Y = "y"
     }
 
     init {
-        if (!getProfiles().contains(DEFAULT_PROFILE)) {
-            saveProfile(DEFAULT_PROFILE, emptyList())
+        val currentProfiles = getProfiles()
+        if (!currentProfiles.contains(DEFAULT_PROFILE)) {
+            val updatedProfiles = currentProfiles.toMutableList().apply {
+                add(0, DEFAULT_PROFILE)
+            }
+            saveProfilesList(updatedProfiles)
+            if (!hasProfileData(DEFAULT_PROFILE)) {
+                saveProfile(DEFAULT_PROFILE, emptyList())
+            }
         }
     }
 
@@ -45,25 +61,20 @@ class TouchInputBindingProfileManager(context: Context) {
     }
 
     fun getProfiles(): List<String> {
-        val json = preferences.getString(KEY_PROFILES_LIST, null)
+        val json = preferences.getString(KEY_PROFILES_LIST, null) ?: return listOf(DEFAULT_PROFILE)
 
-        return if (json != null) {
-            try {
-                val array = JSONArray(json)
-                List(array.length()) { index ->
-                    array.getString(index)
-                }
-            } catch (_: Exception) {
-                listOf(DEFAULT_PROFILE)
+        return try {
+            val array = JSONArray(json)
+            List(array.length()) { index ->
+                array.getString(index)
             }
-        } else {
+        } catch (_: Exception) {
             listOf(DEFAULT_PROFILE)
         }
     }
 
     private fun saveProfilesList(profiles: List<String>) {
         val array = JSONArray()
-
         profiles.forEach { profile ->
             array.put(profile)
         }
@@ -74,8 +85,9 @@ class TouchInputBindingProfileManager(context: Context) {
     }
 
     fun createProfile(profileName: String): Boolean {
-        val profiles = getProfiles().toMutableList()
+        if (profileName.isBlank()) return false
 
+        val profiles = getProfiles().toMutableList()
         if (profiles.contains(profileName)) {
             return false
         }
@@ -93,11 +105,15 @@ class TouchInputBindingProfileManager(context: Context) {
         }
 
         val profiles = getProfiles().toMutableList()
+        if (!profiles.contains(profileName)) {
+            return false
+        }
+
         profiles.remove(profileName)
         saveProfilesList(profiles)
 
         preferences.edit()
-            .remove("$KEY_BINDINGS_PREFIX$profileName")
+            .remove(getProfileStorageKey(profileName))
             .apply()
 
         if (getCurrentProfile() == profileName) {
@@ -108,15 +124,26 @@ class TouchInputBindingProfileManager(context: Context) {
     }
 
     fun renameProfile(oldName: String, newName: String): Boolean {
-        if (oldName == DEFAULT_PROFILE || getProfiles().contains(newName)) {
+        if (oldName == DEFAULT_PROFILE || newName.isBlank() || oldName == newName) {
+            return false
+        }
+
+        val profiles = getProfiles().toMutableList()
+        val index = profiles.indexOf(oldName)
+        if (index == -1 || profiles.contains(newName)) {
             return false
         }
 
         val bindings = loadProfile(oldName)
 
-        deleteProfile(oldName)
-        createProfile(newName)
+        // Atomic update: rename entry in list and update keys
+        profiles[index] = newName
+        saveProfilesList(profiles)
+
         saveProfile(newName, bindings)
+        preferences.edit()
+            .remove(getProfileStorageKey(oldName))
+            .apply()
 
         if (getCurrentProfile() == oldName) {
             setCurrentProfile(newName)
@@ -133,26 +160,25 @@ class TouchInputBindingProfileManager(context: Context) {
 
         bindings.forEach { binding ->
             val obj = JSONObject().apply {
-                put("keyCode", binding.keyCode)
-                put("axis", binding.axis)
-                put("positive", binding.positive)
-                put("analog", binding.analog)
-                put("threshold", binding.threshold)
-                put("x", binding.x)
-                put("y", binding.y)
+                put(JSON_KEY_CODE, binding.keyCode)
+                put(JSON_AXIS, binding.axis)
+                put(JSON_POSITIVE, binding.positive)
+                put(JSON_ANALOG, binding.analog)
+                put(JSON_THRESHOLD, binding.threshold)
+                put(JSON_X, binding.x)
+                put(JSON_Y, binding.y)
             }
-
             array.put(obj)
         }
 
         preferences.edit()
-            .putString("$KEY_BINDINGS_PREFIX$profileName", array.toString())
+            .putString(getProfileStorageKey(profileName), array.toString())
             .apply()
     }
 
     fun loadProfile(profileName: String): List<TouchInputBinding> {
         val json = preferences.getString(
-            "$KEY_BINDINGS_PREFIX$profileName",
+            getProfileStorageKey(profileName),
             null
         ) ?: return emptyList()
 
@@ -162,17 +188,25 @@ class TouchInputBindingProfileManager(context: Context) {
                 val obj = array.getJSONObject(index)
 
                 TouchInputBinding(
-                    keyCode = obj.optInt("keyCode", -1),
-                    axis = obj.optInt("axis", -1),
-                    positive = obj.optBoolean("positive", true),
-                    analog = obj.optBoolean("analog", false),
-                    threshold = obj.optDouble("threshold", 0.5).toFloat(),
-                    x = obj.optDouble("x", 0.5).toFloat(),
-                    y = obj.optDouble("y", 0.5).toFloat()
+                    keyCode = obj.optInt(JSON_KEY_CODE, -1),
+                    axis = obj.optInt(JSON_AXIS, -1),
+                    positive = obj.optBoolean(JSON_POSITIVE, true),
+                    analog = obj.optBoolean(JSON_ANALOG, false),
+                    threshold = obj.optDouble(JSON_THRESHOLD, 0.5).toFloat(),
+                    x = obj.optDouble(JSON_X, 0.5).toFloat(),
+                    y = obj.optDouble(JSON_Y, 0.5).toFloat()
                 )
             }
         } catch (_: Exception) {
             emptyList()
         }
+    }
+
+    private fun hasProfileData(profileName: String): Boolean {
+        return preferences.contains(getProfileStorageKey(profileName))
+    }
+
+    private fun getProfileStorageKey(profileName: String): String {
+        return "$KEY_BINDINGS_PREFIX$profileName"
     }
 }
