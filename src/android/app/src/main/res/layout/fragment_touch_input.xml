@@ -19,7 +19,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/edit_touch_bindings"
+            android:text="@string/edit_touch_input_bindings"
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="?attr/colorOnSurface" />
@@ -28,7 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="@string/edit_touch_bindings_subtitle"
+            android:text="@string/edit_touch_input_bindings_subtitle"
             android:textSize="14sp"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -78,7 +78,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:padding="12dp"
-                android:src="@drawable/ic_edit"
+                android:src="@android:drawable/ic_edit"
                 app:tint="?attr/colorOnSurfaceVariant" />
 
         </androidx.cardview.widget.CardView>
@@ -164,14 +164,14 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_info"
+                android:src="@android:drawable/ic_info"
                 app:tint="?attr/colorPrimary" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/edit_touch_bindings_subtitle"
+                android:text="@string/edit_touch_input_bindings_subtitle"
                 android:textSize="13sp"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -193,7 +193,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/bindings"
+            android:text="@string/touch_input_bindings"
             android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="?attr/colorOnSurfaceVariant" />
@@ -204,7 +204,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:minHeight="36dp"
-            android:text="@string/delete_all"
+            android:text="@string/delete_all_touch_input_bindings"
             android:textColor="?attr/colorError"
             android:insetTop="0dp"
             android:insetBottom="0dp" />
