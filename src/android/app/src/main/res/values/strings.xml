@@ -445,6 +445,33 @@
 	<string name="chat_max_lines">Chat Message Lines</string>
     <string name="chat_max_lines_description">Sets the maximum number of chat messages displayed in the overlay.</string>
     
+    <!-- Touch Input Bindings -->
+    <string name="touch_input_bindings">Touch Input Bindings</string>
+    <string name="touch_input_bindings_description">Configure controller inputs to press the 3DS touchscreen.</string>
+    <string name="bind_touch_input">Bind Touch Input</string>
+    <string name="bind_touch_input_message">Press a button or move an analog input</string>
+    <string name="bind_touch_input_cancel">Cancel</string>
+    <string name="bind_touch_input_clear">Clear</string>
+    <string name="no_touch_input_bindings">No touch input bindings</string>
+    <string name="touch_input_coordinates">Touch position (%1$s, %2$s)</string>
+    <string name="delete_all">Delete All</string>
+    <string name="delete_all_touch_input_confirm">Are you sure you want to delete all touch input bindings?</string>
+     <string name="delete_touch_input_confirm">Delete this touch input binding?</string>
+    <string name="profile">Profile</string>
+    <string name="new_text">New</string>
+    <string name="create_new_profile">Create New Profile</string>
+    <string name="profile_name">Profile Name</string>
+    <string name="bindings">Bindings</string>
+    <string name="edit_touch_input_bindings">Edit your touch input bindings</string>
+    <string name="edit_touch_input_bindings_subtitle">Tap the preview to add a new binding,
+    or tap the ⋮ icon on a binding in the list to
+    edit its coordinates or delete it.</string>
+    <string name="no_touch_input_bindings_subtitle">Tap anywhere inside the preview above
+    to create your first touch input binding.</string>
+    <string name="edit">Edit</string>
+    <string name="x_coordinate">X Coordinate</string>
+    <string name="y_coordinate">Y Coordinate</string>
+    
     <!-- Tweaks -->
     <string name="reduce_downcount_slice">Reduce Downcount Slice</string>
     <string name="reduce_downcount_slice_description">Reduces core timing downcount to a smaller time slice, reducing CPU usage. This may improve performance in some games.</string>

@@ -495,6 +495,36 @@ void Java_org_citra_citra_1emu_NativeLibrary_updateFramebuffer([[maybe_unused]] 
     }
 }
 
+jintArray Java_org_citra_citra_1emu_NativeLibrary_getFramebufferLayoutNative(
+    JNIEnv* env,
+    jobject /*obj*/) {
+    
+    Layout::FramebufferLayout layout;
+    
+    if (!window) {
+        // Fall back to FrameLayoutFromResolutionScale when not in-game
+        layout = Layout::FrameLayoutFromResolutionScale(1, false, false);
+    } else {
+        // Use actual framebuffer layout when in-game
+        layout = window->GetFramebufferLayout();
+    }
+    
+    // Return: [width, height, bottom_left, bottom_top, bottom_right, bottom_bottom, is_rotated]
+    jint data[7] = {
+        static_cast<jint>(layout.width),
+        static_cast<jint>(layout.height),
+        static_cast<jint>(layout.bottom_screen.left),
+        static_cast<jint>(layout.bottom_screen.top),
+        static_cast<jint>(layout.bottom_screen.right),
+        static_cast<jint>(layout.bottom_screen.bottom),
+        layout.is_rotated ? 1 : 0
+    };
+    
+    jintArray result = env->NewIntArray(7);
+    env->SetIntArrayRegion(result, 0, 7, data);
+    return result;
+}
+
 void Java_org_citra_citra_1emu_NativeLibrary_setCustomLayout(JNIEnv* env, jobject obj, jint top_x,
                                                              jint top_y, jint top_width,
                                                              jint top_height, jint bottom_x,
