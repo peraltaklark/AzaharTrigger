@@ -14,6 +14,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.widget.doOnTextChanged
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -21,12 +22,14 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
-import info.debatty.java.stringsimilarity.Jaccard
-import info.debatty.java.stringsimilarity.JaroWinkler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.citra.citra_emu.R
 import org.citra.citra_emu.databinding.DialogLobbyBrowserBinding
 import org.citra.citra_emu.databinding.ItemLobbyRoomBinding
-import org.citra.citra_emu.utils.CompatUtils
 import org.citra.citra_emu.utils.NetPlayManager
 import java.util.Locale
 
@@ -34,8 +37,14 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     private lateinit var binding: DialogLobbyBrowserBinding
     private lateinit var adapter: LobbyRoomAdapter
     private val handler = Handler(Looper.getMainLooper())
-    /** Stores the last visited lobby room. */
-    private val preferences: SharedPreferences = context.getSharedPreferences("lobby_history", Context.MODE_PRIVATE)
+    
+    private val preferences: SharedPreferences =
+        context.getSharedPreferences("lobby_history", Context.MODE_PRIVATE)
+
+    // Cached preference variables to eliminate disk reads on UI filter passes
+    private var lastIp: String? = null
+    private var lastPort: Int = -1
+    private var lastName: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +56,11 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         binding = DialogLobbyBrowserBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Cache last visited room details in memory
+        lastIp = preferences.getString("last_room_ip", null)
+        lastPort = preferences.getInt("last_room_port", -1)
+        lastName = preferences.getString("last_room_name", "")
+
         binding.emptyRefreshButton.setOnClickListener {
             binding.progressBar.visibility = View.VISIBLE
             refreshRoomList()
@@ -54,8 +68,10 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
 
         setupRecyclerView()
         setupRefreshButton()
-        refreshRoomList()
         setupSearchBar()
+        
+        // Show local cache instantly while network refresh runs
+        refreshRoomList()
 
         setOnDismissListener {
             NetPlayDialog(context).show()
@@ -81,32 +97,38 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     }
 
     private fun setupSearchBar() {
-        binding.chipHideEmpty.setOnClickListener { _ -> adapter.filterAndSearch() }
-        binding.chipHideFull.setOnClickListener { _ -> adapter.filterAndSearch() }
-        binding.chipHideLocked.setOnClickListener { _ -> adapter.filterAndSearch() }
+        binding.chipHideEmpty.setOnClickListener { adapter.filterAndSearch() }
+        binding.chipHideFull.setOnClickListener { adapter.filterAndSearch() }
+        binding.chipHideLocked.setOnClickListener { adapter.filterAndSearch() }
 
         binding.searchText.doOnTextChanged { text: CharSequence?, _: Int, _: Int, _: Int ->
-            if (text.toString().isNotEmpty()) {
-                binding.clearButton.visibility = View.VISIBLE
-            } else {
-                binding.clearButton.visibility = View.INVISIBLE
-            }
+            binding.clearButton.visibility =
+                if (text.isNullOrEmpty()) View.INVISIBLE else View.VISIBLE
             adapter.filterAndSearch()
         }
 
         binding.clearButton.setOnClickListener {
             binding.searchText.setText("")
-            adapter.updateRooms(NetPlayManager.getPublicRooms())
+            adapter.filterAndSearch()
         }
     }
 
     private fun refreshRoomList() {
+        // 1. Instantly display whatever is already in local memory
+        val cachedRooms = NetPlayManager.getPublicRooms()
+        if (cachedRooms.isNotEmpty()) {
+            adapter.updateRooms(moveLastVisitedRoomToTop(cachedRooms))
+            binding.emptyView.visibility = View.GONE
+            binding.roomList.visibility = View.VISIBLE
+        }
+
+        // 2. Refresh from network asynchronously
         NetPlayManager.refreshRoomListAsync { rooms ->
             binding.emptyView.visibility = if (rooms.isEmpty()) View.VISIBLE else View.GONE
             binding.roomList.visibility = if (rooms.isEmpty()) View.GONE else View.VISIBLE
             binding.appbar.visibility = if (rooms.isEmpty()) View.GONE else View.VISIBLE
-            adapter.updateRooms(rooms)
-            adapter.filterAndSearch()
+
+            adapter.filterAndSearch(rooms)
             binding.refreshButton.isEnabled = true
             binding.progressBar.visibility = View.GONE
         }
@@ -134,13 +156,11 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             .show()
     }
 
-    /**
-     * Saves the selected room as the last visited room.
-     *
-     * Stores room identity information so it can be restored
-     * and moved to the top of the lobby list later.
-     */
     private fun saveLastVisitedRoom(room: NetPlayManager.RoomInfo) {
+        lastIp = room.ip
+        lastPort = room.port
+        lastName = room.name
+
         preferences.edit()
             .putString("last_room_ip", room.ip)
             .putInt("last_room_port", room.port)
@@ -148,29 +168,19 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             .apply()
     }
 
-    /**
-     * Moves the last visited room to the top of the list.
-     *
-     * If the saved room is no longer available,
-     * the list order remains unchanged.
-     */
-     private fun moveLastVisitedRoomToTop(
+    private fun moveLastVisitedRoomToTop(
         rooms: List<NetPlayManager.RoomInfo>
-     ): List<NetPlayManager.RoomInfo> {
+    ): List<NetPlayManager.RoomInfo> {
+        val ip = lastIp
+        val port = lastPort
 
-        val lastIp = preferences.getString("last_room_ip", null)
-        val lastPort = preferences.getInt("last_room_port", -1)
-
-        if (lastIp == null || lastPort == -1) {
+        if (ip == null || port == -1) {
             return rooms
         }
 
-        val lastName = preferences.getString("last_room_name", "")
-
+        val name = lastName
         val lastRoom = rooms.find {
-            it.ip == lastIp &&
-            it.port == lastPort &&
-            (lastName.isNullOrEmpty() || it.name == lastName)
+            it.ip == ip && it.port == port && (name.isNullOrEmpty() || it.name == name)
         }
 
         return if (lastRoom != null) {
@@ -200,6 +210,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         RecyclerView.Adapter<LobbyRoomAdapter.RoomViewHolder>() {
 
         private val rooms = mutableListOf<NetPlayManager.RoomInfo>()
+        private var searchJob: Job? = null
 
         inner class RoomViewHolder(private val binding: ItemLobbyRoomBinding) :
             RecyclerView.ViewHolder(binding.root) {
@@ -239,50 +250,78 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
 
         override fun getItemCount() = rooms.size
 
+        /**
+         * Updates rooms smoothly using DiffUtil. Detects player count, 
+         * password status, and room name changes without re-rendering the whole list.
+         */
         fun updateRooms(newRooms: List<NetPlayManager.RoomInfo>) {
+            val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+                override fun getOldListSize() = rooms.size
+                override fun getNewListSize() = newRooms.size
+
+                override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                    val old = rooms[oldItemPosition]
+                    val new = newRooms[newItemPosition]
+                    return old.ip == new.ip && old.port == new.port
+                }
+
+                override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                    val old = rooms[oldItemPosition]
+                    val new = newRooms[newItemPosition]
+                    return old.members.size == new.members.size &&
+                           old.maxPlayers == new.maxPlayers &&
+                           old.name == new.name &&
+                           old.hasPassword == new.hasPassword &&
+                           old.preferredGameName == new.preferredGameName
+                }
+            })
+
             rooms.clear()
             rooms.addAll(newRooms)
-            notifyDataSetChanged()
+            diffResult.dispatchUpdatesTo(this)
         }
 
         /**
-         * Filters rooms by selected options and search text.
-         * Also keeps the last visited room at the top of the list.
+         * Offloads filter and search execution to Dispatchers.Default.
+         * Cancels previous search jobs on new text keystrokes to preserve UI response time.
          */
-        fun filterAndSearch() {
-            val baseList = NetPlayManager.getPublicRooms()
-            var filteredList: List<NetPlayManager.RoomInfo> = baseList
+        fun filterAndSearch(
+            sourceRooms: List<NetPlayManager.RoomInfo> = NetPlayManager.getPublicRooms()
+        ) {
+            searchJob?.cancel()
 
-            if (binding.chipHideEmpty.isChecked) {
-                filteredList = filteredList.filter { it.members.isNotEmpty() }
-            }
+            val query = binding.searchText.text.toString().trim().lowercase(Locale.getDefault())
+            val hideEmpty = binding.chipHideEmpty.isChecked
+            val hideFull = binding.chipHideFull.isChecked
+            val hideLocked = binding.chipHideLocked.isChecked
 
-            if (binding.chipHideFull.isChecked) {
-                filteredList = filteredList.filter { it.members.size < it.maxPlayers }
-            }
+            searchJob = CoroutineScope(Dispatchers.Default).launch {
+                var filteredList = sourceRooms
 
-            if (binding.chipHideLocked.isChecked) {
-                filteredList = filteredList.filter { !it.hasPassword }
-            }
-
-            val searchText = binding.searchText.text.toString().lowercase(Locale.getDefault())
-
-            if (searchText.isNotEmpty()) {
-                val searchAlgorithm = if (searchText.length > 1) Jaccard(2) else JaroWinkler()
-
-                filteredList = filteredList.mapNotNull { room ->
-                    val roomName = room.name.lowercase(Locale.getDefault())
-                    val score = searchAlgorithm.similarity(roomName, searchText)
-
-                    if (score > 0.03) ScoreItem(score, room) else null
+                if (hideEmpty) {
+                    filteredList = filteredList.filter { it.members.isNotEmpty() }
                 }
-                .sortedByDescending { it.score }
-                .map { it.item }
-            }
+                if (hideFull) {
+                    filteredList = filteredList.filter { it.members.size < it.maxPlayers }
+                }
+                if (hideLocked) {
+                    filteredList = filteredList.filter { !it.hasPassword }
+                }
 
-            adapter.updateRooms(moveLastVisitedRoomToTop(filteredList))
+                if (query.isNotEmpty()) {
+                    filteredList = filteredList.filter { room ->
+                        room.name.lowercase(Locale.getDefault()).contains(query) ||
+                        room.owner.lowercase(Locale.getDefault()).contains(query) ||
+                        room.preferredGameName.lowercase(Locale.getDefault()).contains(query)
+                    }
+                }
+
+                val finalList = moveLastVisitedRoomToTop(filteredList)
+
+                withContext(Dispatchers.Main) {
+                    updateRooms(finalList)
+                }
+            }
         }
     }
-
-    private inner class ScoreItem(val score: Double, val item: NetPlayManager.RoomInfo)
 }
