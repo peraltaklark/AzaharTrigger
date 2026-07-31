@@ -109,6 +109,7 @@ class TouchInputBindingView @JvmOverloads constructor(
 
         canvas.drawRect(bottomScreenRect, bottomScreenPaint)
 
+        // Draw existing confirmed bindings with their numbers (1, 2, 3...)
         bindings.forEachIndexed { index, binding ->
             val pointX = bottomScreenRect.left + binding.x * bottomScreenRect.width()
             val pointY = bottomScreenRect.top + binding.y * bottomScreenRect.height()
@@ -122,12 +123,13 @@ class TouchInputBindingView @JvmOverloads constructor(
             )
         }
 
+        // Draw active selection as BLANK (number = 0) while waiting for user to bind a key
         if (selectedX >= 0f && selectedY >= 0f) {
             drawBindingPoint(
                 canvas = canvas,
                 x = selectedX,
                 y = selectedY,
-                number = 0,
+                number = 0, // 0 = Keep blank during selection prompt
                 selected = true
             )
         }
@@ -151,6 +153,7 @@ class TouchInputBindingView @JvmOverloads constructor(
         canvas.drawCircle(x, y, radius, pointOuterPaint)
         canvas.drawCircle(x, y, radius - 3f, pointInnerPaint)
 
+        // Only draw the number inside the circle when a valid number (> 0) exists
         if (number > 0) {
             labelPaint.color = MaterialColors.getColor(
                 this,
@@ -189,10 +192,18 @@ class TouchInputBindingView @JvmOverloads constructor(
     fun setBindings(newBindings: List<TouchInputBinding>) {
         bindings.clear()
         bindings.addAll(newBindings)
+        // Clear temporary point so the new saved binding renders in place
+        selectedX = UNSELECTED_COORDINATE
+        selectedY = UNSELECTED_COORDINATE
 
-        post {
+        if (isAttachedToWindow) {
             updateScreenRect()
             invalidate()
+        } else {
+            post {
+                updateScreenRect()
+                invalidate()
+            }
         }
     }
 
