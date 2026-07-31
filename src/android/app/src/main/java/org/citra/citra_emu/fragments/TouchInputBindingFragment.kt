@@ -196,10 +196,13 @@ class TouchInputBindingFragment : Fragment() {
     // ----------------------------------------------------
 
     private fun setupProfileButtons() {
-        binding.editProfileButton.setOnClickListener { showEditProfileDialog() }
-        binding.deleteProfileButton.setOnClickListener { showDeleteProfileDialog() }
-        binding.addProfileButton.setOnClickListener { showCreateProfileDialog() }
-        binding.deleteAllButton.setOnClickListener { showDeleteAllBindingsDialog() }
+        binding.profileMenuButton.setOnClickListener { view ->
+            showProfileMenu(view)
+        }
+
+        binding.deleteAllButton.setOnClickListener {
+            showDeleteAllBindingsDialog()
+        }
     }
 
     // ----------------------------------------------------
