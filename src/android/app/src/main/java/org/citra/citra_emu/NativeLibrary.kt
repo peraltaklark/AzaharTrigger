@@ -218,8 +218,6 @@ object NativeLibrary {
      */
     external fun updateFramebuffer(isPortrait: Boolean)
 
-    external fun getFramebufferSize(): IntArray?
-
     fun getFramebufferLayout(): IntArray {
         return try {
             getFramebufferLayoutNative()
@@ -227,6 +225,8 @@ object NativeLibrary {
             intArrayOf()
         }
     }
+    
+    private external fun getFramebufferLayoutNative(): IntArray
 
     external fun setCustomLayout(
         topX: Int,
