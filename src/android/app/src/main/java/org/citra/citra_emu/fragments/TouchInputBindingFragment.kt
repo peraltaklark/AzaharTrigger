@@ -15,6 +15,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import org.citra.citra_emu.R
@@ -203,6 +204,37 @@ class TouchInputBindingFragment : Fragment() {
         binding.deleteAllButton.setOnClickListener {
             showDeleteAllBindingsDialog()
         }
+    }
+
+    private fun showProfileMenu(anchor: View) {
+        val popup = PopupMenu(requireContext(), anchor)
+
+        popup.menu.add("Create Profile")
+        popup.menu.add("Rename Profile")
+        popup.menu.add("Delete Profile")
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.title) {
+                "Create Profile" -> {
+                    showCreateProfileDialog()
+                    true
+                }
+
+                "Rename Profile" -> {
+                    showEditProfileDialog()
+                    true
+                }
+
+                "Delete Profile" -> {
+                    showDeleteProfileDialog()
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        popup.show()
     }
 
     // ----------------------------------------------------
