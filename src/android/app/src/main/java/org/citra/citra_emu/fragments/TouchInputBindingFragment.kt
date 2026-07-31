@@ -6,19 +6,21 @@ package org.citra.citra_emu.fragments
 
 import android.os.Bundle
 import android.text.InputType
+import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import org.citra.citra_emu.R
 import org.citra.citra_emu.databinding.FragmentTouchInputBinding
 import org.citra.citra_emu.features.touchinput.TouchInputBinding
@@ -190,8 +192,14 @@ class TouchInputBindingFragment : Fragment() {
     private fun updateProfileSpinner() {
         val profiles = profileManager.getProfiles()
 
-        val adapter = ArrayAdapter(
+        // Pass M3 Popup Theme Context so popup background matches theme container
+        val popupContext = ContextThemeWrapper(
             requireContext(),
+            com.google.android.material.R.style.ThemeOverlay_Material3_PopupMenu
+        )
+
+        val adapter = ArrayAdapter(
+            popupContext,
             android.R.layout.simple_spinner_item,
             profiles
         )
@@ -255,18 +263,16 @@ class TouchInputBindingFragment : Fragment() {
     // ----------------------------------------------------
 
     private fun showCreateProfileDialog() {
-        val input = EditText(requireContext()).apply {
+        val (inputLayout, inputEditText) = createInputField(
             hint = getString(R.string.profile_name)
-        }
+        )
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.create_new_profile)
-            .setView(input)
+            .setView(inputLayout)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val name = input.text.toString().trim()
-                if (name.isEmpty()) {
-                    return@setPositiveButton
-                }
+                val name = inputEditText.text.toString().trim()
+                if (name.isEmpty()) return@setPositiveButton
 
                 if (profileManager.createProfile(name)) {
                     selectProfile(name)
@@ -284,18 +290,17 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     private fun showEditProfileDialog() {
-        val input = EditText(requireContext()).apply {
-            setText(currentProfile)
-        }
+        val (inputLayout, inputEditText) = createInputField(
+            hint = getString(R.string.profile_name),
+            initialText = currentProfile
+        )
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.edit_profile_name)
-            .setView(input)
+            .setView(inputLayout)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val newName = input.text.toString().trim()
-                if (newName.isEmpty() || newName == currentProfile) {
-                    return@setPositiveButton
-                }
+                val newName = inputEditText.text.toString().trim()
+                if (newName.isEmpty() || newName == currentProfile) return@setPositiveButton
 
                 if (profileManager.renameProfile(currentProfile, newName)) {
                     currentProfile = newName
@@ -322,7 +327,7 @@ class TouchInputBindingFragment : Fragment() {
             return
         }
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.delete_profile)
             .setMessage(getString(R.string.delete_profile_confirm, currentProfile))
             .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -341,7 +346,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     private fun showDeleteAllBindingsDialog() {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.delete_all)
             .setMessage(R.string.delete_all_touch_input_confirm)
             .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -367,28 +372,30 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     private fun showEditBindingDialog(touchBinding: TouchInputBinding) {
+        val density = resources.displayMetrics.density
         val container = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            val padding = (24 * resources.displayMetrics.density).toInt()
-            setPadding(padding, padding, padding, padding)
+            val padding = (24 * density).toInt()
+            setPadding(padding, (16 * density).toInt(), padding, 0)
         }
 
-        val xInput = EditText(requireContext()).apply {
-            hint = getString(R.string.x_coordinate)
-            setText(formatCoordinate(touchBinding.x))
+        val (xLayout, xInput) = createInputField(
+            hint = getString(R.string.x_coordinate),
+            initialText = formatCoordinate(touchBinding.x),
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
+            addMarginBottom = true
+        )
+
+        val (yLayout, yInput) = createInputField(
+            hint = getString(R.string.y_coordinate),
+            initialText = formatCoordinate(touchBinding.y),
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        }
+        )
 
-        val yInput = EditText(requireContext()).apply {
-            hint = getString(R.string.y_coordinate)
-            setText(formatCoordinate(touchBinding.y))
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        }
+        container.addView(xLayout)
+        container.addView(yLayout)
 
-        container.addView(xInput)
-        container.addView(yInput)
-
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.edit)
             .setView(container)
             .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -415,7 +422,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     private fun showDeleteBindingDialog(touchBinding: TouchInputBinding) {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.delete)
             .setMessage(R.string.delete_touch_input_confirm)
             .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -430,6 +437,42 @@ class TouchInputBindingFragment : Fragment() {
     // ----------------------------------------------------
     // Helpers
     // ----------------------------------------------------
+
+    private fun createInputField(
+        hint: String,
+        initialText: String = "",
+        inputType: Int = InputType.TYPE_CLASS_TEXT,
+        addMarginBottom: Boolean = false
+    ): Pair<TextInputLayout, TextInputEditText> {
+        val density = resources.displayMetrics.density
+
+        val inputLayout = TextInputLayout(
+            requireContext(),
+            null,
+            com.google.android.material.R.style.Widget_Material3_TextInputLayout_OutlinedBox
+        ).apply {
+            this.hint = hint
+            if (addMarginBottom) {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = (12 * density).toInt()
+                }
+            } else {
+                val padding = (24 * density).toInt()
+                setPadding(padding, (16 * density).toInt(), padding, 0)
+            }
+        }
+
+        val editText = TextInputEditText(inputLayout.context).apply {
+            setText(initialText)
+            this.inputType = inputType
+        }
+
+        inputLayout.addView(editText)
+        return Pair(inputLayout, editText)
+    }
 
     private fun formatCoordinate(value: Float): String {
         return String.format(MASK_COORDINATE_FORMAT, value)
