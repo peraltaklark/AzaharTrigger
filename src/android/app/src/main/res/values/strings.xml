@@ -469,8 +469,7 @@
     <string name="cannot_delete_default_profile">Cannot delete Default profile</string>
     <string name="delete_profile_confirm">Are you sure you want to delete \"%1$s\"?</string>
     <string name="profile_deleted">Profile deleted</string>
-    <string name="edit_touch_input_bindings">Edit your touch input bindings</string>
-    <string name="edit_touch_input_bindings_subtitle">Tap the preview to add a new binding, or tap the ⋮ icon on a binding in the list to edit its coordinates or delete it.</string>
+    <string name="profile_options">Profile options</string>
     <string name="edit">Edit</string>
     <string name="x_coordinate">X Coordinate</string>
     <string name="y_coordinate">Y Coordinate</string>
