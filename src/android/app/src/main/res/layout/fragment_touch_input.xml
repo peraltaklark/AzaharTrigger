@@ -44,7 +44,7 @@
         android:paddingEnd="16dp"
         android:paddingBottom="12dp">
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
@@ -60,9 +60,9 @@
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp" />
 
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/editProfileButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
@@ -81,9 +81,9 @@
                 android:src="@drawable/ic_edit"
                 app:tint="?attr/colorOnSurfaceVariant" />
 
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/deleteProfileButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
@@ -102,9 +102,9 @@
                 android:src="@drawable/ic_delete"
                 app:tint="?attr/colorOnSurfaceVariant" />
 
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/addProfileButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
@@ -122,28 +122,32 @@
                 android:src="@drawable/ic_add"
                 app:tint="?attr/colorOnSurfaceVariant" />
 
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 
     <!-- Touchscreen preview -->
-    <FrameLayout
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
-        android:layout_height="200dp"
+        android:layout_height="220dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="12dp">
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="2dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="?attr/colorOutlineVariant"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer">
 
         <org.citra.citra_emu.features.touchinput.TouchInputBindingView
             android:id="@+id/touchInputBindingView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/bg_touchscreen_preview" />
+            android:layout_height="match_parent" />
 
-    </FrameLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- Instructions -->
-    <androidx.cardview.widget.CardView
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -177,7 +181,7 @@
 
         </LinearLayout>
 
-    </androidx.cardview.widget.CardView>
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- Bindings header -->
     <LinearLayout

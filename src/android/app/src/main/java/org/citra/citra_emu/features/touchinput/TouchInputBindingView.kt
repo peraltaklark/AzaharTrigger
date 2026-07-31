@@ -1,5 +1,5 @@
 // Copyright Citra Emulator Project / Azahar Emulator Project
-// Licensed under GPLv2 or any later version
+// Licensed under GPLv2 or any later version.
 // Refer to the license.txt file included.
 
 package org.citra.citra_emu.features.touchinput
@@ -8,11 +8,11 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Rect
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import com.google.android.material.color.MaterialColors
 import org.citra.citra_emu.NativeLibrary
 import kotlin.math.min
 
@@ -22,24 +22,25 @@ class TouchInputBindingView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     private val bottomScreenRect = RectF()
-    private val textBoundsCache = Rect()
 
     private val bottomScreenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK
         style = Paint.Style.FILL
     }
 
-    private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FF4444")
+    private val pointOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+    }
+
+    private val pointInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        style = Paint.Style.FILL
+        textAlign = Paint.Align.CENTER
         textSize = POINT_LABEL_TEXT_SIZE
         isFakeBoldText = true
-        setShadowLayer(SHADOW_RADIUS, SHADOW_DX, SHADOW_DY, Color.BLACK)
     }
 
     private val bindings = mutableListOf<TouchInputBinding>()
@@ -52,13 +53,9 @@ class TouchInputBindingView @JvmOverloads constructor(
     companion object {
         private const val UNSELECTED_COORDINATE = -1f
         private const val SCREEN_SCALE_FACTOR = 0.8f
-        private const val BINDING_POINT_RADIUS = 14f
-        private const val SELECTED_POINT_RADIUS = 16f
-        private const val LABEL_OFFSET_X = 20f
-        private const val POINT_LABEL_TEXT_SIZE = 28f
-        private const val SHADOW_RADIUS = 3f
-        private const val SHADOW_DX = 1f
-        private const val SHADOW_DY = 1f
+        private const val BINDING_POINT_RADIUS = 18f
+        private const val SELECTED_POINT_RADIUS = 20f
+        private const val POINT_LABEL_TEXT_SIZE = 22f
     }
 
     override fun onSizeChanged(
@@ -75,7 +72,6 @@ class TouchInputBindingView @JvmOverloads constructor(
         if (width <= 0 || height <= 0) return
 
         val layout = NativeLibrary.getFramebufferLayout()
-
         if (layout.size >= 6) {
             val bottomLeft = layout[2]
             val bottomTop = layout[3]
@@ -85,7 +81,7 @@ class TouchInputBindingView @JvmOverloads constructor(
             val bottomWidth = (bottomRight - bottomLeft).toFloat()
             val bottomHeight = (bottomBottom - bottomTop).toFloat()
 
-            if (bottomWidth <= 0f || bottomHeight <= 0f) return
+            if (bottomWidth <= 0 || bottomHeight <= 0) return
 
             val scaleX = (width * SCREEN_SCALE_FACTOR) / bottomWidth
             val scaleY = (height * SCREEN_SCALE_FACTOR) / bottomHeight
@@ -117,21 +113,52 @@ class TouchInputBindingView @JvmOverloads constructor(
             val pointX = bottomScreenRect.left + binding.x * bottomScreenRect.width()
             val pointY = bottomScreenRect.top + binding.y * bottomScreenRect.height()
 
-            canvas.drawCircle(pointX, pointY, BINDING_POINT_RADIUS, pointPaint)
-
-            val label = (index + 1).toString()
-            labelPaint.getTextBounds(label, 0, label.length, textBoundsCache)
-
-            canvas.drawText(
-                label,
-                pointX + LABEL_OFFSET_X,
-                pointY + textBoundsCache.height() / 2f,
-                labelPaint
+            drawBindingPoint(
+                canvas = canvas,
+                x = pointX,
+                y = pointY,
+                number = index + 1,
+                selected = false
             )
         }
 
         if (selectedX >= 0f && selectedY >= 0f) {
-            canvas.drawCircle(selectedX, selectedY, SELECTED_POINT_RADIUS, pointPaint)
+            drawBindingPoint(
+                canvas = canvas,
+                x = selectedX,
+                y = selectedY,
+                number = 0,
+                selected = true
+            )
+        }
+    }
+
+    private fun drawBindingPoint(
+        canvas: Canvas,
+        x: Float,
+        y: Float,
+        number: Int,
+        selected: Boolean
+    ) {
+        val radius = if (selected) SELECTED_POINT_RADIUS else BINDING_POINT_RADIUS
+
+        pointOuterPaint.color = Color.WHITE
+        pointInnerPaint.color = MaterialColors.getColor(
+            this,
+            com.google.android.material.R.attr.colorPrimaryContainer
+        )
+
+        canvas.drawCircle(x, y, radius, pointOuterPaint)
+        canvas.drawCircle(x, y, radius - 3f, pointInnerPaint)
+
+        if (number > 0) {
+            labelPaint.color = MaterialColors.getColor(
+                this,
+                com.google.android.material.R.attr.colorOnPrimaryContainer
+            )
+
+            val textY = y - (labelPaint.ascent() + labelPaint.descent()) / 2f
+            canvas.drawText(number.toString(), x, textY, labelPaint)
         }
     }
 
@@ -148,10 +175,13 @@ class TouchInputBindingView @JvmOverloads constructor(
         selectedY = event.y
         invalidate()
 
-        val normalizedX = ((event.x - bottomScreenRect.left) / bottomScreenRect.width()).coerceIn(0f, 1f)
-        val normalizedY = ((event.y - bottomScreenRect.top) / bottomScreenRect.height()).coerceIn(0f, 1f)
+        val normalizedX = (event.x - bottomScreenRect.left) / bottomScreenRect.width()
+        val normalizedY = (event.y - bottomScreenRect.top) / bottomScreenRect.height()
 
-        onTouchPointSelected?.invoke(normalizedX, normalizedY)
+        onTouchPointSelected?.invoke(
+            normalizedX.coerceIn(0f, 1f),
+            normalizedY.coerceIn(0f, 1f)
+        )
 
         return true
     }
