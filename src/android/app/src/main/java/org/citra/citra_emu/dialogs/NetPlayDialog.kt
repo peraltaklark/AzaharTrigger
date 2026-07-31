@@ -99,11 +99,16 @@ class NetPlayDialog(context: Context) : BottomSheetDialog(context) {
                     listMultiplayer.adapter = adapter
                     adapter.loadMultiplayerMenu()
                     btnLeave.setOnClickListener {
+                        btnLeave.isEnabled = false
                         NetPlayManager.leaveRoom()
                         activeWifiDirectManager?.stop()
                         activeWifiDirectManager = null
-                        dismiss()
-                        NetPlayDialog(context).show()
+
+                        // Give the network thread ~150ms to set state back to disconnected/idle
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            dismiss()
+                            NetPlayDialog(context).show() // Now netPlayIsJoined() will be false, opening the Connect/Create screen!
+                        }, 150)
                     }
                     btnChat.setOnClickListener {
                         ChatDialog(context).show()
