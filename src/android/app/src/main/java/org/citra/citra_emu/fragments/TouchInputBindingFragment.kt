@@ -6,7 +6,6 @@ package org.citra.citra_emu.fragments
 
 import android.os.Bundle
 import android.text.InputType
-import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
@@ -80,7 +79,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     // ----------------------------------------------------
-    // RecyclerView
+    // RecyclerView Setup
     // ----------------------------------------------------
 
     private fun setupBindingRecyclerView() {
@@ -104,7 +103,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     // ----------------------------------------------------
-    // Fragment Result
+    // Fragment Result Listeners
     // ----------------------------------------------------
 
     private fun setupFragmentResultListener() {
@@ -125,7 +124,6 @@ class TouchInputBindingFragment : Fragment() {
             resultListener
         )
 
-        // Clear preview dot selection when user cancels/dismisses bottom sheet dialog
         parentFragmentManager.setFragmentResultListener(
             "touch_binding_cancelled",
             viewLifecycleOwner
@@ -135,7 +133,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     // ----------------------------------------------------
-    // Touch Input Preview
+    // Touch Preview View
     // ----------------------------------------------------
 
     private fun setupTouchInputView() {
@@ -145,7 +143,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     // ----------------------------------------------------
-    // Profiles
+    // Profile Management
     // ----------------------------------------------------
 
     private fun selectProfile(profileName: String) {
@@ -192,14 +190,8 @@ class TouchInputBindingFragment : Fragment() {
     private fun updateProfileSpinner() {
         val profiles = profileManager.getProfiles()
 
-        // Pass M3 Popup Theme Context so popup background matches theme container
-        val popupContext = ContextThemeWrapper(
-            requireContext(),
-            com.google.android.material.R.style.ThemeOverlay_Material3_PopupMenu
-        )
-
         val adapter = ArrayAdapter(
-            popupContext,
+            requireContext(),
             android.R.layout.simple_spinner_item,
             profiles
         )
@@ -214,7 +206,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     // ----------------------------------------------------
-    // Profile Buttons
+    // Profile Actions & Popup Menu
     // ----------------------------------------------------
 
     private fun setupProfileButtons() {
@@ -259,7 +251,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     // ----------------------------------------------------
-    // Profile Dialogs
+    // Material Profile Dialogs
     // ----------------------------------------------------
 
     private fun showCreateProfileDialog() {
@@ -359,7 +351,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     // ----------------------------------------------------
-    // Binding Dialogs
+    // Material Binding Dialogs
     // ----------------------------------------------------
 
     private fun showBindingDialog(x: Float, y: Float) {
@@ -373,17 +365,18 @@ class TouchInputBindingFragment : Fragment() {
 
     private fun showEditBindingDialog(touchBinding: TouchInputBinding) {
         val density = resources.displayMetrics.density
+
         val container = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            val padding = (24 * density).toInt()
-            setPadding(padding, (16 * density).toInt(), padding, 0)
+            val horizontalPadding = (24 * density).toInt()
+            val topPadding = (16 * density).toInt()
+            setPadding(horizontalPadding, topPadding, horizontalPadding, 0)
         }
 
         val (xLayout, xInput) = createInputField(
             hint = getString(R.string.x_coordinate),
             initialText = formatCoordinate(touchBinding.x),
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
-            addMarginBottom = true
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         )
 
         val (yLayout, yInput) = createInputField(
@@ -391,6 +384,9 @@ class TouchInputBindingFragment : Fragment() {
             initialText = formatCoordinate(touchBinding.y),
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         )
+
+        xLayout.setPadding(0, 0, 0, (12 * density).toInt())
+        yLayout.setPadding(0, 0, 0, 0)
 
         container.addView(xLayout)
         container.addView(yLayout)
@@ -435,16 +431,16 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     // ----------------------------------------------------
-    // Helpers
+    // Dynamic View Generators & Helpers
     // ----------------------------------------------------
 
     private fun createInputField(
         hint: String,
         initialText: String = "",
-        inputType: Int = InputType.TYPE_CLASS_TEXT,
-        addMarginBottom: Boolean = false
+        inputType: Int = InputType.TYPE_CLASS_TEXT
     ): Pair<TextInputLayout, TextInputEditText> {
         val density = resources.displayMetrics.density
+        val cornerRadius = 28f * density
 
         val inputLayout = TextInputLayout(
             requireContext(),
@@ -452,17 +448,11 @@ class TouchInputBindingFragment : Fragment() {
             com.google.android.material.R.style.Widget_Material3_TextInputLayout_OutlinedBox
         ).apply {
             this.hint = hint
-            if (addMarginBottom) {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    bottomMargin = (12 * density).toInt()
-                }
-            } else {
-                val padding = (24 * density).toInt()
-                setPadding(padding, (16 * density).toInt(), padding, 0)
-            }
+            setBoxCornerRadii(cornerRadius, cornerRadius, cornerRadius, cornerRadius)
+
+            val horizontalPadding = (24 * density).toInt()
+            val topPadding = (16 * density).toInt()
+            setPadding(horizontalPadding, topPadding, horizontalPadding, 0)
         }
 
         val editText = TextInputEditText(inputLayout.context).apply {
