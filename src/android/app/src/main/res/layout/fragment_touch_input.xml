@@ -43,7 +43,8 @@
         android:layout_marginBottom="12dp"
         app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:cardCornerRadius="20dp"
-        app:cardElevation="1dp">
+        app:cardElevation="1dp"
+        app:strokeWidth="0dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -70,7 +71,8 @@
                     android:id="@+id/profileSpinner"
                     android:layout_width="match_parent"
                     android:layout_height="36dp"
-                    android:layout_marginStart="-8dp" />
+                    android:layout_marginStart="-8dp"
+                    android:popupTheme="?attr/actionBarPopupTheme" />
 
             </LinearLayout>
 
@@ -78,6 +80,8 @@
                 android:id="@+id/profileMenuButton"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/profile_options"
                 android:padding="8dp"
                 android:src="@drawable/ic_overflow_menu"
                 app:tint="?attr/colorOnSurfaceVariant" />
@@ -86,7 +90,7 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Touchscreen preview + instruction -->
+    <!-- Touchscreen Preview + Instructions -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -135,6 +139,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_marginEnd="12dp"
+                    android:contentDescription="@null"
                     android:src="@drawable/ic_touch_input"
                     app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -152,7 +157,7 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Bindings header -->
+    <!-- Bindings Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -184,7 +189,7 @@
 
     </LinearLayout>
 
-    <!-- Binding list -->
+    <!-- Binding List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/bindingList"
         android:layout_width="match_parent"
