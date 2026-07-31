@@ -406,7 +406,7 @@ class EmulationActivity : AppCompatActivity() {
         }
 
         // Custom touch-input axis bindings
-        if (TouchInputBindingManager.onAxisEvent(event)) {
+        if (TouchInputBindingManager.handleAxisMotion(event)) {
             return true
         }
         

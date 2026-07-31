@@ -1,4 +1,4 @@
-// Copyright 2025 Azahar Project
+// Copyright Citra Emulator Project / Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -105,7 +105,7 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     private fun setupTouchInputView() {
-        binding.touchInputBindingView.onTouchPointSelected = { x, y -> showBindingDialog(x, y) }
+        binding.touchInputBindingView.onTouchPointSelected = { x: Float, y: Float -> showBindingDialog(x, y) }
     }
 
     // --- Profile & Persistence Architecture ---

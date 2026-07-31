@@ -135,7 +135,7 @@
         android:layout_marginBottom="12dp">
 
         <org.citra.citra_emu.features.touchinput.TouchInputBindingView
-            android:id="@+id/touchscreenView"
+            android:id="@+id/touchInputBindingView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/bg_touchscreen_preview" />
