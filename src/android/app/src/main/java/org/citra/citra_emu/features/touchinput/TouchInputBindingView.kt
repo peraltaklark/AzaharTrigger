@@ -8,6 +8,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
@@ -22,10 +23,21 @@ class TouchInputBindingView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     private val bottomScreenRect = RectF()
+    private val clipPath = Path()
 
     private val bottomScreenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#F4F4F6")
         style = Paint.Style.FILL
+    }
+
+    private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1f
+    }
+
+    private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.5f * resources.displayMetrics.density
     }
 
     private val pointOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -56,6 +68,11 @@ class TouchInputBindingView @JvmOverloads constructor(
         private const val BINDING_POINT_RADIUS = 18f
         private const val SELECTED_POINT_RADIUS = 20f
         private const val POINT_LABEL_TEXT_SIZE = 22f
+        private const val CORNER_RADIUS_DP = 16f
+
+        // Grid lines density (16 columns x 12 rows)
+        private const val GRID_COLUMNS = 16
+        private const val GRID_ROWS = 12
     }
 
     override fun onSizeChanged(
@@ -99,6 +116,11 @@ class TouchInputBindingView @JvmOverloads constructor(
                 offsetX + scaledWidth,
                 offsetY + scaledHeight
             )
+
+            // Update clip path for rounded corner grid clipping
+            val cornerPx = CORNER_RADIUS_DP * resources.displayMetrics.density
+            clipPath.reset()
+            clipPath.addRoundRect(bottomScreenRect, cornerPx, cornerPx, Path.Direction.CW)
         }
 
         invalidate()
@@ -107,9 +129,22 @@ class TouchInputBindingView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        canvas.drawRect(bottomScreenRect, bottomScreenPaint)
+        val cornerPx = CORNER_RADIUS_DP * resources.displayMetrics.density
 
-        // Draw existing confirmed bindings with their numbers (1, 2, 3...)
+        // 1. Draw rounded bottom screen background
+        canvas.drawRoundRect(bottomScreenRect, cornerPx, cornerPx, bottomScreenPaint)
+
+        // 2. Draw subtle grid pattern clipped inside rounded rectangle
+        drawGrid(canvas)
+
+        // 3. Draw rounded grey outline stroke
+        outlinePaint.color = MaterialColors.getColor(
+            this,
+            com.google.android.material.R.attr.colorOutlineVariant
+        )
+        canvas.drawRoundRect(bottomScreenRect, cornerPx, cornerPx, outlinePaint)
+
+        // 4. Draw existing confirmed bindings with their numbers (1, 2, 3...)
         bindings.forEachIndexed { index, binding ->
             val pointX = bottomScreenRect.left + binding.x * bottomScreenRect.width()
             val pointY = bottomScreenRect.top + binding.y * bottomScreenRect.height()
@@ -123,7 +158,7 @@ class TouchInputBindingView @JvmOverloads constructor(
             )
         }
 
-        // Draw active selection as BLANK (number = 0) while waiting for user to bind a key
+        // 5. Draw active selection as BLANK (number = 0) while waiting for user to bind a key
         if (selectedX >= 0f && selectedY >= 0f) {
             drawBindingPoint(
                 canvas = canvas,
@@ -133,6 +168,36 @@ class TouchInputBindingView @JvmOverloads constructor(
                 selected = true
             )
         }
+    }
+
+    private fun drawGrid(canvas: Canvas) {
+        gridPaint.color = MaterialColors.getColor(
+            this,
+            com.google.android.material.R.attr.colorOutlineVariant
+        )
+        gridPaint.alpha = 55 // Subtle grid intensity
+
+        canvas.save()
+        canvas.clipPath(clipPath)
+
+        val width = bottomScreenRect.width()
+        val height = bottomScreenRect.height()
+
+        // Draw Vertical Grid Lines
+        val columnWidth = width / GRID_COLUMNS
+        for (i in 1 until GRID_COLUMNS) {
+            val x = bottomScreenRect.left + (i * columnWidth)
+            canvas.drawLine(x, bottomScreenRect.top, x, bottomScreenRect.bottom, gridPaint)
+        }
+
+        // Draw Horizontal Grid Lines
+        val rowHeight = height / GRID_ROWS
+        for (i in 1 until GRID_ROWS) {
+            val y = bottomScreenRect.top + (i * rowHeight)
+            canvas.drawLine(bottomScreenRect.left, y, bottomScreenRect.right, y, gridPaint)
+        }
+
+        canvas.restore()
     }
 
     private fun drawBindingPoint(
