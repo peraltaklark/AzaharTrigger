@@ -24,7 +24,7 @@ class TouchInputBindingView @JvmOverloads constructor(
     private val bottomScreenRect = RectF()
 
     private val bottomScreenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK
+        color = Color.parseColor("#F4F4F6")
         style = Paint.Style.FILL
     }
 
@@ -189,7 +189,11 @@ class TouchInputBindingView @JvmOverloads constructor(
     fun setBindings(newBindings: List<TouchInputBinding>) {
         bindings.clear()
         bindings.addAll(newBindings)
-        invalidate()
+
+        post {
+            updateScreenRect()
+            invalidate()
+        }
     }
 
     fun clearSelection() {
