@@ -74,12 +74,6 @@
             </LinearLayout>
 
             <ImageView
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:src="@drawable/ic_arrow_drop_down"
-                app:tint="?attr/colorOnSurfaceVariant"/>
-
-            <ImageView
                 android:id="@+id/profileMenuButton"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -141,7 +135,7 @@
                     android:layout_height="24dp"
                     android:layout_marginEnd="12dp"
                     android:src="@drawable/ic_touch_input"
-                    app:tint="?attr/colorPrimary" />
+                    app:tint="?attr/colorOnSurfaceVariant"/>
 
                 <TextView
                     android:layout_width="0dp"
