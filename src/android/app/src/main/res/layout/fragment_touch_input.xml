@@ -3,8 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="?attr/colorSurface">
+    android:background="?attr/colorSurface"
+    android:orientation="vertical">
 
     <!-- Header -->
     <LinearLayout
@@ -20,30 +20,30 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/edit_touch_input_bindings"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorOnSurface" />
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/edit_touch_input_bindings_subtitle"
-            android:textSize="14sp"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="14sp" />
 
     </LinearLayout>
 
-    <!-- Profile -->
+    <!-- Profile Card -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="72dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="12dp"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:cardCornerRadius="20dp"
-        app:cardElevation="1dp"
-        app:cardBackgroundColor="?attr/colorSurfaceContainer">
+        app:cardElevation="1dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -62,14 +62,15 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Profile"
-                    android:textSize="14sp"
-                    android:textColor="?attr/colorPrimary" />
+                    android:text="@string/profile"
+                    android:textColor="?attr/colorPrimaryContainer"
+                    android:textSize="14sp" />
 
                 <Spinner
                     android:id="@+id/profileSpinner"
                     android:layout_width="match_parent"
-                    android:layout_height="36dp"/>
+                    android:layout_height="36dp"
+                    android:layout_marginStart="-8dp" />
 
             </LinearLayout>
 
@@ -79,7 +80,7 @@
                 android:layout_height="40dp"
                 android:padding="8dp"
                 android:src="@drawable/ic_overflow_menu"
-               app:tint="?attr/colorOnSurfaceVariant"/>
+                app:tint="?attr/colorOnSurfaceVariant" />
 
         </LinearLayout>
 
@@ -92,11 +93,11 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="12dp"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:cardCornerRadius="20dp"
         app:cardElevation="2dp"
-        app:strokeWidth="1dp"
         app:strokeColor="?attr/colorOutlineVariant"
-        app:cardBackgroundColor="?attr/colorSurfaceContainer">
+        app:strokeWidth="1dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -123,8 +124,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:gravity="center_vertical"
+                android:orientation="horizontal"
                 android:paddingStart="16dp"
                 android:paddingTop="10dp"
                 android:paddingEnd="16dp"
@@ -135,15 +136,15 @@
                     android:layout_height="24dp"
                     android:layout_marginEnd="12dp"
                     android:src="@drawable/ic_touch_input"
-                    app:tint="?attr/colorOnSurfaceVariant"/>
+                    app:tint="?attr/colorOnSurfaceVariant" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Tap anywhere in the preview to create a new mapping."
-                    android:textSize="13sp"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:text="@string/touch_input_instruction"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="13sp" />
 
             </LinearLayout>
 
@@ -157,8 +158,8 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:paddingStart="16dp"
-        android:paddingEnd="16dp"
         android:paddingTop="4dp"
+        android:paddingEnd="16dp"
         android:paddingBottom="4dp">
 
         <TextView
@@ -166,20 +167,20 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/touch_input_bindings"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            android:textStyle="bold" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/deleteAllButton"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
             android:minHeight="36dp"
             android:text="@string/delete_all"
-            android:textColor="?attr/colorError"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            android:textColor="?attr/colorError" />
 
     </LinearLayout>
 
@@ -192,6 +193,6 @@
         android:clipToPadding="false"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="16dp"/>
+        android:paddingBottom="16dp" />
 
 </LinearLayout>
