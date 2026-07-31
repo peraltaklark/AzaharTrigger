@@ -7,6 +7,7 @@ package org.citra.citra_emu.fragments
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
+import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
@@ -38,6 +39,10 @@ class TouchInputBindingFragment : Fragment() {
     companion object {
         private const val DEFAULT_PROFILE = "Default"
         private const val MASK_COORDINATE_FORMAT = "%.3f"
+
+        private const val MENU_CREATE_PROFILE = Menu.FIRST
+        private const val MENU_RENAME_PROFILE = Menu.FIRST + 1
+        private const val MENU_DELETE_PROFILE = Menu.FIRST + 2
     }
 
     override fun onCreateView(
@@ -117,6 +122,14 @@ class TouchInputBindingFragment : Fragment() {
             viewLifecycleOwner,
             resultListener
         )
+
+        // Clear preview dot selection when user cancels/dismisses bottom sheet dialog
+        parentFragmentManager.setFragmentResultListener(
+            "touch_binding_cancelled",
+            viewLifecycleOwner
+        ) { _, _ ->
+            binding.touchInputBindingView.clearSelection()
+        }
     }
 
     // ----------------------------------------------------
@@ -209,23 +222,23 @@ class TouchInputBindingFragment : Fragment() {
     private fun showProfileMenu(anchor: View) {
         val popup = PopupMenu(requireContext(), anchor)
 
-        popup.menu.add("Create Profile")
-        popup.menu.add("Rename Profile")
-        popup.menu.add("Delete Profile")
+        popup.menu.add(Menu.NONE, MENU_CREATE_PROFILE, 1, getString(R.string.create_profile))
+        popup.menu.add(Menu.NONE, MENU_RENAME_PROFILE, 2, getString(R.string.rename_profile))
+        popup.menu.add(Menu.NONE, MENU_DELETE_PROFILE, 3, getString(R.string.delete_profile))
 
         popup.setOnMenuItemClickListener { item ->
-            when (item.title) {
-                "Create Profile" -> {
+            when (item.itemId) {
+                MENU_CREATE_PROFILE -> {
                     showCreateProfileDialog()
                     true
                 }
 
-                "Rename Profile" -> {
+                MENU_RENAME_PROFILE -> {
                     showEditProfileDialog()
                     true
                 }
 
-                "Delete Profile" -> {
+                MENU_DELETE_PROFILE -> {
                     showDeleteProfileDialog()
                     true
                 }
@@ -261,7 +274,7 @@ class TouchInputBindingFragment : Fragment() {
                 } else {
                     Toast.makeText(
                         requireContext(),
-                        "Profile already exists",
+                        getString(R.string.profile_already_exists),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -276,7 +289,7 @@ class TouchInputBindingFragment : Fragment() {
         }
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Edit Profile Name")
+            .setTitle(R.string.edit_profile_name)
             .setView(input)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val newName = input.text.toString().trim()
@@ -290,7 +303,7 @@ class TouchInputBindingFragment : Fragment() {
                 } else {
                     Toast.makeText(
                         requireContext(),
-                        "Profile name already exists",
+                        getString(R.string.profile_name_already_exists),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -303,22 +316,22 @@ class TouchInputBindingFragment : Fragment() {
         if (currentProfile == DEFAULT_PROFILE) {
             Toast.makeText(
                 requireContext(),
-                "Cannot delete Default profile",
+                getString(R.string.cannot_delete_default_profile),
                 Toast.LENGTH_SHORT
             ).show()
             return
         }
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Delete Profile")
-            .setMessage("Are you sure you want to delete \"$currentProfile\"?")
+            .setTitle(R.string.delete_profile)
+            .setMessage(getString(R.string.delete_profile_confirm, currentProfile))
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 if (profileManager.deleteProfile(currentProfile)) {
                     selectProfile(DEFAULT_PROFILE)
                     updateProfileSpinner()
                     Toast.makeText(
                         requireContext(),
-                        "Profile deleted",
+                        getString(R.string.profile_deleted),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -392,7 +405,7 @@ class TouchInputBindingFragment : Fragment() {
                 } else {
                     Toast.makeText(
                         requireContext(),
-                        "Invalid coordinates (0.0 - 1.0)",
+                        getString(R.string.invalid_coordinates),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
