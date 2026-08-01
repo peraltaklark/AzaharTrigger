@@ -188,6 +188,11 @@ class NetPlayDialog(context: Context) : BottomSheetDialog(context) {
                         if (preferredGameList.none { it.id == gameId }) {
                             preferredGameList.add(PreferredGame(gameName, gameId))
                         }
+
+                        if (gameNameList.none { it == gameName }) {
+                            gameNameList.add(gameName)
+                            gameIdList.add(gameId)
+                        }
                     }
 
                     btnCreate.setOnClickListener {
