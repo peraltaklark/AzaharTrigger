@@ -843,12 +843,30 @@ void RoomMember::Unbind(CallbackHandle<T> handle) {
 }
 
 void RoomMember::Leave() {
+    if (!room_member_impl->loop_thread)
+        return;
+
     room_member_impl->SetState(State::Idle);
-    room_member_impl->loop_thread->join();
+
+    {
+        std::lock_guard lock(room_member_impl->network_mutex);
+
+        if (room_member_impl->server) {
+            enet_peer_disconnect(room_member_impl->server, 0);
+            enet_host_flush(room_member_impl->client);
+        }
+    }
+
+    if (room_member_impl->loop_thread->joinable()) {
+        room_member_impl->loop_thread->join();
+    }
+
     room_member_impl->loop_thread.reset();
 
-    enet_host_destroy(room_member_impl->client);
-    room_member_impl->client = nullptr;
+    if (room_member_impl->client) {
+        enet_host_destroy(room_member_impl->client);
+        room_member_impl->client = nullptr;
+    }
 }
 
 template void RoomMember::Unbind(CallbackHandle<WifiPacket>);
