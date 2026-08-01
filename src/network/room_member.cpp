@@ -139,8 +139,6 @@ public:
      */
     void Disconnect();
 
-    ~RoomMemberImpl();
-
     template <typename T>
     void Invoke(const T& data);
 
@@ -659,24 +657,11 @@ RoomMember::CallbackHandle<T> RoomMember::RoomMemberImpl::Bind(
 }
 
 // RoomMember
-RoomMember::RoomMemberImpl::~RoomMemberImpl() {
-    SetState(State::Idle);
-    if (loop_thread && loop_thread->joinable()) {
-        try {
-            loop_thread->join();
-        } catch (const std::system_error&) {}
-        loop_thread.reset();
-    }
-    if (client) {
-        enet_host_destroy(client);
-        client = nullptr;
-    }
-}
-
 RoomMember::RoomMember() : room_member_impl{std::make_unique<RoomMemberImpl>()} {}
 
 RoomMember::~RoomMember() {
-    if (room_member_impl && room_member_impl->loop_thread) {
+    ASSERT_MSG(!IsConnected(), "RoomMember is being destroyed while connected");
+    if (room_member_impl->loop_thread) {
         Leave();
     }
 }
@@ -859,20 +844,11 @@ void RoomMember::Unbind(CallbackHandle<T> handle) {
 
 void RoomMember::Leave() {
     room_member_impl->SetState(State::Idle);
+    room_member_impl->loop_thread->join();
+    room_member_impl->loop_thread.reset();
 
-    if (room_member_impl->loop_thread && room_member_impl->loop_thread->joinable()) {
-        try {
-            room_member_impl->loop_thread->join();
-        } catch (const std::system_error& e) {
-            // Catch native thread join crashes
-        }
-        room_member_impl->loop_thread.reset();
-    }
-
-    if (room_member_impl->client) {
-        enet_host_destroy(room_member_impl->client);
-        room_member_impl->client = nullptr;
-    }
+    enet_host_destroy(room_member_impl->client);
+    room_member_impl->client = nullptr;
 }
 
 template void RoomMember::Unbind(CallbackHandle<WifiPacket>);
