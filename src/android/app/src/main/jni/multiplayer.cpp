@@ -1,529 +1,391 @@
-// Copyright 2024 Mandarine Project
-// Licensed under GPLv2 or any later version
-// Refer to the license.txt file included.
+package org.citra.citra_emu.overlay
 
-#include <chrono>
-#include <thread>
-#include <network/network_settings.h>
-#include "common/logging/log.h"
-#include "core/core.h"
-#include "core/hle/service/cfg/cfg.h"
-#include "id_cache.h"
-#include "jni/android_common/android_common.h"
-#include "multiplayer.h"
-#include "network/announce_multiplayer_session.h"
+import android.content.Context
+import android.graphics.Color
+import android.os.Handler
+import android.os.Looper
+import android.util.TypedValue
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import org.citra.citra_emu.R
+import org.citra.citra_emu.dialogs.ChatDialog
+import org.citra.citra_emu.features.settings.model.IntSetting
+import org.citra.citra_emu.utils.NetPlayManager
 
-AndroidMultiplayer::AndroidMultiplayer(Core::System& system_,
-                                       std::shared_ptr<Network::AnnounceMultiplayerSession> session)
-    : system{system_}, announce_multiplayer_session(session), melon_lan_adapter(nullptr) {}
-
-AndroidMultiplayer::~AndroidMultiplayer() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->Shutdown();
+/**
+ * Manages the chat overlay UI for netplay sessions.
+ * Handles displaying messages, auto-hiding, button positioning, and drag functionality.
+ */
+class ChatOverlayManager(
+    private val chatContainer: View,
+    private val chatRecycler: RecyclerView,
+    private val chatButton: FloatingActionButton,
+    private val context: Context
+) {
+    
+    // ==================== PROPERTIES ====================
+    
+    /** Adapter for displaying chat messages */
+    private val chatAdapter = ChatOverlayAdapter()
+    
+    /** Handler for main thread operations */
+    private val mainHandler = Handler(Looper.getMainLooper())
+    
+    /** Runnable for auto-hiding chat container */
+    private var autoHideRunnable: Runnable? = null
+    
+    // ==================== INIT ====================
+    
+    init {
+        setupRecyclerView()
+        setupChatButton()
+        setupNetPlayListener()
+        updateChatButtonVisibility()
+        loadSettings()
     }
-}
-
-void AndroidMultiplayer::AddNetPlayMessage(jint type, jstring msg) {
-    IDCache::GetEnvForThread()->CallStaticVoidMethod(IDCache::GetNativeLibraryClass(),
-                                                     IDCache::GetAddNetPlayMessage(), type, msg);
-}
-
-void AndroidMultiplayer::AddNetPlayMessage(int type, const std::string& msg) {
-    JNIEnv* env = IDCache::GetEnvForThread();
-    AddNetPlayMessage(type, ToJString(env, msg));
-}
-
-void AndroidMultiplayer::ClearChat() {
-    IDCache::GetEnvForThread()->CallStaticVoidMethod(IDCache::GetNativeLibraryClass(),
-                                                     IDCache::ClearChat());
-}
-
-bool AndroidMultiplayer::NetworkInit() {
-    bool result = Network::Init();
-
-    if (!result) {
-        return false;
+    
+    // ==================== SETUP METHODS ====================
+    
+    /**
+     * Initializes the RecyclerView with layout manager and adapter
+     */
+    private fun setupRecyclerView() {
+        chatRecycler.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = chatAdapter
+        }
     }
-
-    if (auto member = Network::GetRoomMember().lock()) {
-        // register the network structs to use in slots and signals
-        member->BindOnStateChanged([this](const Network::RoomMember::State& state) {
-            if (state == Network::RoomMember::State::Joined ||
-                state == Network::RoomMember::State::Moderator) {
-                NetPlayStatus status;
-                std::string msg;
-                switch (state) {
-                case Network::RoomMember::State::Joined:
-                    status = NetPlayStatus::ROOM_JOINED;
-                    break;
-                case Network::RoomMember::State::Moderator:
-                    status = NetPlayStatus::ROOM_MODERATOR;
-                    break;
-                default:
-                    return;
+    
+    /**
+     * Configures the chat button click listener and drag functionality
+     */
+    private fun setupChatButton() {
+        chatButton.setOnClickListener {
+            ChatDialog(context).show()
+        }
+        setupDraggableChatButton()
+        chatButton.visibility = if (NetPlayManager.netPlayIsJoined()) View.VISIBLE else View.GONE
+    }
+    
+    /**
+     * Sets up the NetPlay message listener to receive chat messages
+     */
+    private fun setupNetPlayListener() {
+        NetPlayManager.setOnMessageReceivedListener { type, msg ->
+            (context as? android.app.Activity)?.runOnUiThread {
+                if (!NetPlayManager.netPlayIsJoined()) {
+                    clearAllMessages()
+                    updateChatButtonVisibility()
+                    return@runOnUiThread
                 }
-                AddNetPlayMessage(static_cast<int>(status), msg);
+                displayNewMessage(type, msg)
+                updateChatButtonVisibility()
             }
-        });
-        member->BindOnError([this](const Network::RoomMember::Error& error) {
-            NetPlayStatus status;
-            std::string msg;
-            switch (error) {
-            case Network::RoomMember::Error::LostConnection:
-                status = NetPlayStatus::LOST_CONNECTION;
-                break;
-            case Network::RoomMember::Error::HostKicked:
-                status = NetPlayStatus::HOST_KICKED;
-                break;
-            case Network::RoomMember::Error::UnknownError:
-                status = NetPlayStatus::UNKNOWN_ERROR;
-                break;
-            case Network::RoomMember::Error::NameCollision:
-                status = NetPlayStatus::NAME_COLLISION;
-                break;
-            case Network::RoomMember::Error::MacCollision:
-                status = NetPlayStatus::MAC_COLLISION;
-                break;
-            case Network::RoomMember::Error::WrongVersion:
-                status = NetPlayStatus::WRONG_VERSION;
-                break;
-            case Network::RoomMember::Error::WrongPassword:
-                status = NetPlayStatus::WRONG_PASSWORD;
-                break;
-            case Network::RoomMember::Error::CouldNotConnect:
-                status = NetPlayStatus::COULD_NOT_CONNECT;
-                break;
-            case Network::RoomMember::Error::RoomIsFull:
-                status = NetPlayStatus::ROOM_IS_FULL;
-                break;
-            case Network::RoomMember::Error::HostBanned:
-                status = NetPlayStatus::HOST_BANNED;
-                break;
-            case Network::RoomMember::Error::PermissionDenied:
-                status = NetPlayStatus::PERMISSION_DENIED;
-                break;
-            case Network::RoomMember::Error::NoSuchUser:
-                status = NetPlayStatus::NO_SUCH_USER;
-                break;
-            case Network::RoomMember::Error::ConsoleIdCollision:
-                status = NetPlayStatus::CONSOLE_ID_COLLISION;
-                break;
-            }
-            AddNetPlayMessage(static_cast<int>(status), msg);
-        });
-        member->BindOnStatusMessageReceived(
-            [this](const Network::StatusMessageEntry& status_message) {
-                NetPlayStatus status = NetPlayStatus::NO_ERROR;
-                std::string msg(status_message.nickname);
-                switch (status_message.type) {
-                case Network::IdMemberJoin:
-                    status = NetPlayStatus::MEMBER_JOIN;
-                    break;
-                case Network::IdMemberLeave:
-                    status = NetPlayStatus::MEMBER_LEAVE;
-                    break;
-                case Network::IdMemberKicked:
-                    status = NetPlayStatus::MEMBER_KICKED;
-                    break;
-                case Network::IdMemberBanned:
-                    status = NetPlayStatus::MEMBER_BANNED;
-                    break;
-                case Network::IdAddressUnbanned:
-                    status = NetPlayStatus::ADDRESS_UNBANNED;
-                    break;
+        }
+    }
+    
+    // ==================== SETTINGS METHODS ====================
+    
+    /**
+     * Loads saved settings from preferences and applies them
+     */
+    private fun loadSettings() {
+        applyTextSize(IntSetting.CHAT_TEXT_SIZE.int.toFloat())
+        applyBackgroundOpacity(IntSetting.CHAT_BACKGROUND_OPACITY.int)
+        applyFabOpacity(IntSetting.CHAT_FAB_OPACITY.int)
+        applyFabSize(IntSetting.CHAT_FAB_SIZE.int)
+        applyShadowRadius(IntSetting.CHAT_SHADOW_RADIUS.int.toFloat())
+    }
+    
+    /**
+     * Applies text size to chat messages
+     * @param size Text size in SP
+     */
+    private fun applyTextSize(size: Float) {
+        chatAdapter.setTextSize(size)
+    }
+    
+    /**
+     * Applies background opacity to the chat container
+     * @param opacity Opacity percentage (0-100)
+     */
+    private fun applyBackgroundOpacity(opacity: Int) {
+        val alpha = opacity / 100f
+        val backgroundColor = Color.argb((alpha * 255).toInt(), 0, 0, 0)
+        chatContainer.setBackgroundColor(backgroundColor)
+    }
+    
+    /**
+     * Applies opacity to the FAB button
+     * @param opacity Opacity percentage (0-100)
+     */
+    private fun applyFabOpacity(opacity: Int) {
+        chatButton.alpha = opacity / 100f
+    }
+    
+    /**
+     * Applies size to the FAB button
+     * @param sizeDp Size in DP
+     */
+    private fun applyFabSize(sizeDp: Int) {
+        val sizePx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            sizeDp.toFloat(),
+            context.resources.displayMetrics
+        ).toInt()
+        val layoutParams = chatButton.layoutParams
+        layoutParams.width = sizePx
+        layoutParams.height = sizePx
+        chatButton.layoutParams = layoutParams
+        chatButton.requestLayout()
+    }
+    
+    /**
+     * Applies shadow radius to chat messages
+     * @param radius Shadow radius in pixels
+     */
+    private fun applyShadowRadius(radius: Float) {
+        chatAdapter.setShadowRadius(radius)
+    }
+    
+    // ==================== PUBLIC METHODS ====================
+    
+    /**
+     * Displays a new chat message in the overlay
+     * @param type Message type from NetPlayManager.NetPlayStatus
+     * @param msg The message content
+     */
+    fun displayNewMessage(type: Int, msg: String) {
+        val formattedMessage = formatMessageByType(type, msg)
+        chatAdapter.add(formattedMessage)
+        showChatContainer()
+        scrollToLatestMessage()
+        scheduleAutoHide()
+    }
+    
+    /**
+     * Clears all chat messages and hides the overlay
+     */
+    fun clearAllMessages() {
+        mainHandler.removeCallbacksAndMessages(null)
+        autoHideRunnable?.let { mainHandler.removeCallbacks(it) }
+        chatAdapter.clear()
+        chatContainer.clearAnimation()
+        chatContainer.animate().cancel()
+        chatContainer.alpha = 1f
+        chatContainer.visibility = View.GONE
+    }
+    
+    /**
+     * Updates the chat button visibility based on netplay status
+     */
+    fun updateChatButtonVisibility() {
+        val isNetPlayActive = NetPlayManager.netPlayIsJoined()
+        chatButton.visibility = if (isNetPlayActive) View.VISIBLE else View.GONE
+        if (!isNetPlayActive) {
+            clearAllMessages()
+        }
+    }
+    
+    /**
+     * Called when the fragment resumes - refreshes chat state
+     */
+    fun onFragmentResume() {
+        updateChatButtonVisibility()
+        loadSettings()
+    }
+    
+    /**
+     * Returns the chat adapter for external access if needed
+     * @return The ChatOverlayAdapter instance
+     */
+    fun getChatAdapter(): ChatOverlayAdapter = chatAdapter
+    
+    /**
+     * Cleans up resources when the fragment is destroyed
+     */
+    fun cleanup() {
+        NetPlayManager.setOnMessageReceivedListener(null)
+        clearAllMessages()
+    }
+    
+    // ==================== PRIVATE HELPER METHODS ====================
+    
+    /**
+     * Formats the message with appropriate prefix based on message type
+     * @param type Message type from NetPlayManager.NetPlayStatus
+     * @param msg The original message
+     * @return Formatted message string
+     */
+    private fun formatMessageByType(type: Int, msg: String): String {
+        return when (type) {
+            NetPlayManager.NetPlayStatus.CHAT_MESSAGE -> msg
+            NetPlayManager.NetPlayStatus.MEMBER_JOIN -> "➕ $msg"
+            NetPlayManager.NetPlayStatus.MEMBER_LEAVE -> "➖ $msg"
+            NetPlayManager.NetPlayStatus.MEMBER_KICKED -> "❌ $msg"
+            NetPlayManager.NetPlayStatus.MEMBER_BANNED -> "🚫 $msg"
+            else -> msg
+        }
+    }
+    
+    /**
+     * Makes the chat button draggable within its parent bounds
+     */
+    private fun setupDraggableChatButton() {
+        var initialTouchX = 0f
+        var initialTouchY = 0f
+        var isDragging = false
+
+        chatButton.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    isDragging = false
+                    true
                 }
-                AddNetPlayMessage(static_cast<int>(status), msg);
-            });
-        member->BindOnChatMessageRecieved([this](const Network::ChatEntry& chat) {
-            NetPlayStatus status = NetPlayStatus::CHAT_MESSAGE;
-            std::string msg(chat.nickname);
-            msg += ": ";
-            msg += chat.message;
-            AddNetPlayMessage(static_cast<int>(status), msg);
-        });
-        member->BindOnRoomInformationChanged([this](const Network::RoomInformation&) {
-            AddNetPlayMessage(static_cast<int>(NetPlayStatus::ROOM_INFORMATION_UPDATED), "");
-        });
-    }
-
-    return true;
-}
-
-NetPlayStatus AndroidMultiplayer::NetPlayCreateRoom(const std::string& ipaddress, int port,
-                                                    const std::string& username,
-                                                    const std::string& preferedGameName,
-                                                    const u64& preferedGameId,
-                                                    const std::string& password,
-                                                    const std::string& room_name, int max_players) {
-
-    auto member = Network::GetRoomMember().lock();
-    if (!member) {
-        return NetPlayStatus::NETWORK_ERROR;
-    }
-
-    if (member->GetState() == Network::RoomMember::State::Joining || member->IsConnected()) {
-        return NetPlayStatus::ALREADY_IN_ROOM;
-    }
-
-    auto room = Network::GetRoom().lock();
-    if (!room) {
-        return NetPlayStatus::NETWORK_ERROR;
-    }
-
-    if (room_name.length() < 3 || room_name.length() > 20) {
-        return NetPlayStatus::CREATE_ROOM_ERROR;
-    }
-
-    // Use the ipaddress passed from the Android frontend instead of ""
-    if (!room->Create(room_name, "", ipaddress, port, password, std::min(max_players, 16),
-                      NetSettings::values.citra_username, preferedGameName, preferedGameId,
-                      std::make_unique<Network::VerifyUser::NullBackend>(), {})) {
-        return NetPlayStatus::CREATE_ROOM_ERROR;
-    }
-
-    // Get the actual IP address from the room information
-    std::string server_address = room->GetRoomInformation().address;
-
-    std::string join_address = server_address;
-    if (join_address.empty() || join_address == "0.0.0.0") {
-        join_address = "127.0.0.1";
-    }
-
-    // Failsafe timer to avoid joining before creation
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    member->Join(username, Service::CFG::GetConsoleIdHash(system), join_address.c_str(), port, 0,
-                 Network::NoPreferredMac, password);
-
-    // Failsafe timer to avoid joining before creation
-    for (int i = 0; i < 5; i++) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        if (member->GetState() == Network::RoomMember::State::Joined ||
-            member->GetState() == Network::RoomMember::State::Moderator) {
-            return NetPlayStatus::NO_ERROR;
-        }
-    }
-
-    // If join failed while room is created, clean up the room
-    room->Destroy();
-    return NetPlayStatus::CREATE_ROOM_ERROR;
-}
-
-NetPlayStatus AndroidMultiplayer::NetPlayJoinRoom(const std::string& ipaddress, int port,
-                                                  const std::string& username,
-                                                  const std::string& password) {
-    auto member = Network::GetRoomMember().lock();
-    if (!member) {
-        return NetPlayStatus::NETWORK_ERROR;
-    }
-
-    if (member->GetState() == Network::RoomMember::State::Joining || member->IsConnected()) {
-        return NetPlayStatus::ALREADY_IN_ROOM;
-    }
-
-    member->Join(username, Service::CFG::GetConsoleIdHash(system), ipaddress.c_str(), port, 0,
-                 Network::NoPreferredMac, password);
-
-    // Wait a bit for the connection and join process to complete
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    if (member->GetState() == Network::RoomMember::State::Joined ||
-        member->GetState() == Network::RoomMember::State::Moderator) {
-        return NetPlayStatus::NO_ERROR;
-    }
-
-    if (!member->IsConnected()) {
-        return NetPlayStatus::COULD_NOT_CONNECT;
-    }
-
-    return NetPlayStatus::WRONG_PASSWORD;
-}
-
-void AndroidMultiplayer::NetPlaySendMessage(const std::string& msg) {
-    if (auto room = Network::GetRoomMember().lock()) {
-        if (room->GetState() != Network::RoomMember::State::Joined &&
-            room->GetState() != Network::RoomMember::State::Moderator) {
-
-            return;
-        }
-        room->SendChatMessage(msg);
-    }
-}
-
-void AndroidMultiplayer::NetPlayKickUser(const std::string& username) {
-    if (auto room = Network::GetRoomMember().lock()) {
-        auto members = room->GetMemberInformation();
-        auto it = std::find_if(members.begin(), members.end(),
-                               [&username](const Network::RoomMember::MemberInformation& member) {
-                                   return member.nickname == username;
-                               });
-        if (it != members.end()) {
-            room->SendModerationRequest(Network::RoomMessageTypes::IdModKick, username);
-        }
-    }
-}
-
-void AndroidMultiplayer::NetPlayBanUser(const std::string& username) {
-    if (auto room = Network::GetRoomMember().lock()) {
-        auto members = room->GetMemberInformation();
-        auto it = std::find_if(members.begin(), members.end(),
-                               [&username](const Network::RoomMember::MemberInformation& member) {
-                                   return member.nickname == username;
-                               });
-        if (it != members.end()) {
-            room->SendModerationRequest(Network::RoomMessageTypes::IdModBan, username);
-        }
-    }
-}
-
-void AndroidMultiplayer::NetPlayUnbanUser(const std::string& username) {
-    if (auto room = Network::GetRoomMember().lock()) {
-        room->SendModerationRequest(Network::RoomMessageTypes::IdModUnban, username);
-    }
-}
-
-std::vector<std::string> AndroidMultiplayer::NetPlayRoomInfo() {
-    std::vector<std::string> info_list;
-    if (auto room = Network::GetRoomMember().lock()) {
-        auto members = room->GetMemberInformation();
-        if (!members.empty()) {
-            // name, max players, address, and port
-            auto room_info = room->GetRoomInformation();
-            const auto& address = room->GetServerAddress();
-            info_list.push_back(room_info.name + "|" + std::to_string(room_info.member_slots) +
-                                "|" + address + "|" + std::to_string(room_info.port));
-            // all members
-            for (const auto& member : members) {
-                info_list.push_back(member.nickname + "|" + std::to_string(member.game_info.id) +
-                                    "|" + member.game_info.name);
+                MotionEvent.ACTION_MOVE -> {
+                    val deltaX = kotlin.math.abs(event.rawX - initialTouchX)
+                    val deltaY = kotlin.math.abs(event.rawY - initialTouchY)
+                    if (deltaX > 8 || deltaY > 8) {
+                        isDragging = true
+                    }
+                    if (isDragging) {
+                        val parent = view.parent as View
+                        view.x = (event.rawX + view.x - initialTouchX)
+                            .coerceIn(0f, (parent.width - view.width).toFloat())
+                        view.y = (event.rawY + view.y - initialTouchY)
+                            .coerceIn(0f, (parent.height - view.height).toFloat())
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!isDragging) {
+                        view.performClick()
+                    }
+                    true
+                }
+                else -> false
             }
         }
     }
-    return info_list;
-}
-
-bool AndroidMultiplayer::NetPlayIsJoined() {
-    auto member = Network::GetRoomMember().lock();
-    if (!member) {
-        return false;
+    
+    /**
+     * Shows the chat container with full opacity
+     */
+    private fun showChatContainer() {
+        chatContainer.visibility = View.VISIBLE
+        chatContainer.alpha = 1f
     }
-
-    return (member->GetState() == Network::RoomMember::State::Joined ||
-            member->GetState() == Network::RoomMember::State::Moderator);
-}
-
-bool AndroidMultiplayer::NetPlayIsHostedRoom() {
-    if (auto room = Network::GetRoom().lock()) {
-        return room->GetState() == Network::Room::State::Open;
+    
+    /**
+     * Scrolls the RecyclerView to show the latest message
+     */
+    private fun scrollToLatestMessage() {
+        chatRecycler.scrollToPosition(chatAdapter.itemCount - 1)
     }
-    return false;
-}
-
-void AndroidMultiplayer::NetPlayLeaveRoom() {
-    LOG_INFO(Network, "NetPlayLeaveRoom called");
-
-    auto room = Network::GetRoom().lock();
-    if (!room) {
-        LOG_ERROR(Network, "No room exists");
-        return;
-    }
-
-    auto member = Network::GetRoomMember().lock();
-    if (!member) {
-        LOG_ERROR(Network, "No room member exists");
-    } else {
-        LOG_INFO(Network, "Leaving room member");
-        member->Leave();
-    }
-
-    ClearChat();
-
-    if (room->GetState() == Network::Room::State::Open) {
-        LOG_INFO(Network, "Destroying hosted room");
-        room->Destroy();
-    }
-}
-
-void AndroidMultiplayer::NetworkShutdown() {
-    Network::Shutdown();
-}
-
-bool AndroidMultiplayer::NetPlayIsModerator() {
-    auto member = Network::GetRoomMember().lock();
-    if (!member) {
-        return false;
-    }
-    return member->GetState() == Network::RoomMember::State::Moderator;
-}
-
-std::vector<std::string> AndroidMultiplayer::NetPlayGetPublicRooms() {
-    std::vector<std::string> room_list;
-
-    if (auto session = announce_multiplayer_session.lock()) {
-        auto rooms = session->GetRoomList();
-        for (const auto& room : rooms) {
-            std::string name = room.name;
-            std::string description = room.description;
-            std::string owner = room.owner;
-            std::string preferred_game = room.preferred_game;
-
-            std::replace(name.begin(), name.end(), '|', '-');
-            std::replace(description.begin(), description.end(), '|', '-');
-            std::replace(owner.begin(), owner.end(), '|', '-');
-            std::replace(preferred_game.begin(), preferred_game.end(), '|', '-');
-
-            room_list.push_back(name + "|" + (room.has_password ? "1" : "0") + "|" +
-                                std::to_string(room.max_player) + "|" + room.ip + "|" +
-                                std::to_string(room.port) + "|" + description + "|" + owner + "|" +
-                                std::to_string(room.preferred_game_id) + "|" + preferred_game);
-
-            for (const auto& member : room.members) {
-                std::string username = member.username;
-                std::string nickname = member.nickname;
-                std::string game_name = member.game_name;
-
-                std::replace(username.begin(), username.end(), '|', '-');
-                std::replace(nickname.begin(), nickname.end(), '|', '-');
-                std::replace(game_name.begin(), game_name.end(), '|', '-');
-
-                room_list.push_back("MEMBER|" + name + "|" + username + "|" + nickname + "|" +
-                                    std::to_string(member.game_id) + "|" + game_name);
-            }
+    
+    /**
+     * Schedules the chat container to auto-hide after 10 seconds
+     */
+    private fun scheduleAutoHide() {
+        mainHandler.removeCallbacksAndMessages(null)
+        autoHideRunnable = Runnable {
+            chatContainer.animate()
+                .alpha(0f)
+                .setDuration(300)
+                .withEndAction {
+                    chatContainer.visibility = View.GONE
+                    chatContainer.alpha = 1f
+                }
         }
-    }
-    return room_list;
-}
-
-std::vector<std::string> AndroidMultiplayer::NetPlayGetBanList() {
-    std::vector<std::string> ban_list;
-    if (auto room = Network::GetRoom().lock()) {
-        auto [username_bans, ip_bans] = room->GetBanList();
-
-        // Add username bans
-        for (const auto& username : username_bans) {
-            ban_list.push_back(username);
-        }
-
-        // Add IP bans
-        for (const auto& ip : ip_bans) {
-            ban_list.push_back(ip);
-        }
-    }
-    return ban_list;
-}
-
-// melonDS LAN compatibility implementations
-
-bool AndroidMultiplayer::MelonLANInit() {
-    if (!melon_lan_adapter) {
-        melon_lan_adapter = std::make_unique<Network::MelonLANAdapter>();
-    }
-    return melon_lan_adapter->Init();
-}
-
-void AndroidMultiplayer::MelonLANShutdown() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->Shutdown();
-        melon_lan_adapter.reset();
+        mainHandler.postDelayed(autoHideRunnable!!, 10000)
     }
 }
 
-bool AndroidMultiplayer::MelonLANStartDiscovery() {
-    if (!melon_lan_adapter) {
-        return false;
-    }
-    return melon_lan_adapter->StartDiscovery();
-}
+/**
+ * Adapter for displaying chat messages in the overlay RecyclerView.
+ * Handles message storage, text formatting, and view binding.
+ */
+class ChatOverlayAdapter : RecyclerView.Adapter<ChatOverlayAdapter.ChatViewHolder>() {
+    
+    /** List of chat messages */
+    private val messages = mutableListOf<String>()
+    
+    /** Current text size in SP */
+    private var textSize = 14f
+    
+    /** Current shadow radius in pixels */
+    private var shadowRadius = 2f
 
-void AndroidMultiplayer::MelonLANStopDiscovery() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->StopDiscovery();
-    }
-}
-
-std::vector<std::string> AndroidMultiplayer::MelonLANGetDiscoveryList() {
-    if (!melon_lan_adapter) {
-        return {};
-    }
-
-    auto discovery_list = melon_lan_adapter->GetDiscoveryList();
-    std::vector<std::string> result;
-
-    for (const auto& [addr, data] : discovery_list) {
-        // Format: "IP|RoomName|GameName|NumPlayers|MaxPlayers|HasPassword|InGame"
-        char ip_str[INET_ADDRSTRLEN];
-        struct in_addr in_addr;
-        in_addr.s_addr = htonl(addr);
-        inet_ntop(AF_INET, &in_addr, ip_str, INET_ADDRSTRLEN);
-
-        std::string entry = std::string(ip_str) + "|" + data.SessionName + "|" + "" +
-                            "|" + // GameName not available in MelonDiscoveryData
-                            std::to_string(data.NumPlayers) + "|" +
-                            std::to_string(data.MaxPlayers) + "|" + std::to_string(false) +
-                            "|" + // HasPassword not available in MelonDiscoveryData
-                            std::to_string(data.Status); // Status instead of InGame
-        result.push_back(entry);
+    /**
+     * ViewHolder for chat message items
+     */
+    class ChatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val textView: TextView = itemView.findViewById(R.id.chat_overlay_message_text)
     }
 
-    return result;
-}
-
-bool AndroidMultiplayer::MelonLANStartHost(const std::string& player_name, int max_players) {
-    if (!melon_lan_adapter) {
-        return false;
-    }
-    return melon_lan_adapter->StartHost(player_name, max_players);
-}
-
-bool AndroidMultiplayer::MelonLANStartClient(const std::string& player_name,
-                                             const std::string& host_address) {
-    if (!melon_lan_adapter) {
-        return false;
-    }
-    return melon_lan_adapter->StartClient(player_name, host_address);
-}
-
-void AndroidMultiplayer::MelonLANEndSession() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->EndSession();
-    }
-}
-
-std::vector<std::string> AndroidMultiplayer::MelonLANGetPlayerList() {
-    if (!melon_lan_adapter) {
-        return {};
+    /**
+     * Creates a new ViewHolder for chat messages
+     */
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_chat_overlay, parent, false)
+        return ChatViewHolder(view)
     }
 
-    auto players = melon_lan_adapter->GetPlayerList();
-    std::vector<std::string> result;
-
-    for (const auto& player : players) {
-        // Format: "ID|Name|Status|Address|Ping"
-        std::string entry = std::to_string(player.ID) + "|" + player.Name + "|" +
-                            std::to_string(player.Status) + "|" + std::to_string(player.Address) +
-                            "|" + std::to_string(player.Ping);
-        result.push_back(entry);
+    /**
+     * Binds message data to the ViewHolder
+     */
+    override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
+        holder.textView.text = messages[position]
+        holder.textView.textSize = textSize
+        holder.textView.setShadowLayer(shadowRadius, 1f, 1f, Color.BLACK)
     }
 
-    return result;
-}
+    /**
+     * Returns the total number of messages
+     */
+    override fun getItemCount(): Int = messages.size
 
-void AndroidMultiplayer::MelonLANProcess() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->Process();
+    /**
+     * Adds a new message to the list
+     * @param message The message to add
+     */
+    fun add(message: String) {
+        messages.add(message)
+        notifyItemInserted(messages.size - 1)
     }
-}
 
-bool AndroidMultiplayer::MelonLANIsActive() {
-    if (!melon_lan_adapter) {
-        return false;
+    /**
+     * Clears all messages from the list
+     */
+    fun clear() {
+        messages.clear()
+        notifyDataSetChanged()
     }
-    return melon_lan_adapter->IsActive();
-}
 
-bool AndroidMultiplayer::MelonLANIsHost() {
-    if (!melon_lan_adapter) {
-        return false;
+    /**
+     * Sets the text size for all messages
+     * @param size Text size in SP
+     */
+    fun setTextSize(size: Float) {
+        textSize = size
+        notifyDataSetChanged()
     }
-    return melon_lan_adapter->IsHost();
+
+    /**
+     * Sets the shadow radius for all messages
+     * @param radius Shadow radius in pixels
+     */
+    fun setShadowRadius(radius: Float) {
+        shadowRadius = radius
+        notifyDataSetChanged()
+    }
 }
