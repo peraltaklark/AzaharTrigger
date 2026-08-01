@@ -45,15 +45,13 @@ import org.citra.citra_emu.utils.GameHelper
 import org.citra.citra_emu.utils.NetPlayManager
 import org.citra.citra_emu.utils.WifiDirectManager
 
-class NetPlayDialog(
-    context: Context,
-    private val isLeaving: Boolean = false
-) : BottomSheetDialog(context) {
+class NetPlayDialog(context: Context) : BottomSheetDialog(context) {
     private lateinit var adapter: NetPlayAdapter
 
     private val preferredGameList = mutableListOf<PreferredGame>()
     private val gameNameList = mutableListOf<String>()
     private val gameIdList = mutableListOf<Long>()
+    private var selectedPreferredGame = 0
 
     companion object {
         // Kept alive across NetPlayDialog instances: the Wi-Fi Direct group must remain up
@@ -77,7 +75,7 @@ class NetPlayDialog(
     class WifiDirectBroadcastRcv : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val device = intent?.getParcelableExtra<WifiP2pDevice>(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)
-            thisDeviceName = device?.deviceName ?: "This Device"
+            thisDeviceName = device?.deviceName!!
         }
     }
 
@@ -85,14 +83,14 @@ class NetPlayDialog(
         super.onCreate(savedInstanceState)
 
         val intentFilter = IntentFilter(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
-        val receiver = WifiDirectBroadcastRcv()
+        val receiver = WifiDirectBroadcastRcv();
         registerReceiver(context, receiver, intentFilter, RECEIVER_NOT_EXPORTED)
 
         behavior.state = BottomSheetBehavior.STATE_EXPANDED
         behavior.skipCollapsed = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
         when {
-            !isLeaving && NetPlayManager.netPlayIsJoined() -> DialogMultiplayerLobbyBinding.inflate(layoutInflater)
+            NetPlayManager.netPlayIsJoined() -> DialogMultiplayerLobbyBinding.inflate(layoutInflater)
                 .apply {
                     setContentView(root)
                     adapter = NetPlayAdapter()
@@ -104,7 +102,6 @@ class NetPlayDialog(
                         activeWifiDirectManager?.stop()
                         activeWifiDirectManager = null
                         dismiss()
-                        NetPlayDialog(context, isLeaving = true).show()
                     }
                     btnChat.setOnClickListener {
                         ChatDialog(context).show()
@@ -118,7 +115,7 @@ class NetPlayDialog(
                     }
 
                 }
-            !isLeaving && NetPlayManager.melonLANIsActive() -> DialogMultiplayerLobbyBinding.inflate(layoutInflater)
+            NetPlayManager.melonLANIsActive() -> DialogMultiplayerLobbyBinding.inflate(layoutInflater)
                 .apply {
                     setContentView(root)
                     textTitle.text = context.getString(R.string.multiplayer_melon_lobby)
@@ -133,7 +130,6 @@ class NetPlayDialog(
                     btnLeave.setOnClickListener {
                         NetPlayManager.leaveRoom()
                         dismiss()
-                        NetPlayDialog(context, isLeaving = true).show()
                     }
 
                     // Refresh player list periodically
@@ -177,8 +173,22 @@ class NetPlayDialog(
                         override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
                     })
 
-                    // Populate game lists BEFORE showing the room dialog
-                    populateGameLists()
+                    // Prepare the game list in case a user tries to create a room
+
+                    preferredGameList.add(PreferredGame("%none%", -1))
+
+                    // Prepare the game list in case a user tries to create a room.
+                    // Always seed with a "None" option first so the dropdown is never empty.
+                    gameNameList.add(context.getString(R.string.multiplayer_no_preferred_game))
+                    gameIdList.add(-1L)
+                    for (game in GameHelper.cachedGameList) {
+                        val gameName = game.title
+                        val gameId = game.titleId
+
+                        if (preferredGameList.none { it.id == gameId }) {
+                            preferredGameList.add(PreferredGame(gameName, gameId))
+                        }
+                    }
 
                     btnCreate.setOnClickListener {
                         showNetPlayInputDialog(true)
@@ -211,31 +221,6 @@ class NetPlayDialog(
                         dismiss()
                     }
                 }
-            }
-        }
-    }
-
-    private fun populateGameLists() {
-        preferredGameList.clear()
-        gameNameList.clear()
-        gameIdList.clear()
-
-        preferredGameList.add(PreferredGame("%none%", -1))
-        gameNameList.add(context.getString(R.string.multiplayer_no_preferred_game))
-        gameIdList.add(-1L)
-
-        for (game in GameHelper.cachedGameList) {
-            val gameName = game.title
-            val gameId = game.titleId
-
-            if (preferredGameList.none { it.id == gameId }) {
-                preferredGameList.add(PreferredGame(gameName, gameId))
-            }
-            if (gameNameList.none { it == gameName }) {
-                gameNameList.add(gameName)
-            }
-            if (gameIdList.none { it == gameId }) {
-                gameIdList.add(gameId)
             }
         }
     }
@@ -328,6 +313,11 @@ class NetPlayDialog(
             NetPlayDialog(context).show()
         }
 
+        // On cancel/error: tear down the group immediately and clear the reference.
+        // On success: leave the group alive � the multiplayer session runs over it.
+        // On cancel/error: tear down the group immediately and clear the reference.
+        // On success: leave the group alive � the multiplayer session runs over it.
+        //             The reference is kept in activeWifiDirectManager until the lobby is left.
         dialog.setOnDismissListener {
             if (!connectionSucceeded) {
                 wifiDirectManager.stop()
@@ -494,8 +484,13 @@ class NetPlayDialog(
         val activity = CompatUtils.findActivity(context)
         val dialog = BottomSheetDialog(activity)
 
+        dialog.setOnDismissListener {
+            NetPlayDialog(context).show()
+        }
+
         dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
         dialog.behavior.skipCollapsed = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
 
         val binding = DialogMultiplayerRoomBinding.inflate(LayoutInflater.from(activity))
         dialog.setContentView(binding.root)
@@ -512,17 +507,17 @@ class NetPlayDialog(
         binding.ipPort.setText(NetPlayManager.getRoomPort(activity))
         binding.username.setText(NetPlayManager.getUsername(activity))
 
-        // Ensure lists are fresh before attaching adapter
-        if (gameNameList.isEmpty()) {
-            populateGameLists()
-        }
-
-        // Attach populated adapter to AutoCompleteTextView
-        val gameAdapter = ArrayAdapter(activity, R.layout.dropdown_item, gameNameList)
         binding.dropdownPreferedGameName.apply {
-            setAdapter(gameAdapter)
+            setAdapter(
+                ArrayAdapter(
+                    activity,
+                    R.layout.dropdown_item,
+                    gameNameList
+                )
+            )
             if (isCreateRoom) {
-                var selectedIndex = 0 // default index 0 is "%none%"
+                // Default to the running game if it is in the cached list, otherwise "None".
+                var selectedIndex = 0 // index 0 is always "None"
                 if (NativeLibrary.isRunning()) {
                     val runningTitleId = NativeLibrary.getRunningTitleId()
                     if (runningTitleId != 0L) {
@@ -530,11 +525,14 @@ class NetPlayDialog(
                         if (idx != -1) selectedIndex = idx
                     }
                 }
-                if (gameNameList.isNotEmpty()) {
-                    setText(gameNameList[selectedIndex], false)
-                }
+                setText(gameNameList[selectedIndex], false)
             }
         }
+        selectedPreferredGame = 0
+        binding.dropdownPreferedGameName.setText(
+            binding.dropdownPreferedGameName.adapter.getItem(selectedPreferredGame) as String,
+            false
+        )
 
         binding.preferedGameName.visibility = if (isCreateRoom) View.VISIBLE else View.GONE
         binding.roomName.visibility = if (isCreateRoom) View.VISIBLE else View.GONE
@@ -559,7 +557,7 @@ class NetPlayDialog(
             val preferedGameId = run {
                 val index = gameNameList.indexOfFirst { it == preferedGameName }
                 val id = if (index != -1) gameIdList[index] else -1L
-                if (id == -1L) 0L else id
+                if (id == -1L) 0L else id  // convert "None" sentinel to 0 (no preference)
             }
             val password = binding.password.text.toString()
             val port = portStr.toIntOrNull() ?: run {
@@ -639,9 +637,13 @@ class NetPlayDialog(
         binding.listMultiplayer.layoutManager = LinearLayoutManager(context)
         binding.listMultiplayer.adapter = adapter
 
+        // Start discovery
         NetPlayManager.melonLANStartDiscovery()
+
+        // Load initial list
         adapter.loadDiscoveryList()
 
+        // Refresh periodically
         val handler = Handler(Looper.getMainLooper())
         val refreshRunnable = object : Runnable {
             override fun run() {
@@ -681,6 +683,7 @@ class NetPlayDialog(
             else R.string.multiplayer_melon_join
         )
 
+        // Hide Citra-specific fields
         binding.preferedGameName.visibility = View.GONE
         binding.roomName.visibility = View.GONE
         binding.maxPlayersContainer.visibility = if (isHost) View.VISIBLE else View.GONE
@@ -693,9 +696,9 @@ class NetPlayDialog(
             if (isHost) NetPlayManager.getIpAddressByWifi(activity)
             else ""
         )
-        binding.ipPort.visibility = View.GONE
+        binding.ipPort.visibility = View.GONE // melonDS uses fixed port
         binding.username.setText(NetPlayManager.getUsername(activity))
-        binding.password.visibility = View.GONE
+        binding.password.visibility = View.GONE // melonDS LAN doesn't use passwords
 
         binding.btnConfirm.setOnClickListener {
             binding.btnConfirm.isEnabled = false
@@ -813,6 +816,7 @@ class NetPlayDialog(
         val dialog = BottomSheetDialog(activity)
 
         dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+        dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
         dialog.behavior.skipCollapsed = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
         val binding = DialogMultiplayerRoomBinding.inflate(LayoutInflater.from(activity))
@@ -820,6 +824,7 @@ class NetPlayDialog(
 
         binding.textTitle.text = activity.getString(R.string.multiplayer_melon_join)
 
+        // Hide Citra-specific fields
         binding.preferedGameName.visibility = View.GONE
         binding.roomName.visibility = View.GONE
         binding.maxPlayersContainer.visibility = View.GONE
