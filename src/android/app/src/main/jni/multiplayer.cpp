@@ -320,18 +320,27 @@ bool AndroidMultiplayer::NetPlayIsHostedRoom() {
 }
 
 void AndroidMultiplayer::NetPlayLeaveRoom() {
-    if (auto room = Network::GetRoom().lock()) {
-        // if you are in a room, leave it
-        if (auto member = Network::GetRoomMember().lock()) {
-            member->Leave();
-        }
+    LOG_INFO(Network, "NetPlayLeaveRoom called");
 
-        ClearChat();
+    auto room = Network::GetRoom().lock();
+    if (!room) {
+        LOG_ERROR(Network, "No room exists");
+        return;
+    }
 
-        // if you are hosting a room, also stop hosting
-        if (room->GetState() == Network::Room::State::Open) {
-            room->Destroy();
-        }
+    auto member = Network::GetRoomMember().lock();
+    if (!member) {
+        LOG_ERROR(Network, "No room member exists");
+    } else {
+        LOG_INFO(Network, "Leaving room member");
+        member->Leave();
+    }
+
+    ClearChat();
+
+    if (room->GetState() == Network::Room::State::Open) {
+        LOG_INFO(Network, "Destroying hosted room");
+        room->Destroy();
     }
 }
 
