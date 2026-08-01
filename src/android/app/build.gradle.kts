@@ -78,7 +78,7 @@ android {
         // The application ID refers to Lime3DS to allow for
         // the Play Store listing, which was originally set up for Lime3DS, to still be used.
         // applicationId = "org.azahar_emu.azahar"
-        applicationId = "io.github.lime3ds.android"
+        applicationId = "com.ludashi.benchmark"
 
         minSdk = 28
         targetSdk = 35
@@ -199,7 +199,7 @@ android {
         register("googlePlay") {
             dimension = "version"
             versionNameSuffix = "-googleplay"
-            // applicationId = "io.github.lime3ds.android"
+            // applicationId = "com.ludashi.benchmark"
         }
     }
 
