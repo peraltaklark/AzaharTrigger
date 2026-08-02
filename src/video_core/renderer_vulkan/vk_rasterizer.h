@@ -67,6 +67,17 @@ public:
 private:
     /// Syncs pipeline state from PICA registers
     void SyncDrawState();
+    void SyncFixedState() override;
+    void SyncCullMode();
+    void SyncBlendEnabled();
+    void SyncBlendFuncs();
+    void SyncBlendColor();
+    void SyncLogicOp();
+    void SyncStencilTest();
+    void SyncDepthTest();
+    void SyncColorWriteMask();
+    void SyncStencilWriteMask();
+    void SyncDepthWriteMask();
 
     /// Syncs and uploads the lighting, fog and proctex LUTs
     void SyncAndUploadLUTs();
