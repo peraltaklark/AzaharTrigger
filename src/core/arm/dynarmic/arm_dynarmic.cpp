@@ -14,7 +14,7 @@
 #include "core/arm/dynarmic/arm_tick_counts.h"
 #include "core/core.h"
 #include "core/core_timing.h"
-#include "core/settings.h"
+#include "common/settings.h"
 #ifdef ENABLE_GDBSTUB
 #include "core/gdbstub/gdbstub.h"
 #endif
