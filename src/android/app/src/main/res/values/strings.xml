@@ -3,7 +3,7 @@
 <resources>
 
 	<!-- General application strings -->
-	<string name="app_name" translatable="false">AzaharTrigger</string>
+	<string name="app_name" translatable="false">AzaharTrigger Ludashi</string>
 	<string name="app_disclaimer">
 		This software will run applications for the Nintendo 3DS handheld game console. No game titles are included.\n\nBefore you can begin with emulating, please select a folder to store Azahar\'s user data in.\n\nWhat\'s this:\n<a href='https://web.archive.org/web/20240304193549/https://github.com/citra-emu/citra/wiki/Citra-Android-user-data-and-storage'>Wiki - Citra Android user data and storage</a>
 	</string>
@@ -479,6 +479,8 @@
     <string name="reduce_downcount_slice">Reduce Downcount Slice</string>
     <string name="reduce_downcount_slice_description">Reduces core timing downcount to a smaller time slice, reducing CPU usage. This may improve performance in some games.</string>
 	<string name="priority_boost_starved_threads">Priority Boost Starved Threads</string>
+    <string name="use_fastmem">Use Fastmem</string>
+    <string name="use_fastmem_description">Enable direct memory access for JIT (faster, disable if crashing)</string>
     <string name="priority_boost_starved_threads_description">Boost low priority starved threads during kernel rescheduling. This may improve the performance.</string>
 	<string name="adreno_gpu_boost">Adreno GPU Boost (Experimental)</string>
 	<string name="adreno_gpu_boost_description">Increases graphics throughput on supported devices, improving performance. Use of this setting can increase power usage and temperature. May cause stability issues on certain devices.</string>

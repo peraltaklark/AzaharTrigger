@@ -2116,6 +2116,15 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
                     BooleanSetting.PRIORITY_BOOST_STARVED_THREADS.defaultValue
                 )
             )
+            add(
+                SwitchSetting(
+                    BooleanSetting.USE_FASTMEM,
+                    R.string.use_fastmem,
+                    R.string.use_fastmem_description,
+                    BooleanSetting.USE_FASTMEM.key,
+                    BooleanSetting.USE_FASTMEM.defaultValue
+                )
+            )
         }
     }
 

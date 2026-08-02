@@ -82,6 +82,11 @@ enum class BooleanSetting(
         Settings.SECTION_DEBUG,
         true
     ),
+    USE_FASTMEM(
+        SettingKeys.use_fastmem(),
+        Settings.SECTION_DEBUG,
+        true
+    ),
     REQUIRED_ONLINE_LLE_MODULES(
         SettingKeys.enable_required_online_lle_modules(),
         Settings.SECTION_SYSTEM,
