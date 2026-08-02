@@ -1671,24 +1671,6 @@ void NWM_UDS::BeaconBroadcastCallback(std::uintptr_t user_data, s64 cycles_late)
     if (connection_status.status != NetworkStatus::ConnectedAsHost)
         return;
 
-    // ================= KEEPALIVE (INSERT HERE) =================
-    if (keepalive_enabled) {
-        keepalive_tick++;
-
-        if (keepalive_tick % 2 == 0) { // ~1 second depending on beacon interval
-            Network::WifiPacket keepalive;
-            keepalive.type = Network::WifiPacket::PacketType::Data;
-            keepalive.channel = network_channel;
-            keepalive.destination_address = Network::BroadcastMac;
-
-            // tiny harmless payload (does not affect UDS logic)
-            keepalive.data = std::vector<u8>{0x00};
-
-            SendPacket(keepalive);
-        }
-    }
-    // ==========================================================
-
     std::vector<u8> frame = GenerateBeaconFrame(network_info, node_info, probe_oui, probe_data);
 
     using Network::WifiPacket;
