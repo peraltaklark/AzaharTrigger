@@ -32,9 +32,21 @@ using VideoCore::SurfaceType;
 using namespace Common::Literals;
 using namespace Pica::Shader::Generator;
 
+#if defined(__ANDROID__)
+constexpr u64 STREAM_BUFFER_SIZE = 128_MiB;
+#else
 constexpr u64 STREAM_BUFFER_SIZE = 64_MiB;
+#endif
+#if defined(__ANDROID__)
+constexpr u64 UNIFORM_BUFFER_SIZE = 16_MiB;
+#else
 constexpr u64 UNIFORM_BUFFER_SIZE = 8_MiB;
+#endif
+#if defined(__ANDROID__)
+constexpr u64 TEXTURE_BUFFER_SIZE = 4_MiB;
+#else
 constexpr u64 TEXTURE_BUFFER_SIZE = 2_MiB;
+#endif
 
 constexpr vk::BufferUsageFlags BUFFER_USAGE =
     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer;

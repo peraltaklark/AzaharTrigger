@@ -108,7 +108,7 @@ vk::CommandBuffer CommandPool::Commit() {
 }
 
 constexpr u32 DESCRIPTOR_SET_BATCH = 64;
-constexpr u32 DESCRIPTOR_MULTIPLIER = 4; // Increase capacity of each pool
+constexpr u32 DESCRIPTOR_MULTIPLIER = 8; // Increase capacity of each pool
 
 DescriptorHeap::DescriptorHeap(const Instance& instance, MasterSemaphore* master_semaphore,
                                std::span<const vk::DescriptorSetLayoutBinding> bindings,
