@@ -693,6 +693,8 @@ public:
     /// Unregisters page table for rasterizer cache marking
     void UnregisterPageTable(std::shared_ptr<PageTable> page_table);
 
+    uintptr_t GetFastmemArenaBase(const std::shared_ptr<PageTable>& page_table) const;
+
     /// Gets pointer to DSP shared memory with given offset
     u8* GetDspMemory(std::size_t offset) const;
 

@@ -361,6 +361,14 @@ std::unique_ptr<Dynarmic::A32::Jit> ARM_Dynarmic::MakeJit() {
     config.processor_id = GetID();
     config.global_monitor = &exclusive_monitor.monitor;
 
+#if defined(__ANDROID__) && defined(__aarch64__)
+    {
+        const uintptr_t arena_base = memory.GetFastmemArenaBase(current_page_table);
+        if (arena_base != 0) {
+            config.fastmem_pointer = arena_base;
+        }
+    }
+#endif
     return std::make_unique<Dynarmic::A32::Jit>(config);
 }
 
