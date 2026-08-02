@@ -1115,6 +1115,11 @@ void MemorySystem::RasterizerMarkRegionCached(PAddr start, u32 size, bool cached
                                         ? PageType::RasterizerCachedMemory
                                         : PageType::RasterizerCachedMemoryWatchpoint;
                         page_table->pointers[vaddr >> CITRA_PAGE_BITS] = nullptr;
+#if defined(__ANDROID__) && defined(__aarch64__)
+                        if (page_table == impl->fastmem_page_table) {
+                            impl->arena.Unmap(vaddr & ~CITRA_PAGE_MASK, CITRA_PAGE_SIZE);
+                        }
+#endif
                         break;
                     default:
                         UNREACHABLE();
@@ -1133,8 +1138,16 @@ void MemorySystem::RasterizerMarkRegionCached(PAddr start, u32 size, bool cached
                                         : PageType::MemoryWatchpoint;
 
                         if (page_type == PageType::Memory) {
-                            page_table->pointers[vaddr >> CITRA_PAGE_BITS] =
-                                GetPointerForRasterizerCache(vaddr & ~CITRA_PAGE_MASK);
+                            auto mem_ref = GetPointerForRasterizerCache(vaddr & ~CITRA_PAGE_MASK);
+                            page_table->pointers[vaddr >> CITRA_PAGE_BITS] = mem_ref;
+#if defined(__ANDROID__) && defined(__aarch64__)
+                            if (page_table == impl->fastmem_page_table) {
+                                std::size_t backing_offset = 0;
+                                if (impl->ResolveBackingOffset(mem_ref.GetPtr(), CITRA_PAGE_SIZE, backing_offset)) {
+                                    impl->arena.Map(vaddr & ~CITRA_PAGE_MASK, backing_offset, CITRA_PAGE_SIZE);
+                                }
+                            }
+#endif
                         }
                         break;
                     }
