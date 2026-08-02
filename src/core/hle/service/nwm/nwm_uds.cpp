@@ -363,7 +363,6 @@ void NWM_UDS::HandleSecureDataPacket(const Network::WifiPacket& packet) {
     const auto secure_data = ParseSecureDataHeader(packet.data);
     std::scoped_lock lock{connection_status_mutex, system.Kernel().GetHLELock()};
 
-    last_packet_time = std::chrono::steady_clock::now();
     if (connection_status.status == NetworkStatus::ConnectedAsHost) {
         auto node_it = node_map.find(packet.transmitter_address);
         if (node_it != node_map.end())
@@ -622,8 +621,8 @@ void NWM_UDS::ShutdownHLE() {
     initialized = false;
 
     system.CoreTiming().UnscheduleEvent(heartbeat_event, 0);
-    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
     system.CoreTiming().UnscheduleEvent(reconnect_event, 0);
+    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
     for (auto& bind_node : channel_data) {
         bind_node.second.event->Signal();
     }
@@ -1139,7 +1138,6 @@ Result NWM_UDS::DestroyNetworkHLE() {
     // Unschedule the beacon broadcast event.
     system.CoreTiming().UnscheduleEvent(beacon_broadcast_event, 0);
     system.CoreTiming().UnscheduleEvent(heartbeat_event, 0);
-    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
 
     // Only a host can destroy
     std::scoped_lock lock(connection_status_mutex);
@@ -1476,8 +1474,8 @@ void NWM_UDS::ConnectToNetworkDeprecated(Kernel::HLERequestContext& ctx) {
 
 ResultStatus NWM_UDS::DisconnectNetworkHLE() {
     system.CoreTiming().UnscheduleEvent(heartbeat_event, 0);
-    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
     system.CoreTiming().UnscheduleEvent(reconnect_event, 0);
+    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
     using Network::WifiPacket;
     WifiPacket deauth;
     {
@@ -1698,11 +1696,11 @@ void NWM_UDS::SendHeartbeat() {
     hb.type = Network::WifiPacket::PacketType::Data;
     if (connection_status.status == NetworkStatus::ConnectedAsHost) {
         hb.destination_address = Network::BroadcastMac;
-        hb.data = GenerateDataPayload({0x00}, HEARTBEAT_CHANNEL, BroadcastNetworkNodeId,
+        hb.data = GenerateDataPayload(std::vector<u8>{0x00}, HEARTBEAT_CHANNEL, BroadcastNetworkNodeId,
                                        connection_status.network_node_id, 0);
     } else {
         hb.destination_address = network_info.host_mac_address;
-        hb.data = GenerateDataPayload({0x00}, HEARTBEAT_CHANNEL, HostDestNodeId,
+        hb.data = GenerateDataPayload(std::vector<u8>{0x00}, HEARTBEAT_CHANNEL, HostDestNodeId,
                                        connection_status.network_node_id, 0);
     }
     SendPacket(hb);
@@ -1730,7 +1728,7 @@ void NWM_UDS::HandleConnectionLost() {
             connection_status_event->Signal();
         }
         system.CoreTiming().ScheduleEvent(
-            msToCycles(static_cast<s64>(RECONNECT_DELAY.count())), reconnect_event, 0);
+            msToCycles(static_cast<int>(RECONNECT_DELAY.count())), reconnect_event, 0);
     } else {
         reconnect_attempts = 0;
     }
@@ -1763,7 +1761,7 @@ void NWM_UDS::CleanupTimedOutClients() {
 
 void NWM_UDS::ScheduleHeartbeat() {
     system.CoreTiming().ScheduleEvent(
-        msToCycles(static_cast<s64>(HEARTBEAT_INTERVAL.count())), heartbeat_event, 0);
+        msToCycles(static_cast<int>(HEARTBEAT_INTERVAL.count())), heartbeat_event, 0);
 }
 
 void NWM_UDS::ScheduleHealthCheck() {
@@ -1776,7 +1774,7 @@ void NWM_UDS::HeartbeatCallback(std::uintptr_t, s64 cl) {
         connection_status.status == NetworkStatus::ConnectedAsSpectator) {
         SendHeartbeat();
         system.CoreTiming().ScheduleEvent(
-            msToCycles(static_cast<s64>(HEARTBEAT_INTERVAL.count())) - cl, heartbeat_event, 0);
+            msToCycles(static_cast<int>(HEARTBEAT_INTERVAL.count())) - cl, heartbeat_event, 0);
     }
 }
 
@@ -1877,10 +1875,10 @@ NWM_UDS::~NWM_UDS() {
     if (auto room_member = Network::GetRoomMember().lock())
         room_member->Unbind(wifi_packet_received);
 
-    system.CoreTiming().UnscheduleEvent(heartbeat_event, 0);
-    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
     system.CoreTiming().UnscheduleEvent(reconnect_event, 0);
+    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
     system.CoreTiming().UnscheduleEvent(beacon_broadcast_event, 0);
+    system.CoreTiming().UnscheduleEvent(heartbeat_event, 0);
 }
 
 } // namespace Service::NWM
