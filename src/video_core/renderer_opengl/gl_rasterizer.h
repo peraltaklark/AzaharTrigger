@@ -60,6 +60,7 @@ public:
 private:
     /// Syncs pipeline state from PICA registers
     void SyncDrawState();
+    void SyncFixedState() override {}
 
     /// Syncs and uploads the lighting, fog and proctex LUTs
     void SyncAndUploadLUTs();
