@@ -1524,6 +1524,13 @@ void FragmentModule::DefineEntryPoint() {
     AddEntryPoint(spv::ExecutionModel::Fragment, main_func, "main", interface_ids);
     AddExecutionMode(main_func, spv::ExecutionMode::OriginUpperLeft);
     AddExecutionMode(main_func, spv::ExecutionMode::DepthReplacing);
+#if defined(__ANDROID__)
+    // Enable early fragment tests on Android tile-based GPUs.
+    // Depth/stencil tests run before the fragment shader, skipping
+    // expensive pixel work for occluded geometry. Significant fill rate
+    // savings in alpha-heavy games like MHXX.
+    AddExecutionMode(main_func, spv::ExecutionMode::EarlyFragmentTests);
+#endif
 }
 
 void FragmentModule::DefineUniformStructs() {
