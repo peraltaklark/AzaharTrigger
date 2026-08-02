@@ -182,6 +182,15 @@ void RendererVulkan::PrepareRendertarget() {
         }
 
         LoadFBToScreenInfo(framebuffer, screen_infos[i], i == 1);
+#if defined(__ANDROID__)
+        // Bottom screen: render at half resolution for performance.
+        // The 3DS bottom screen is usually static UI/map. For games like MHXX
+        // this saves significant fill rate with minimal visual impact.
+        if (i == 1) {
+            screen_infos[i].texture.width = std::max(framebuffer.width / 2, 1u);
+            screen_infos[i].texture.height = std::max(framebuffer.height / 2, 1u);
+        }
+#endif
     }
 }
 
