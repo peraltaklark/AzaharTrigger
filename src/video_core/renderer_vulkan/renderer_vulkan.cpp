@@ -182,6 +182,11 @@ void RendererVulkan::PrepareRendertarget() {
         }
 
         LoadFBToScreenInfo(framebuffer, screen_infos[i], i == 1);
+        // Bottom screen half resolution toggle (for performance)
+        if (i == 1 && Settings::values.bottom_screen_half_res) {
+            screen_infos[i].texture.width = std::max(framebuffer.width / 2, 1u);
+            screen_infos[i].texture.height = std::max(framebuffer.height / 2, 1u);
+        }
     }
 }
 

@@ -1032,6 +1032,15 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
             }
             add(
                 SwitchSetting(
+                    BooleanSetting.BOTTOM_SCREEN_HALF_RES,
+                    R.string.bottom_screen_half_res,
+                    R.string.bottom_screen_half_res_description,
+                    BooleanSetting.BOTTOM_SCREEN_HALF_RES.key,
+                    BooleanSetting.BOTTOM_SCREEN_HALF_RES.defaultValue
+                )
+            )
+            add(
+                SwitchSetting(
                     BooleanSetting.DISK_SHADER_CACHE,
                     R.string.use_disk_shader_cache,
                     R.string.use_disk_shader_cache_description,

@@ -87,6 +87,11 @@ enum class BooleanSetting(
         Settings.SECTION_DEBUG,
         true
     ),
+    BOTTOM_SCREEN_HALF_RES(
+        SettingKeys.bottom_screen_half_res(),
+        Settings.SECTION_RENDERER,
+        true
+    ),
     REQUIRED_ONLINE_LLE_MODULES(
         SettingKeys.enable_required_online_lle_modules(),
         Settings.SECTION_SYSTEM,

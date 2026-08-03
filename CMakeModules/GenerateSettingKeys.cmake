@@ -10,6 +10,7 @@ foreach(KEY IN ITEMS
     "enable_gamemode"
     "use_cpu_jit"
     "use_fastmem"
+    "bottom_screen_half_res"
     "cpu_clock_percentage"
     "is_new_3ds"
     "lle_applets"

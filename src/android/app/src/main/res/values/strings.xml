@@ -480,6 +480,8 @@
     <string name="reduce_downcount_slice_description">Reduces core timing downcount to a smaller time slice, reducing CPU usage. This may improve performance in some games.</string>
 	<string name="priority_boost_starved_threads">Priority Boost Starved Threads</string>
     <string name="use_fastmem">Use Fastmem</string>
+    <string name="bottom_screen_half_res">Half-Res Bottom Screen</string>
+    <string name="bottom_screen_half_res_description">Render bottom screen at half resolution for better performance</string>
     <string name="use_fastmem_description">Enable direct memory access for JIT (faster, disable if crashing)</string>
     <string name="priority_boost_starved_threads_description">Boost low priority starved threads during kernel rescheduling. This may improve the performance.</string>
 	<string name="adreno_gpu_boost">Adreno GPU Boost (Experimental)</string>

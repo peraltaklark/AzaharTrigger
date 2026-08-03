@@ -670,6 +670,7 @@ struct Values {
     SwitchableSetting<bool> reduce_downcount_slice{false, "reduce_downcount_slice"};
     SwitchableSetting<bool> priority_boost_starved_threads{true, "priority_boost_starved_threads"};
     SwitchableSetting<bool> use_fastmem{true, "use_fastmem"};
+    SwitchableSetting<bool> bottom_screen_half_res{true, "bottom_screen_half_res"};
 
     // Video Dumping
     std::string output_format;
