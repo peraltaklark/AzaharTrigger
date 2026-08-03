@@ -105,7 +105,6 @@ priority_boost_starved_threads =
 # 0: Disabled, 1: Enabled (default)
 )") DECLARE_KEY(use_fastmem) BOOST_HANA_STRING(R"(
 use_fastmem =
-bottom_screen_half_res =
 
 [Renderer]
 # Whether to render using OpenGL
@@ -153,6 +152,10 @@ bottom_screen_half_res =
 # Increases graphics throughput on supported devices, improving performance.
 # 0 (default): Off, 1: On
 adreno_gpu_boost =
+# Render bottom screen at half resolution for better performance
+# 0: Disabled, 1: Enabled (default)
+)") DECLARE_KEY(bottom_screen_half_res) BOOST_HANA_STRING(R"(
+bottom_screen_half_res =
 
 # Reduce stuttering by storing and loading generated shaders to disk
 # 0: Off, 1 (default. On)
