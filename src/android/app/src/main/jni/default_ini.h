@@ -101,6 +101,11 @@ reduce_downcount_slice =
 # Boost low priority starved threads during kernel rescheduling.
 # 0: Off, 1 (default): On
 priority_boost_starved_threads =
+# Enable fastmem for JIT (direct memory access) on supported platforms
+# 0: Disabled, 1: Enabled (default)
+)") DECLARE_KEY(use_fastmem) BOOST_HANA_STRING(R"(
+use_fastmem =
+bottom_screen_half_res =
 
 [Renderer]
 # Whether to render using OpenGL
