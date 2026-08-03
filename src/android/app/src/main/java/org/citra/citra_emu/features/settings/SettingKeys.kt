@@ -17,6 +17,7 @@ object SettingKeys {
     external fun deterministic_async_operations(): String
     external fun reduce_downcount_slice(): String
     external fun priority_boost_starved_threads(): String
+    external fun use_fastmem(): String
     external fun enable_required_online_lle_modules(): String
     external fun use_virtual_sd(): String
     external fun compress_cia_installs(): String
