@@ -14,6 +14,7 @@
 #include "common/settings.h"
 #include "core/core.h"
 #include "core/core_timing.h"
+#include <chrono>
 #include "core/hle/ipc_helpers.h"
 #include "core/hle/kernel/event.h"
 #include "core/hle/kernel/shared_memory.h"
@@ -55,6 +56,12 @@ constexpr std::size_t MaxBeaconFrames = 15;
 
 // Network node id used when a SecureData packet is addressed to every connected node.
 constexpr u16 BroadcastNetworkNodeId = 0xFFFF;
+
+constexpr std::chrono::milliseconds HEARTBEAT_INTERVAL{500};
+constexpr std::chrono::milliseconds CONNECTION_TIMEOUT{10000};
+constexpr std::chrono::milliseconds RECONNECT_DELAY{2000};
+constexpr int MAX_RECONNECT_ATTEMPTS = 3;
+constexpr u8 HEARTBEAT_CHANNEL = 0xF;
 
 // The Host has always dest_node_id 1
 constexpr u16 HostDestNodeId = 1;
@@ -302,6 +309,9 @@ void NWM_UDS::HandleEAPoLPacket(const Network::WifiPacket& packet) {
 
         if (conn_type == ConnectionType::Client) {
             connection_status.status = NetworkStatus::ConnectedAsClient;
+            reconnect_attempts = 0;
+            ScheduleHeartbeat();
+            ScheduleHealthCheck();
         } else if (conn_type == ConnectionType::Spectator) {
             connection_status.status = NetworkStatus::ConnectedAsSpectator;
         } else {
@@ -352,6 +362,15 @@ void NWM_UDS::HandleEAPoLPacket(const Network::WifiPacket& packet) {
 void NWM_UDS::HandleSecureDataPacket(const Network::WifiPacket& packet) {
     const auto secure_data = ParseSecureDataHeader(packet.data);
     std::scoped_lock lock{connection_status_mutex, system.Kernel().GetHLELock()};
+
+    if (connection_status.status == NetworkStatus::ConnectedAsHost) {
+        auto node_it = node_map.find(packet.transmitter_address);
+        if (node_it != node_map.end())
+            node_it->second.last_activity = std::chrono::steady_clock::now();
+    }
+    if (secure_data.data_channel == HEARTBEAT_CHANNEL) {
+        return;
+    }
 
     if (connection_status.status != NetworkStatus::ConnectedAsHost &&
         connection_status.status != NetworkStatus::ConnectedAsClient &&
@@ -502,6 +521,7 @@ void NWM_UDS::HandleDeauthenticationFrame(const Network::WifiPacket& packet) {
 
     if (connection_status.status != NetworkStatus::ConnectedAsHost) {
         LOG_ERROR(Service_NWM, "Got deauthentication frame but we are not the host");
+        HandleConnectionLost();
         return;
     }
     if (node_map.find(packet.transmitter_address) == node_map.end()) {
@@ -554,6 +574,7 @@ void NWM_UDS::OnWifiPacketReceived(const Network::WifiPacket& packet) {
     if (!initialized) {
         return;
     }
+    last_packet_time = std::chrono::steady_clock::now();
     switch (packet.type) {
     case Network::WifiPacket::PacketType::Beacon:
         HandleBeaconFrame(packet);
@@ -599,6 +620,9 @@ boost::optional<Network::MacAddress> NWM_UDS::GetNodeMacAddress(u16 dest_node_id
 void NWM_UDS::ShutdownHLE() {
     initialized = false;
 
+    system.CoreTiming().UnscheduleEvent(heartbeat_event, 0);
+    system.CoreTiming().UnscheduleEvent(reconnect_event, 0);
+    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
     for (auto& bind_node : channel_data) {
         bind_node.second.event->Signal();
     }
@@ -991,6 +1015,8 @@ Result NWM_UDS::BeginHostingNetwork(std::span<const u8> network_info_buffer,
 
     connection_status_event->Signal();
 
+    ScheduleHeartbeat();
+    ScheduleHealthCheck();
     // Start broadcasting the network, send a beacon frame every 102.4ms.
     system.CoreTiming().ScheduleEvent(msToCycles(DefaultBeaconInterval * MillisecondsPerTU),
                                       beacon_broadcast_event, 0);
@@ -1111,6 +1137,7 @@ void NWM_UDS::UpdateNetworkAttribute(Kernel::HLERequestContext& ctx) {
 Result NWM_UDS::DestroyNetworkHLE() {
     // Unschedule the beacon broadcast event.
     system.CoreTiming().UnscheduleEvent(beacon_broadcast_event, 0);
+    system.CoreTiming().UnscheduleEvent(heartbeat_event, 0);
 
     // Only a host can destroy
     std::scoped_lock lock(connection_status_mutex);
@@ -1446,6 +1473,9 @@ void NWM_UDS::ConnectToNetworkDeprecated(Kernel::HLERequestContext& ctx) {
 }
 
 ResultStatus NWM_UDS::DisconnectNetworkHLE() {
+    system.CoreTiming().UnscheduleEvent(heartbeat_event, 0);
+    system.CoreTiming().UnscheduleEvent(reconnect_event, 0);
+    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
     using Network::WifiPacket;
     WifiPacket deauth;
     {
@@ -1608,39 +1638,11 @@ void NWM_UDS::DecryptBeaconData(Kernel::HLERequestContext& ctx) {
     rb.PushStaticBuffer(std::move(output_buffer), 0);
 }
 
-void NWM_UDS::EjectSpectators(Kernel::HLERequestContext& ctx) {
-    IPC::RequestParser rp(ctx);
-
-    LOG_WARNING(Service_NWM, "(STUBBED) called");
-
-    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
-
-    rb.Push(ResultSuccess);
-}
-
 // Sends a 802.11 beacon frame with information about the current network.
 void NWM_UDS::BeaconBroadcastCallback(std::uintptr_t user_data, s64 cycles_late) {
     // Don't do anything if we're not actually hosting a network
     if (connection_status.status != NetworkStatus::ConnectedAsHost)
         return;
-
-    // ================= KEEPALIVE (INSERT HERE) =================
-    if (keepalive_enabled) {
-        keepalive_tick++;
-
-        if (keepalive_tick % 2 == 0) { // ~1 second depending on beacon interval
-            Network::WifiPacket keepalive;
-            keepalive.type = Network::WifiPacket::PacketType::Data;
-            keepalive.channel = network_channel;
-            keepalive.destination_address = Network::BroadcastMac;
-
-            // tiny harmless payload (does not affect UDS logic)
-            keepalive.data = std::vector<u8>{0x00};
-
-            SendPacket(keepalive);
-        }
-    }
-    // ==========================================================
 
     std::vector<u8> frame = GenerateBeaconFrame(network_info, node_info);
 
@@ -1658,6 +1660,106 @@ void NWM_UDS::BeaconBroadcastCallback(std::uintptr_t user_data, s64 cycles_late)
                                           cycles_late,
                                       beacon_broadcast_event, 0);
 }
+
+void NWM_UDS::SendHeartbeat() {
+    if (connection_status.status != NetworkStatus::ConnectedAsHost &&
+        connection_status.status != NetworkStatus::ConnectedAsClient &&
+        connection_status.status != NetworkStatus::ConnectedAsSpectator)
+        return;
+    Network::WifiPacket hb;
+    hb.channel = network_channel;
+    hb.type = Network::WifiPacket::PacketType::Data;
+    if (connection_status.status == NetworkStatus::ConnectedAsHost) {
+        hb.destination_address = Network::BroadcastMac;
+        hb.data = GenerateDataPayload(std::vector<u8>{0x00}, HEARTBEAT_CHANNEL, BroadcastNetworkNodeId,
+                                       connection_status.network_node_id, 0);
+    } else {
+        hb.destination_address = network_info.host_mac_address;
+        hb.data = GenerateDataPayload(std::vector<u8>{0x00}, HEARTBEAT_CHANNEL, HostDestNodeId,
+                                       connection_status.network_node_id, 0);
+    }
+    SendPacket(hb);
+}
+
+void NWM_UDS::CheckConnectionHealth() {
+    auto e = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - last_packet_time);
+    if (e > CONNECTION_TIMEOUT) {
+        if (connection_status.status == NetworkStatus::ConnectedAsClient ||
+            connection_status.status == NetworkStatus::ConnectedAsSpectator)
+            HandleConnectionLost();
+        else if (connection_status.status == NetworkStatus::ConnectedAsHost)
+            CleanupTimedOutClients();
+    }
+}
+
+void NWM_UDS::HandleConnectionLost() {
+    if (reconnect_attempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnect_attempts++;
+        {
+            std::scoped_lock lk(connection_status_mutex);
+            connection_status.status = NetworkStatus::NotConnected;
+            node_map.clear();
+            connection_status_event->Signal();
+        }
+        system.CoreTiming().ScheduleEvent(
+            msToCycles(static_cast<int>(RECONNECT_DELAY.count())), reconnect_event, 0);
+    } else {
+        reconnect_attempts = 0;
+    }
+}
+
+void NWM_UDS::AttemptReconnection() {
+    if (reconnect_attempts <= MAX_RECONNECT_ATTEMPTS)
+        StartConnectionSequence(network_info.host_mac_address);
+}
+
+void NWM_UDS::CleanupTimedOutClients() {
+    auto now = std::chrono::steady_clock::now();
+    std::vector<Network::MacAddress> to;
+    for (auto& n : node_map)
+        if (n.second.connected && !n.second.spec &&
+            std::chrono::duration_cast<std::chrono::milliseconds>(now - n.second.last_activity) > CONNECTION_TIMEOUT)
+            to.push_back(n.first);
+    for (auto& c : to) {
+        Node nd = node_map[c];
+        node_map.erase(c);
+        if (!nd.spec) {
+            connection_status.node_bitmask &= ~(1 << (nd.node_id - 1));
+            connection_status.total_nodes--;
+            network_info.total_nodes--;
+        }
+        BroadcastNodeMap();
+        connection_status_event->Signal();
+    }
+}
+
+void NWM_UDS::ScheduleHeartbeat() {
+    system.CoreTiming().ScheduleEvent(
+        msToCycles(static_cast<int>(HEARTBEAT_INTERVAL.count())), heartbeat_event, 0);
+}
+
+void NWM_UDS::ScheduleHealthCheck() {
+    system.CoreTiming().ScheduleEvent(msToCycles(5000), health_check_event, 0);
+}
+
+void NWM_UDS::HeartbeatCallback(std::uintptr_t, s64 cl) {
+    if (connection_status.status == NetworkStatus::ConnectedAsHost ||
+        connection_status.status == NetworkStatus::ConnectedAsClient ||
+        connection_status.status == NetworkStatus::ConnectedAsSpectator) {
+        SendHeartbeat();
+        system.CoreTiming().ScheduleEvent(
+            msToCycles(static_cast<int>(HEARTBEAT_INTERVAL.count())) - cl, heartbeat_event, 0);
+    }
+}
+
+void NWM_UDS::HealthCheckCallback(std::uintptr_t, s64 cl) {
+    CheckConnectionHealth();
+    if (connection_status.status != NetworkStatus::NotConnected)
+        system.CoreTiming().ScheduleEvent(msToCycles(5000) - cl, health_check_event, 0);
+}
+
+void NWM_UDS::ReconnectCallback(std::uintptr_t, s64) { AttemptReconnection(); }
 
 Network::MacAddress NWM_UDS::GetMacAddress() {
     MacAddress mac;
@@ -1721,6 +1823,18 @@ NWM_UDS::NWM_UDS(Core::System& system) : ServiceFramework("nwm::UDS"), system(sy
         "UDS::BeaconBroadcastCallback", [this](std::uintptr_t user_data, s64 cycles_late) {
             BeaconBroadcastCallback(user_data, cycles_late);
         });
+    heartbeat_event = system.CoreTiming().RegisterEvent(
+        "UDS::HeartbeatCallback", [this](std::uintptr_t u, s64 c) {
+            HeartbeatCallback(u, c);
+        });
+    health_check_event = system.CoreTiming().RegisterEvent(
+        "UDS::HealthCheckCallback", [this](std::uintptr_t u, s64 c) {
+            HealthCheckCallback(u, c);
+        });
+    reconnect_event = system.CoreTiming().RegisterEvent(
+        "UDS::ReconnectCallback", [this](std::uintptr_t u, s64 c) {
+            ReconnectCallback(u, c);
+        });
 
     system.Kernel().GetSharedPageHandler().SetMacAddress(GetMacAddress());
 
@@ -1736,7 +1850,10 @@ NWM_UDS::~NWM_UDS() {
     if (auto room_member = Network::GetRoomMember().lock())
         room_member->Unbind(wifi_packet_received);
 
+    system.CoreTiming().UnscheduleEvent(reconnect_event, 0);
+    system.CoreTiming().UnscheduleEvent(health_check_event, 0);
     system.CoreTiming().UnscheduleEvent(beacon_broadcast_event, 0);
+    system.CoreTiming().UnscheduleEvent(heartbeat_event, 0);
 }
 
 } // namespace Service::NWM
