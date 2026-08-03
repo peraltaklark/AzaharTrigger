@@ -7,6 +7,7 @@
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <chrono>
 #include <deque>
 #include <list>
 #include <map>
@@ -563,6 +564,40 @@ private:
 
     boost::optional<Network::MacAddress> GetNodeMacAddress(u16 dest_node_id, u8 flags);
 
+    // ================= ANTI-DISCONNECTION SYSTEM =================
+    
+    // Heartbeat - keeps NAT connections alive
+    void SendHeartbeat();
+    void ScheduleHeartbeat();
+    void HeartbeatCallback(std::uintptr_t user_data, s64 cycles_late);
+    
+    // Health monitoring - detects connection loss
+    void CheckConnectionHealth();
+    void ScheduleHealthCheck();
+    void HealthCheckCallback(std::uintptr_t user_data, s64 cycles_late);
+    
+    // Reconnection - automatic recovery
+    void HandleConnectionLost();
+    void AttemptReconnection();
+    void ReconnectCallback(std::uintptr_t user_data, s64 cycles_late);
+    
+    // Host-side client management
+    void CleanupTimedOutClients();
+    
+    // Connection monitoring state
+    std::chrono::steady_clock::time_point last_packet_time;
+    int reconnect_attempts = 0;
+    
+    // Timing constants
+    static constexpr s64 HEARTBEAT_INTERVAL_MS = 500;
+    static constexpr s64 HEALTH_CHECK_INTERVAL_MS = 5000;
+    static constexpr s64 CONNECTION_TIMEOUT_MS = 10000;
+    static constexpr s64 RECONNECT_DELAY_MS = 2000;
+    static constexpr int MAX_RECONNECT_ATTEMPTS = 3;
+    static constexpr u8 HEARTBEAT_CHANNEL = 0xF;
+    
+    // ============================================================
+
     // Event that is signaled every time the connection status changes.
     std::shared_ptr<Kernel::Event> connection_status_event;
 
@@ -611,6 +646,7 @@ private:
     struct Node {
         bool connected;
         bool spec;
+        std::chrono::steady_clock::time_point last_activity = std::chrono::steady_clock::now();
         u16 node_id;
 
     private:
@@ -626,22 +662,10 @@ private:
 
     // Event that will generate and send the 802.11 beacon frames.
     Core::TimingEventType* beacon_broadcast_event;
-
-    // ================= KEEPALIVE SYSTEM =================
-
-    // Last time we received ANY valid network beacon/logoff/traffic
-    s64 last_keepalive_timestamp = 0;
-
-    // Host-side heartbeat counter
-    u32 keepalive_tick = 0;
-
-    // Keepalive interval (host sends every ~1s)
-    static constexpr s64 KEEPALIVE_INTERVAL_MS = 1000;
-
-    // Disconnect timeout (client side)
-    static constexpr s64 KEEPALIVE_TIMEOUT_MS = 6000;
-
-    // Enable toggle (safe rollback)
+    Core::TimingEventType* heartbeat_event = nullptr;
+    Core::TimingEventType* health_check_event = nullptr;
+    Core::TimingEventType* reconnect_event = nullptr;
+    // Keepalive enabled flag (used by enhanced anti-disconnection system)
     bool keepalive_enabled = true;
 
     // Callback identifier for the OnWifiPacketReceived event.
