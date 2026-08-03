@@ -85,6 +85,7 @@ FastmemArena::FastmemArena(std::size_t backing_size_) {
     backing_base = static_cast<u8*>(backing);
     arena_base = static_cast<u8*>(arena);
     arena_reserved_size = reserve_size;
+    madvise(arena, reserve_size, MADV_HUGEPAGE);
     LOG_INFO(Common_Memory, "Fastmem arena ready: backing={} MiB arena_base={}",
              backing_size / (1024 * 1024), static_cast<void*>(arena_base));
     ARENA_ANDROID_LOG("[Fastmem] arena ready: backing=%zu MiB arena_base=%p",

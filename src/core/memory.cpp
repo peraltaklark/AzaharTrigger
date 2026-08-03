@@ -574,7 +574,7 @@ void MemorySystem::MapPages(PageTable& page_table, u32 base, u32 size, MemoryRef
     }
 
 #if defined(__ANDROID__) && defined(__aarch64__)
-    const bool mirror = impl->arena.IsValid() &&
+    const bool mirror = Settings::values.use_fastmem && impl->arena.IsValid() &&
                         (impl->fastmem_page_table.get() == &page_table);
     std::size_t backing_offset = 0;
     const bool mappable =
@@ -637,7 +637,7 @@ MemoryRef MemorySystem::GetPointerForRasterizerCache(VAddr addr) const {
 void MemorySystem::RegisterPageTable(std::shared_ptr<PageTable> page_table) {
     impl->page_table_list.push_back(page_table);
 #if defined(__ANDROID__) && defined(__aarch64__)
-    if (impl->arena.IsValid() && impl->fastmem_page_table == nullptr) {
+    if (Settings::values.use_fastmem && impl->arena.IsValid() && impl->fastmem_page_table == nullptr) {
         impl->fastmem_page_table = page_table;
     }
 #endif
@@ -658,7 +658,7 @@ void MemorySystem::UnregisterPageTable(std::shared_ptr<PageTable> page_table) {
 
 uintptr_t MemorySystem::GetFastmemArenaBase(const std::shared_ptr<PageTable>& page_table) const {
 #if defined(__ANDROID__) && defined(__aarch64__)
-    if (!impl->arena.IsValid() || page_table == nullptr ||
+    if (!Settings::values.use_fastmem || !impl->arena.IsValid() || page_table == nullptr ||
         page_table != impl->fastmem_page_table) {
         return 0;
     }
@@ -1116,7 +1116,7 @@ void MemorySystem::RasterizerMarkRegionCached(PAddr start, u32 size, bool cached
                                         : PageType::RasterizerCachedMemoryWatchpoint;
                         page_table->pointers[vaddr >> CITRA_PAGE_BITS] = nullptr;
 #if defined(__ANDROID__) && defined(__aarch64__)
-                        if (page_table == impl->fastmem_page_table) {
+                        if (Settings::values.use_fastmem && page_table == impl->fastmem_page_table) {
                             impl->arena.Unmap(vaddr & ~CITRA_PAGE_MASK, CITRA_PAGE_SIZE);
                         }
 #endif
@@ -1141,7 +1141,7 @@ void MemorySystem::RasterizerMarkRegionCached(PAddr start, u32 size, bool cached
                             auto mem_ref = GetPointerForRasterizerCache(vaddr & ~CITRA_PAGE_MASK);
                             page_table->pointers[vaddr >> CITRA_PAGE_BITS] = mem_ref;
 #if defined(__ANDROID__) && defined(__aarch64__)
-                            if (page_table == impl->fastmem_page_table) {
+                            if (Settings::values.use_fastmem && page_table == impl->fastmem_page_table) {
                                 std::size_t backing_offset = 0;
                                 if (impl->ResolveBackingOffset(mem_ref.GetPtr(), CITRA_PAGE_SIZE, backing_offset)) {
                                     impl->arena.Map(vaddr & ~CITRA_PAGE_MASK, backing_offset, CITRA_PAGE_SIZE);
