@@ -87,6 +87,7 @@ class ChatOverlayManager(
         setupNetPlayListener()
         loadSettings()
         updateChatButtonVisibility()
+        applyTouchPassthrough()
     }
     
     // ==================== SETUP METHODS ====================
@@ -266,6 +267,27 @@ class ChatOverlayManager(
         clearAllMessages()
     }
     
+
+    /**
+     * Makes the chat overlay and its message list transparent to touches,
+     * so the emulator's on-screen buttons receive all taps.
+     */
+    fun applyTouchPassthrough() {
+        chatContainer.apply {
+            isClickable = false
+            isFocusable = false
+            isFocusableInTouchMode = false
+            setOnTouchListener { _, _ -> false }
+        }
+        chatRecycler.apply {
+            isEnabled = false
+            isClickable = false
+            isFocusable = false
+            isFocusableInTouchMode = false
+            setOnTouchListener { _, _ -> false }
+            isNestedScrollingEnabled = false
+        }
+    }
     // ==================== PRIVATE HELPER METHODS ====================
     
     /**
