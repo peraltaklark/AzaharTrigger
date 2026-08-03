@@ -1712,6 +1712,11 @@ void NWM_UDS::HandleConnectionLost() {
             connection_status.status = NetworkStatus::NotConnected;
             node_map.clear();
             connection_status_event->Signal();
+            Network::WifiPacket deauth;
+            deauth.channel = network_channel;
+            deauth.destination_address = network_info.host_mac_address;
+            deauth.type = Network::WifiPacket::PacketType::Deauthentication;
+            SendPacket(deauth);
         }
         system.CoreTiming().ScheduleEvent(
             msToCycles(static_cast<int>(RECONNECT_DELAY.count())), reconnect_event, 0);
