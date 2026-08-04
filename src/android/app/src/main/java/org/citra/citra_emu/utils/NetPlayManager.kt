@@ -1,3 +1,7 @@
+// Copyright Citra Emulator Project / Azahar Emulator Project
+// Licensed under GPLv2 or any later version
+// Refer to the license.txt file included.
+
 // Copyright 2024 Mandarine Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
@@ -15,65 +19,42 @@ import android.os.Looper
 import android.text.format.Formatter
 import android.widget.Toast
 import androidx.preference.PreferenceManager
+import java.net.Inet4Address
 import org.citra.citra_emu.CitraApplication
 import org.citra.citra_emu.NativeLibrary
 import org.citra.citra_emu.R
 import org.citra.citra_emu.dialogs.ChatMessage
-import java.net.Inet4Address
 
 object NetPlayManager {
-    external fun netPlayCreateRoom(ipAddress: String, port: Int, username: String, preferedGameName:String, preferredGameId: Long, password: String, roomName: String, maxPlayers: Int): Int
-    external fun netPlayJoinRoom(ipAddress: String, port: Int, username: String, password: String): Int
+    external fun netPlayCreateRoom(
+        ipAddress: String,
+        port: Int,
+        username: String,
+        preferedGameName: String,
+        preferredGameId: Long,
+        password: String,
+        roomName: String,
+        maxPlayers: Int
+    ): Int
+
+    external fun netPlayJoinRoom(
+        ipAddress: String,
+        port: Int,
+        username: String,
+        password: String
+    ): Int
+
     external fun netPlayRoomInfo(): Array<String>
     external fun netPlayIsJoined(): Boolean
     external fun netPlayIsHostedRoom(): Boolean
     external fun netPlaySendMessage(msg: String)
     external fun netPlayKickUser(username: String)
     external fun netPlayLeaveRoom()
-
-    fun leaveRoom() {
-        stopLANProcessing()
-        melonLANEndSession()
-        netPlayLeaveRoom()
-        notifyMessageListeners(NetPlayStatus.ROOM_IDLE, "")
-    }
     external fun netPlayIsModerator(): Boolean
     external fun netPlayGetBanList(): Array<String>
     external fun netPlayBanUser(username: String)
     external fun netPlayUnbanUser(username: String)
     external fun netPlayGetPublicRooms(): Array<String>
-
-    // melonDS LAN compatibility functions
-    external fun melonLANInit(): Boolean
-    external fun melonLANShutdown()
-    external fun melonLANStartDiscovery(): Boolean
-    external fun melonLANStopDiscovery()
-    external fun melonLANGetDiscoveryList(): Array<String>
-    external fun melonLANStartHost(playerName: String, maxPlayers: Int): Boolean
-    external fun melonLANStartClient(playerName: String, hostAddress: String): Boolean
-    external fun melonLANEndSession()
-    external fun melonLANGetPlayerList(): Array<String>
-    external fun melonLANProcess()
-    external fun melonLANIsActive(): Boolean
-    external fun melonLANIsHost(): Boolean
-
-    data class MelonDiscoveryInfo(
-        val ip: String,
-        val sessionName: String,
-        val gameName: String,
-        val numPlayers: Int,
-        val maxPlayers: Int,
-        val hasPassword: Int,
-        val inGame: Int
-    )
-
-    data class MelonPlayerInfo(
-        val id: Int,
-        val name: String,
-        val status: Int,
-        val address: Long,
-        val ping: Int
-    )
 
     data class RoomInfo(
         val name: String,
@@ -98,6 +79,8 @@ object NetPlayManager {
     // Changed from single listener to list of listeners
     private val messageListeners = mutableListOf<(Int, String) -> Unit>()
     private var adapterRefreshListener: ((Int, String) -> Unit)? = null
+
+    private val usernameRegex = Regex("^[a-zA-Z0-9._\\- ]{4,20}$")
 
     fun addOnMessageReceivedListener(listener: (Int, String) -> Unit) {
         messageListeners.add(listener)
@@ -152,7 +135,7 @@ object NetPlayManager {
 
     fun refreshRoomListAsync(callback: (List<RoomInfo>) -> Unit) {
         Thread {
-            val rooms =  getPublicRooms()
+            val rooms = getPublicRooms()
 
             Handler(Looper.getMainLooper()).post {
                 callback(rooms)
@@ -164,10 +147,12 @@ object NetPlayManager {
         val prefs = PreferenceManager.getDefaultSharedPreferences(activity)
         var name = NativeLibrary.getSystemUsername()
         if (name.isEmpty()) {
-            name = "Azahar${(Math.random() * 100).toInt()}"
+            name = "AzaharPlus${(Math.random() * 100).toInt()}"
         }
         return prefs.getString("NetPlayUsername", name) ?: name
     }
+
+    fun isUsernameValid(activity: Context): Boolean = getUsername(activity).matches(usernameRegex)
 
     fun setUsername(activity: Activity, name: String) {
         val prefs = PreferenceManager.getDefaultSharedPreferences(activity)
@@ -231,6 +216,7 @@ object NetPlayManager {
                     )
                 }
             }
+
             NetPlayStatus.MEMBER_JOIN,
             NetPlayStatus.MEMBER_LEAVE,
             NetPlayStatus.MEMBER_KICKED,
@@ -255,44 +241,86 @@ object NetPlayManager {
         }
 
         // Notify all listeners
-        // Notify all listeners
         messageListeners.forEach { it(type, message) }
         adapterRefreshListener?.invoke(type, message)
     }
 
-    private fun formatNetPlayStatus(context: Context, type: Int, msg: String): String {
-        return when (type) {
+    private fun formatNetPlayStatus(context: Context, type: Int, msg: String): String =
+        when (type) {
             NetPlayStatus.NETWORK_ERROR -> context.getString(R.string.multiplayer_network_error)
+
             NetPlayStatus.LOST_CONNECTION -> context.getString(R.string.multiplayer_lost_connection)
+
             NetPlayStatus.NAME_COLLISION -> context.getString(R.string.multiplayer_name_collision)
+
             NetPlayStatus.MAC_COLLISION -> context.getString(R.string.multiplayer_mac_collision)
-            NetPlayStatus.CONSOLE_ID_COLLISION -> context.getString(R.string.multiplayer_console_id_collision)
+
+            NetPlayStatus.CONSOLE_ID_COLLISION -> context.getString(
+                R.string.multiplayer_console_id_collision
+            )
+
             NetPlayStatus.WRONG_VERSION -> context.getString(R.string.multiplayer_wrong_version)
+
             NetPlayStatus.WRONG_PASSWORD -> context.getString(R.string.multiplayer_wrong_password)
-            NetPlayStatus.COULD_NOT_CONNECT -> context.getString(R.string.multiplayer_could_not_connect)
+
+            NetPlayStatus.COULD_NOT_CONNECT -> context.getString(
+                R.string.multiplayer_could_not_connect
+            )
+
             NetPlayStatus.ROOM_IS_FULL -> context.getString(R.string.multiplayer_room_is_full)
+
             NetPlayStatus.HOST_BANNED -> context.getString(R.string.multiplayer_host_banned)
-            NetPlayStatus.PERMISSION_DENIED -> context.getString(R.string.multiplayer_permission_denied)
+
+            NetPlayStatus.PERMISSION_DENIED -> context.getString(
+                R.string.multiplayer_permission_denied
+            )
+
             NetPlayStatus.NO_SUCH_USER -> context.getString(R.string.multiplayer_no_such_user)
+
             NetPlayStatus.ALREADY_IN_ROOM -> context.getString(R.string.multiplayer_already_in_room)
-            NetPlayStatus.CREATE_ROOM_ERROR -> context.getString(R.string.multiplayer_create_room_error)
+
+            NetPlayStatus.CREATE_ROOM_ERROR -> context.getString(
+                R.string.multiplayer_create_room_error
+            )
+
             NetPlayStatus.HOST_KICKED -> context.getString(R.string.multiplayer_host_kicked)
+
             NetPlayStatus.UNKNOWN_ERROR -> context.getString(R.string.multiplayer_unknown_error)
-            NetPlayStatus.ROOM_UNINITIALIZED -> context.getString(R.string.multiplayer_room_uninitialized)
+
+            NetPlayStatus.ROOM_UNINITIALIZED -> context.getString(
+                R.string.multiplayer_room_uninitialized
+            )
+
             NetPlayStatus.ROOM_IDLE -> context.getString(R.string.multiplayer_room_idle)
+
             NetPlayStatus.ROOM_JOINING -> context.getString(R.string.multiplayer_room_joining)
+
             NetPlayStatus.ROOM_JOINED -> context.getString(R.string.multiplayer_room_joined)
+
             NetPlayStatus.ROOM_MODERATOR -> context.getString(R.string.multiplayer_room_moderator)
-            NetPlayStatus.ROOM_INFORMATION_UPDATED -> ""
+
             NetPlayStatus.MEMBER_JOIN -> context.getString(R.string.multiplayer_member_join, msg)
+
             NetPlayStatus.MEMBER_LEAVE -> context.getString(R.string.multiplayer_member_leave, msg)
-            NetPlayStatus.MEMBER_KICKED -> context.getString(R.string.multiplayer_member_kicked, msg)
-            NetPlayStatus.MEMBER_BANNED -> context.getString(R.string.multiplayer_member_banned, msg)
-            NetPlayStatus.ADDRESS_UNBANNED -> context.getString(R.string.multiplayer_address_unbanned)
+
+            NetPlayStatus.MEMBER_KICKED -> context.getString(
+                R.string.multiplayer_member_kicked,
+                msg
+            )
+
+            NetPlayStatus.MEMBER_BANNED -> context.getString(
+                R.string.multiplayer_member_banned,
+                msg
+            )
+
+            NetPlayStatus.ADDRESS_UNBANNED -> context.getString(
+                R.string.multiplayer_address_unbanned
+            )
+
             NetPlayStatus.CHAT_MESSAGE -> msg
+
             else -> ""
         }
-    }
 
     fun isConnectedToWifi(activity: Activity): Boolean {
         val connectivityManager = activity.getSystemService(ConnectivityManager::class.java)
@@ -338,88 +366,6 @@ object NetPlayManager {
         return netPlayGetBanList().toList()
     }
 
-    // melonDS LAN background processing
-    private var lanProcessHandler: Handler? = null
-    private var lanProcessRunnable: Runnable? = null
-
-    fun startLANProcessing() {
-        if (lanProcessHandler == null) {
-            lanProcessHandler = Handler(Looper.getMainLooper())
-            lanProcessRunnable = object : Runnable {
-                override fun run() {
-                    if (melonLANIsActive()) {
-                        melonLANProcess()
-                        lanProcessHandler?.postDelayed(this, 16) // ~60fps
-                    }
-                }
-            }
-            lanProcessHandler?.post(lanProcessRunnable!!)
-        }
-    }
-
-    fun stopLANProcessing() {
-        lanProcessHandler?.removeCallbacks(lanProcessRunnable!!)
-        lanProcessHandler = null
-        lanProcessRunnable = null
-    }
-
-    // melonDS LAN helper methods
-    fun getMelonDiscoveryList(): List<MelonDiscoveryInfo> {
-        val discoveryData = melonLANGetDiscoveryList()
-        val discoveries = mutableListOf<MelonDiscoveryInfo>()
-
-        for (data in discoveryData) {
-            val parts = data.split("|")
-            if (parts.size >= 7) {
-                discoveries.add(
-                    MelonDiscoveryInfo(
-                        ip = parts[0],
-                        sessionName = parts[1],
-                        gameName = parts[2],
-                        numPlayers = parts[3].toIntOrNull() ?: 0,
-                        maxPlayers = parts[4].toIntOrNull() ?: 0,
-                        hasPassword = parts[5].toIntOrNull() ?: 0,
-                        inGame = parts[6].toIntOrNull() ?: 0
-                    )
-                )
-            }
-        }
-
-        return discoveries
-    }
-
-    fun getMelonPlayerList(): List<MelonPlayerInfo> {
-        val playerData = melonLANGetPlayerList()
-        val players = mutableListOf<MelonPlayerInfo>()
-
-        for (data in playerData) {
-            val parts = data.split("|")
-            if (parts.size >= 5) {
-                players.add(
-                    MelonPlayerInfo(
-                        id = parts[0].toIntOrNull() ?: 0,
-                        name = parts[1],
-                        status = parts[2].toIntOrNull() ?: 0,
-                        address = parts[3].toLongOrNull() ?: 0L,
-                        ping = parts[4].toIntOrNull() ?: 0
-                    )
-                )
-            }
-        }
-
-        return players
-    }
-
-    fun refreshMelonDiscoveryListAsync(callback: (List<MelonDiscoveryInfo>) -> Unit) {
-        Thread {
-            val discoveries = getMelonDiscoveryList()
-
-            Handler(Looper.getMainLooper()).post {
-                callback(discoveries)
-            }
-        }.start()
-    }
-
     object NetPlayStatus {
         const val NO_ERROR = 0
         const val NETWORK_ERROR = 1
@@ -449,6 +395,5 @@ object NetPlayManager {
         const val MEMBER_BANNED = 25
         const val ADDRESS_UNBANNED = 26
         const val CHAT_MESSAGE = 27
-        const val ROOM_INFORMATION_UPDATED = 28
     }
 }

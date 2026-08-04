@@ -31,7 +31,6 @@ struct RoomInformation {
     std::string description;    ///< Server description
     u32 member_slots;           ///< Maximum number of members in this room
     u16 port;                   ///< The port of this room
-    std::string address;        ///< The address others should use to connect to this room
     std::string preferred_game; ///< Game to advertise that you want to play
     u64 preferred_game_id;      ///< Title ID for the advertised game
     std::string host_username;  ///< Forum username of the host
@@ -78,8 +77,8 @@ enum RoomMessageTypes : u8 {
     IdModPermissionDenied,
     IdModNoSuchUser,
     IdJoinSuccessAsMod,
-    // Specific to AzaharPlus
-    idAzaharPlusSpecific = 0xff
+	// Specific to AzaharPlus
+	idAzaharPlusSpecific = 0xff
 };
 
 enum AzaharPlusSpecificTypes : u8 {

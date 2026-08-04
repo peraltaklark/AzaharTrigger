@@ -1,10 +1,13 @@
+// Copyright Citra Emulator Project / Azahar Emulator Project
+// Licensed under GPLv2 or any later version
+// Refer to the license.txt file included.
+
 // Copyright 2024 Mandarine Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
 #include <chrono>
 #include <thread>
-#include <network/network_settings.h>
 #include "common/logging/log.h"
 #include "core/core.h"
 #include "core/hle/service/cfg/cfg.h"
@@ -15,13 +18,9 @@
 
 AndroidMultiplayer::AndroidMultiplayer(Core::System& system_,
                                        std::shared_ptr<Network::AnnounceMultiplayerSession> session)
-    : system{system_}, announce_multiplayer_session(session), melon_lan_adapter(nullptr) {}
+    : system{system_}, announce_multiplayer_session(session) {}
 
-AndroidMultiplayer::~AndroidMultiplayer() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->Shutdown();
-    }
-}
+AndroidMultiplayer::~AndroidMultiplayer() = default;
 
 void AndroidMultiplayer::AddNetPlayMessage(jint type, jstring msg) {
     IDCache::GetEnvForThread()->CallStaticVoidMethod(IDCache::GetNativeLibraryClass(),
@@ -141,9 +140,6 @@ bool AndroidMultiplayer::NetworkInit() {
             msg += chat.message;
             AddNetPlayMessage(static_cast<int>(status), msg);
         });
-        member->BindOnRoomInformationChanged([this](const Network::RoomInformation&) {
-            AddNetPlayMessage(static_cast<int>(NetPlayStatus::ROOM_INFORMATION_UPDATED), "");
-        });
     }
 
     return true;
@@ -174,25 +170,16 @@ NetPlayStatus AndroidMultiplayer::NetPlayCreateRoom(const std::string& ipaddress
         return NetPlayStatus::CREATE_ROOM_ERROR;
     }
 
-    // Use the ipaddress passed from the Android frontend instead of ""
-    if (!room->Create(room_name, "", ipaddress, port, password, std::min(max_players, 16),
-                      NetSettings::values.citra_username, preferedGameName, preferedGameId,
+    if (!room->Create(room_name, "", ipaddress, port, password, std::min(max_players, 16), username,
+                      preferedGameName, preferedGameId,
                       std::make_unique<Network::VerifyUser::NullBackend>(), {})) {
         return NetPlayStatus::CREATE_ROOM_ERROR;
-    }
-
-    // Get the actual IP address from the room information
-    std::string server_address = room->GetRoomInformation().address;
-
-    std::string join_address = server_address;
-    if (join_address.empty() || join_address == "0.0.0.0") {
-        join_address = "127.0.0.1";
     }
 
     // Failsafe timer to avoid joining before creation
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    member->Join(username, Service::CFG::GetConsoleIdHash(system), join_address.c_str(), port, 0,
+    member->Join(username, Service::CFG::GetConsoleIdHash(system), ipaddress.c_str(), port, 0,
                  Network::NoPreferredMac, password);
 
     // Failsafe timer to avoid joining before creation
@@ -287,15 +274,12 @@ std::vector<std::string> AndroidMultiplayer::NetPlayRoomInfo() {
     if (auto room = Network::GetRoomMember().lock()) {
         auto members = room->GetMemberInformation();
         if (!members.empty()) {
-            // name, max players, address, and port
+            // name and max players
             auto room_info = room->GetRoomInformation();
-            const auto& address = room->GetServerAddress();
-            info_list.push_back(room_info.name + "|" + std::to_string(room_info.member_slots) +
-                                "|" + address + "|" + std::to_string(room_info.port));
+            info_list.push_back(room_info.name + "|" + std::to_string(room_info.member_slots));
             // all members
             for (const auto& member : members) {
-                info_list.push_back(member.nickname + "|" + std::to_string(member.game_info.id) +
-                                    "|" + member.game_info.name);
+                info_list.push_back(member.nickname);
             }
         }
     }
@@ -358,27 +342,29 @@ std::vector<std::string> AndroidMultiplayer::NetPlayGetPublicRooms() {
             std::string owner = room.owner;
             std::string preferred_game = room.preferred_game;
 
-            std::replace(name.begin(), name.end(), '|', '-');
-            std::replace(description.begin(), description.end(), '|', '-');
-            std::replace(owner.begin(), owner.end(), '|', '-');
-            std::replace(preferred_game.begin(), preferred_game.end(), '|', '-');
+            std::replace( name.begin(), name.end(), '|', '-');
+            std::replace( description.begin(), description.end(), '|', '-');
+            std::replace( owner.begin(), owner.end(), '|', '-');
+            std::replace( preferred_game.begin(), preferred_game.end(), '|', '-');
 
             room_list.push_back(name + "|" + (room.has_password ? "1" : "0") + "|" +
                                 std::to_string(room.max_player) + "|" + room.ip + "|" +
-                                std::to_string(room.port) + "|" + description + "|" + owner + "|" +
-                                std::to_string(room.preferred_game_id) + "|" + preferred_game);
+                                std::to_string(room.port) + "|" + description + "|" +
+                                owner + "|" + std::to_string(room.preferred_game_id) + "|" +
+                                preferred_game);
 
             for (const auto& member : room.members) {
                 std::string username = member.username;
                 std::string nickname = member.nickname;
                 std::string game_name = member.game_name;
 
-                std::replace(username.begin(), username.end(), '|', '-');
-                std::replace(nickname.begin(), nickname.end(), '|', '-');
-                std::replace(game_name.begin(), game_name.end(), '|', '-');
+                std::replace( username.begin(), username.end(), '|', '-');
+                std::replace( nickname.begin(), nickname.end(), '|', '-');
+                std::replace( game_name.begin(), game_name.end(), '|', '-');
 
-                room_list.push_back("MEMBER|" + name + "|" + username + "|" + nickname + "|" +
-                                    std::to_string(member.game_id) + "|" + game_name);
+                room_list.push_back("MEMBER|" + name + "|" + username + "|" +
+                                    nickname + "|" + std::to_string(member.game_id) + "|" +
+                                    game_name);
             }
         }
     }
@@ -403,118 +389,8 @@ std::vector<std::string> AndroidMultiplayer::NetPlayGetBanList() {
     return ban_list;
 }
 
-// melonDS LAN compatibility implementations
-
-bool AndroidMultiplayer::MelonLANInit() {
-    if (!melon_lan_adapter) {
-        melon_lan_adapter = std::make_unique<Network::MelonLANAdapter>();
+void AndroidMultiplayer::UpdateCredentials() {
+    if (auto session = announce_multiplayer_session.lock()) {
+        session->UpdateCredentials(Service::CFG::GetUsername(Core::System::GetInstance()));
     }
-    return melon_lan_adapter->Init();
-}
-
-void AndroidMultiplayer::MelonLANShutdown() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->Shutdown();
-        melon_lan_adapter.reset();
-    }
-}
-
-bool AndroidMultiplayer::MelonLANStartDiscovery() {
-    if (!melon_lan_adapter) {
-        return false;
-    }
-    return melon_lan_adapter->StartDiscovery();
-}
-
-void AndroidMultiplayer::MelonLANStopDiscovery() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->StopDiscovery();
-    }
-}
-
-std::vector<std::string> AndroidMultiplayer::MelonLANGetDiscoveryList() {
-    if (!melon_lan_adapter) {
-        return {};
-    }
-
-    auto discovery_list = melon_lan_adapter->GetDiscoveryList();
-    std::vector<std::string> result;
-
-    for (const auto& [addr, data] : discovery_list) {
-        // Format: "IP|RoomName|GameName|NumPlayers|MaxPlayers|HasPassword|InGame"
-        char ip_str[INET_ADDRSTRLEN];
-        struct in_addr in_addr;
-        in_addr.s_addr = htonl(addr);
-        inet_ntop(AF_INET, &in_addr, ip_str, INET_ADDRSTRLEN);
-
-        std::string entry = std::string(ip_str) + "|" + data.SessionName + "|" + "" +
-                            "|" + // GameName not available in MelonDiscoveryData
-                            std::to_string(data.NumPlayers) + "|" +
-                            std::to_string(data.MaxPlayers) + "|" + std::to_string(false) +
-                            "|" + // HasPassword not available in MelonDiscoveryData
-                            std::to_string(data.Status); // Status instead of InGame
-        result.push_back(entry);
-    }
-
-    return result;
-}
-
-bool AndroidMultiplayer::MelonLANStartHost(const std::string& player_name, int max_players) {
-    if (!melon_lan_adapter) {
-        return false;
-    }
-    return melon_lan_adapter->StartHost(player_name, max_players);
-}
-
-bool AndroidMultiplayer::MelonLANStartClient(const std::string& player_name,
-                                             const std::string& host_address) {
-    if (!melon_lan_adapter) {
-        return false;
-    }
-    return melon_lan_adapter->StartClient(player_name, host_address);
-}
-
-void AndroidMultiplayer::MelonLANEndSession() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->EndSession();
-    }
-}
-
-std::vector<std::string> AndroidMultiplayer::MelonLANGetPlayerList() {
-    if (!melon_lan_adapter) {
-        return {};
-    }
-
-    auto players = melon_lan_adapter->GetPlayerList();
-    std::vector<std::string> result;
-
-    for (const auto& player : players) {
-        // Format: "ID|Name|Status|Address|Ping"
-        std::string entry = std::to_string(player.ID) + "|" + player.Name + "|" +
-                            std::to_string(player.Status) + "|" + std::to_string(player.Address) +
-                            "|" + std::to_string(player.Ping);
-        result.push_back(entry);
-    }
-
-    return result;
-}
-
-void AndroidMultiplayer::MelonLANProcess() {
-    if (melon_lan_adapter) {
-        melon_lan_adapter->Process();
-    }
-}
-
-bool AndroidMultiplayer::MelonLANIsActive() {
-    if (!melon_lan_adapter) {
-        return false;
-    }
-    return melon_lan_adapter->IsActive();
-}
-
-bool AndroidMultiplayer::MelonLANIsHost() {
-    if (!melon_lan_adapter) {
-        return false;
-    }
-    return melon_lan_adapter->IsHost();
 }

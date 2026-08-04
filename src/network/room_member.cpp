@@ -9,12 +9,12 @@
 #include <set>
 #include <thread>
 #include "common/assert.h"
-#include "common/file_util.h"
-#include "core/loader/ncch.h"
-#include "core/zip_pass.h"
 #include "enet/enet.h"
 #include "network/packet.h"
 #include "network/room_member.h"
+#include "core/zip_pass.h"
+#include "common/file_util.h"
+#include "core/loader/ncch.h"
 
 namespace Network {
 
@@ -44,8 +44,6 @@ public:
     mutable std::mutex username_mutex; ///< Mutex for locking username.
 
     MacAddress mac_address; ///< The mac_address of this member.
-
-    std::string server_address; ///< The address this member connected to.
 
     std::mutex network_mutex; ///< Mutex that controls access to the `client` variable.
     /// Thread that receives and dispatches network packets
@@ -131,8 +129,8 @@ public:
      * @param event The ENet event that was received.
      */
     void HandleModBanListResponsePacket(const ENetEvent* event);
-
-    void HandleAzaharPlusPecificPacket(const ENetEvent* event);
+	
+	void HandleAzaharPlusPecificPacket(const ENetEvent* event);
 
     /**
      * Disconnects the RoomMember from the Room
@@ -344,12 +342,6 @@ void RoomMember::RoomMemberImpl::HandleRoomInformationPacket(const ENetEvent* ev
             }
         }
     }
-
-    if (!packet.EndOfPacket()) {
-        packet >> info.address;
-        room_information.address = info.address;
-    }
-
     Invoke(room_information);
 }
 
@@ -432,148 +424,142 @@ void RoomMember::RoomMemberImpl::HandleModBanListResponsePacket(const ENetEvent*
 
 void RoomMember::RoomMemberImpl::HandleAzaharPlusPecificPacket(const ENetEvent* event) {
     // handle azaharplus packet
-    LOG_ERROR(Network, "HandleAzaharPlusPecificPacket");
-
-    Packet packet;
+	LOG_ERROR(Network, "HandleAzaharPlusPecificPacket");
+	
+	Packet packet;
     packet.Append(event->packet->data, event->packet->dataLength);
     packet.IgnoreBytes(sizeof(u8)); // Ignore the message type
 
     u8 subType;
     packet >> subType;
-
-    switch (subType) {
-    case IdZipPassAnnounce: {
-        LOG_ERROR(Network, "IdZipPassAnnounce");
-
-        u32 version;
-        packet >> version;
-
-        LOG_ERROR(Network, "version {}", version);
-
-        const std::string path{fmt::format("{}/zippass/myAutoExport.pass.zip",
-                                           FileUtil::GetUserPath(FileUtil::UserPath::UserDir))};
-
-        if (!FileUtil::CreateFullPath(path)) {
-            LOG_ERROR(Service_FS, "Failed to create myAutoExport.pass.zip");
-            break;
-        }
-
-        std::string zip_path = path;
-
-#if defined(ANDROID) && !defined(HAVE_LIBRETRO_VFS)
-        zip_path = AndroidUtils::TranslateFilePath(path);
+	
+	switch(subType) {
+		case IdZipPassAnnounce: {
+			LOG_ERROR(Network, "IdZipPassAnnounce");
+			
+			u32 version;
+			packet >> version;
+			
+			LOG_ERROR(Network, "version {}", version);
+			
+			const std::string path{fmt::format("{}/zippass/myAutoExport.pass.zip", FileUtil::GetUserPath(FileUtil::UserPath::UserDir))};
+		
+			if (!FileUtil::CreateFullPath(path)) {
+				LOG_ERROR(Service_FS, "Failed to create myAutoExport.pass.zip");
+				break;
+			}
+			
+			std::string zip_path = path;
+			
+#ifdef ANDROID
+			zip_path = AndroidUtils::TranslateFilePath(path);
 #endif
 
-        int ret = Core::exportZipPass(zip_path);
+			int ret = Core::exportZipPass(zip_path);
+			
+			if(ret > 0) {
+				char* buffer = new char[1000000];
+				FileUtil::IOFile efile(path, "rb");
+				int tocopy = (int)efile.ReadBytes(buffer, 1000000);
+				efile.Close();
+				
+				if(tocopy > 0 && tocopy < 1000000) {
+					Packet packet;
+					packet << static_cast<u8>(idAzaharPlusSpecific);
+					packet << static_cast<u8>(IdZipPassUpload);
+					packet << static_cast<u32>(azaharplus_network_version);
+					packet << static_cast<u32>(tocopy);
+					packet.Append(buffer, tocopy);
+					Send(std::move(packet));
+				}
+				
+				delete[] buffer;
+			}
+			
+			break;
+		}
+			
+		case IdZipPassUpload:
+			LOG_ERROR(Network, "IdZipPassUpload");
+			break;
+			
+		case IdZipPassDownload: {
+			LOG_ERROR(Network, "IdZipPassDownload");
+			
+			std::string nickname;
+			u32 nicknameLength;
+			packet >> nicknameLength;
+			
+			if(nicknameLength < 64) {
+				nickname.resize(nicknameLength);
+				memcpy(nickname.data(), event->packet->data + 2*sizeof(u8) + sizeof(u32), nicknameLength);
+				packet.IgnoreBytes(nicknameLength);
+				
+				u32 dataSize;
+				packet >> dataSize;
+				
+				if(dataSize > 0 && dataSize < 1000000
+				&& event->packet->dataLength == dataSize + 2*sizeof(u8) + 2*sizeof(u32) + nicknameLength ) {
+					std::string dir = "history";
+					
+					if(Loader::getProgramId() != "") {
+						FileUtil::FSTEntry data_dir;
+						std::vector<FileUtil::FSTEntry> files;
+						const std::string queue_path{fmt::format("{}/zippass/queue", FileUtil::GetUserPath(FileUtil::UserPath::UserDir))};
+						FileUtil::ScanDirectoryTree(queue_path, data_dir, 2048);
+						FileUtil::GetAllFilesFromNestedEntries(data_dir, files);
+						
+						if (files.size() > 99) {
+							LOG_ERROR(Service_FS, "ZipPass queue is full");
+							break;
+						}
+						
+						dir = "queue";
+					}
+					
+					const std::string path{fmt::format("{}/zippass/{}/{}.pass.zip", 
+						FileUtil::GetUserPath(FileUtil::UserPath::UserDir),
+						dir,
+						nickname)};
+					
+					if (!FileUtil::CreateFullPath(path)) {
+						LOG_ERROR(Service_FS, "Failed to create {}", path);
+						break;
+					}
 
-        if (ret > 0) {
-            char* buffer = new char[1000000];
-            FileUtil::IOFile efile(path, "rb");
-            int tocopy = (int)efile.ReadBytes(buffer, 1000000);
-            efile.Close();
-
-            if (tocopy > 0 && tocopy < 1000000) {
-                Packet send_packet;
-                send_packet << static_cast<u8>(idAzaharPlusSpecific);
-                send_packet << static_cast<u8>(IdZipPassUpload);
-                send_packet << static_cast<u32>(azaharplus_network_version);
-                send_packet << static_cast<u32>(tocopy);
-                send_packet.Append(buffer, tocopy);
-                Send(std::move(send_packet));
-            }
-
-            delete[] buffer;
-        }
-
-        break;
-    }
-
-    case IdZipPassUpload:
-        LOG_ERROR(Network, "IdZipPassUpload");
-        break;
-
-    case IdZipPassDownload: {
-        LOG_ERROR(Network, "IdZipPassDownload");
-
-        std::string nickname;
-        u32 nicknameLength;
-        packet >> nicknameLength;
-
-        if (nicknameLength < 64) {
-            nickname.resize(nicknameLength);
-            memcpy(nickname.data(), event->packet->data + 2 * sizeof(u8) + sizeof(u32),
-                   nicknameLength);
-            packet.IgnoreBytes(nicknameLength);
-
-            u32 dataSize;
-            packet >> dataSize;
-
-            if (dataSize > 0 && dataSize < 1000000 &&
-                event->packet->dataLength ==
-                    dataSize + 2 * sizeof(u8) + 2 * sizeof(u32) + nicknameLength) {
-                std::string dir = "history";
-
-                if (Loader::getProgramId() != "") {
-                    FileUtil::FSTEntry data_dir;
-                    std::vector<FileUtil::FSTEntry> files;
-                    const std::string queue_path{fmt::format(
-                        "{}/zippass/queue", FileUtil::GetUserPath(FileUtil::UserPath::UserDir))};
-                    FileUtil::ScanDirectoryTree(queue_path, data_dir, 2048);
-                    FileUtil::GetAllFilesFromNestedEntries(data_dir, files);
-
-                    if (files.size() > 99) {
-                        LOG_ERROR(Service_FS, "ZipPass queue is full");
-                        break;
-                    }
-
-                    dir = "queue";
-                }
-
-                const std::string path{
-                    fmt::format("{}/zippass/{}/{}.pass.zip",
-                                FileUtil::GetUserPath(FileUtil::UserPath::UserDir), dir, nickname)};
-
-                if (!FileUtil::CreateFullPath(path)) {
-                    LOG_ERROR(Service_FS, "Failed to create {}", path);
-                    break;
-                }
-
-                FileUtil::IOFile dfile(path, "wb");
-                int written = (int)dfile.WriteBytes(event->packet->data + 2 * sizeof(u8) +
-                                                        2 * sizeof(u32) + nicknameLength,
-                                                    dataSize);
-                (void)written; // intentionally unused
-                dfile.Close();
-
-                if (dir == "history") {
-                    std::string zip_path = path;
-
-#if defined(ANDROID) && !defined(HAVE_LIBRETRO_VFS)
-                    zip_path = AndroidUtils::TranslateFilePath(path);
+					FileUtil::IOFile dfile(path, "wb");
+					int written = (int)dfile.WriteBytes(
+						event->packet->data + 2*sizeof(u8) + 2*sizeof(u32) + nicknameLength, 
+						dataSize);
+					dfile.Close();
+					
+					if(dir == "history") {
+						std::string zip_path = path;
+						
+#ifdef ANDROID
+						zip_path = AndroidUtils::TranslateFilePath(path);
 #endif
-                    Core::importZipPass(zip_path);
-                    Core::trimZipPassHistory();
-                }
-            } else {
-                LOG_ERROR(Network, "bad data size {} / {}", dataSize, event->packet->dataLength);
-            }
-        }
-
-        break;
-    }
-
-    default:
-        LOG_ERROR(Network, "unknown subtype {}", subType);
-        break;
-    }
+						Core::importZipPass(zip_path);
+						Core::trimZipPassHistory();
+					}
+				} else {
+					LOG_ERROR(Network, "bad data size {} / {}", dataSize, event->packet->dataLength);
+				}
+			}
+			
+			break;
+		}
+		
+		default:
+			LOG_ERROR(Network, "unknown subtype {}", subType);
+			break;
+	}
 }
 
 void RoomMember::RoomMemberImpl::Disconnect() {
     member_information.clear();
     room_information.member_slots = 0;
     room_information.name.clear();
-    room_information.address.clear();
-    server_address.clear();
 
     if (!server)
         return;
@@ -692,13 +678,6 @@ RoomInformation RoomMember::GetRoomInformation() const {
     return room_member_impl->room_information;
 }
 
-const std::string& RoomMember::GetServerAddress() const {
-    if (!room_member_impl->room_information.address.empty()) {
-        return room_member_impl->room_information.address;
-    }
-    return room_member_impl->server_address;
-}
-
 void RoomMember::Join(const std::string& nick, const std::string& console_id_hash,
                       const char* server_addr, u16 server_port, u16 client_port,
                       const MacAddress& preferred_mac, const std::string& password,
@@ -718,7 +697,6 @@ void RoomMember::Join(const std::string& nick, const std::string& console_id_has
     }
 
     room_member_impl->SetState(State::Joining);
-    room_member_impl->server_address = server_addr;
 
     ENetAddress address{};
     enet_address_set_host(&address, server_addr);
@@ -843,30 +821,12 @@ void RoomMember::Unbind(CallbackHandle<T> handle) {
 }
 
 void RoomMember::Leave() {
-    if (!room_member_impl->loop_thread)
-        return;
-
     room_member_impl->SetState(State::Idle);
-
-    {
-        std::lock_guard lock(room_member_impl->network_mutex);
-
-        if (room_member_impl->server) {
-            enet_peer_disconnect(room_member_impl->server, 0);
-            enet_host_flush(room_member_impl->client);
-        }
-    }
-
-    if (room_member_impl->loop_thread->joinable()) {
-        room_member_impl->loop_thread->join();
-    }
-
+    room_member_impl->loop_thread->join();
     room_member_impl->loop_thread.reset();
 
-    if (room_member_impl->client) {
-        enet_host_destroy(room_member_impl->client);
-        room_member_impl->client = nullptr;
-    }
+    enet_host_destroy(room_member_impl->client);
+    room_member_impl->client = nullptr;
 }
 
 template void RoomMember::Unbind(CallbackHandle<WifiPacket>);
