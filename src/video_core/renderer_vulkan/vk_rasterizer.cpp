@@ -529,6 +529,12 @@ void RasterizerVulkan::DrawTriangles() {
         return;
     }
 
+    // Batch size limit: flush large vertex batches to reduce per-draw overhead
+    if (Settings::values.batch_size_limit && vertex_batch.size() >= 256) {
+        Draw(false, false);
+        return;
+    }
+
     pipeline_info.state.rasterization.topology.Assign(Pica::PipelineRegs::TriangleTopology::List);
     pipeline_info.state.vertex_layout = software_layout;
 

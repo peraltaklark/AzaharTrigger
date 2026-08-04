@@ -92,6 +92,11 @@ enum class BooleanSetting(
         Settings.SECTION_RENDERER,
         true
     ),
+    BATCH_SIZE_LIMIT(
+        SettingKeys.batch_size_limit(),
+        Settings.SECTION_RENDERER,
+        true
+    ),
     REQUIRED_ONLINE_LLE_MODULES(
         SettingKeys.enable_required_online_lle_modules(),
         Settings.SECTION_SYSTEM,

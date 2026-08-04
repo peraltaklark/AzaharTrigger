@@ -3,7 +3,7 @@
 <resources>
 
 	<!-- General application strings -->
-	<string name="app_name" translatable="false">AzaharTrigger</string>
+	<string name="app_name" translatable="false">AzaharTrigger Ludashi</string>
 	<string name="app_disclaimer">
 		This software will run applications for the Nintendo 3DS handheld game console. No game titles are included.\n\nBefore you can begin with emulating, please select a folder to store Azahar\'s user data in.\n\nWhat\'s this:\n<a href='https://web.archive.org/web/20240304193549/https://github.com/citra-emu/citra/wiki/Citra-Android-user-data-and-storage'>Wiki - Citra Android user data and storage</a>
 	</string>
@@ -481,6 +481,8 @@
 	<string name="priority_boost_starved_threads">Priority Boost Starved Threads</string>
     <string name="use_fastmem">Use Fastmem</string>
     <string name="bottom_screen_half_res">Half-Res Bottom Screen</string>
+    <string name="batch_size_limit">Batch Size Limit</string>
+    <string name="batch_size_limit_description">Limit vertex batch size to reduce draw call overhead</string>
     <string name="bottom_screen_half_res_description">Render bottom screen at half resolution for better performance</string>
     <string name="use_fastmem_description">Enable direct memory access for JIT (faster, disable if crashing)</string>
     <string name="priority_boost_starved_threads_description">Boost low priority starved threads during kernel rescheduling. This may improve the performance.</string>

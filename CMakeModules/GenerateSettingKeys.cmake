@@ -11,6 +11,7 @@ foreach(KEY IN ITEMS
     "use_cpu_jit"
     "use_fastmem"
     "bottom_screen_half_res"
+    "batch_size_limit"
     "cpu_clock_percentage"
     "is_new_3ds"
     "lle_applets"

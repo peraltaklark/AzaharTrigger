@@ -156,6 +156,10 @@ adreno_gpu_boost =
 # 0: Disabled, 1: Enabled (default)
 )") DECLARE_KEY(bottom_screen_half_res) BOOST_HANA_STRING(R"(
 bottom_screen_half_res =
+# Limit vertex batch size to reduce draw call overhead
+# 0: Disabled, 1: Enabled (default)
+)") DECLARE_KEY(batch_size_limit) BOOST_HANA_STRING(R"(
+batch_size_limit =
 
 # Reduce stuttering by storing and loading generated shaders to disk
 # 0: Off, 1 (default. On)

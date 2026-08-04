@@ -1041,6 +1041,15 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
             )
             add(
                 SwitchSetting(
+                    BooleanSetting.BATCH_SIZE_LIMIT,
+                    R.string.batch_size_limit,
+                    R.string.batch_size_limit_description,
+                    BooleanSetting.BATCH_SIZE_LIMIT.key,
+                    BooleanSetting.BATCH_SIZE_LIMIT.defaultValue
+                )
+            )
+            add(
+                SwitchSetting(
                     BooleanSetting.DISK_SHADER_CACHE,
                     R.string.use_disk_shader_cache,
                     R.string.use_disk_shader_cache_description,

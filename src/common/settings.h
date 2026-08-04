@@ -671,6 +671,7 @@ struct Values {
     SwitchableSetting<bool> priority_boost_starved_threads{true, "priority_boost_starved_threads"};
     SwitchableSetting<bool> use_fastmem{true, "use_fastmem"};
     SwitchableSetting<bool> bottom_screen_half_res{true, "bottom_screen_half_res"};
+    SwitchableSetting<bool> batch_size_limit{true, "batch_size_limit"};
 
     // Video Dumping
     std::string output_format;
