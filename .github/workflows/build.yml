@@ -2,7 +2,7 @@ name: citra-build
 
 on:
   push:
-    branches: [ "Game-Title-on-Multiplayer-New" ]
+    branches: [ "Game-Title-on-Multiplayer-NewSett" ]
     tags: [ "v*" ]
   pull_request:
     branches: [ "*" ]
