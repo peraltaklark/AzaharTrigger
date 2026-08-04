@@ -220,7 +220,6 @@ class MainActivity :
     }
 
     override fun onDestroy() {
-        NetPlayDialog.stopWifiDirect()
         super.onDestroy()
     }
 
