@@ -468,6 +468,20 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
     }
 
     const bool wait_built = !async_shaders || regs.pipeline.num_vertices <= 6;
+    if (wait_built) {
+        static int wait_log_count = 0;
+        if (wait_log_count < 50) {
+            __android_log_print(ANDROID_LOG_INFO, "citra", "Waiting for pipeline build, vertices=%u", regs.pipeline.num_vertices);
+            wait_log_count++;
+        }
+    }
+    if (wait_built) {
+        static u64 last_log_frame = 0;
+        if (last_log_frame != system.frame_count) {
+            LOG_INFO(Render_Vulkan, "Waiting for pipeline... frame={}", system.frame_count);
+            last_log_frame = system.frame_count;
+        }
+    }
     if (!pipeline_cache.BindPipeline(pipeline_info, wait_built)) {
         return true;
     }
@@ -527,6 +541,13 @@ void RasterizerVulkan::SetupIndexArray() {
 void RasterizerVulkan::DrawTriangles() {
     if (vertex_batch.empty()) {
         return;
+    }
+    {
+        static int draw_count = 0;
+        if (draw_count < 100) { // limit spam
+            __android_log_print(ANDROID_LOG_INFO, "citra", "DrawTriangles batch size: %zu", vertex_batch.size());
+            draw_count++;
+        }
     }
 
     // Batch size limit: flush large vertex batches to reduce per-draw overhead
