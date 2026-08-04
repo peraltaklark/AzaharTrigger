@@ -160,10 +160,6 @@ object NetPlayManager {
         }.start()
     }
 
-    fun setOnAdapterRefreshListener(listener: (Int, String) -> Unit) {
-        adapterRefreshListener = listener
-    }
-
     fun getUsername(activity: Context): String {        val prefs = PreferenceManager.getDefaultSharedPreferences(activity)
         val name = "Azahar${(Math.random() * 100).toInt()}"
         return prefs.getString("NetPlayUsername", name) ?: name

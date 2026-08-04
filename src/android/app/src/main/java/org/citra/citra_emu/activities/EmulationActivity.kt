@@ -233,7 +233,6 @@ class EmulationActivity : AppCompatActivity() {
         instance = null
         secondaryDisplayManager.releasePresentation()
         secondaryDisplayManager.releaseVD()
-        NetPlayDialog.stopWifiDirect()
         NativeLibrary.enableAdrenoTurboMode(false)
 
         super.onDestroy()
