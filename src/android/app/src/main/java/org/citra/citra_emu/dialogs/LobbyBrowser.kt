@@ -200,7 +200,6 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                 if (result == 0) {
                     saveLastVisitedRoom(room)
                     dismiss()
-                    NetPlayDialog(context).show()
                 }
             }
         }.start()
