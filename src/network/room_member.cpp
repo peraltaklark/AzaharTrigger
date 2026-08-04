@@ -679,12 +679,32 @@ void RoomMember::Unbind(CallbackHandle<T> handle) {
 }
 
 void RoomMember::Leave() {
+    // Protect against concurrent calls
+    static std::mutex leave_mutex;
+    std::lock_guard<std::mutex> lock(leave_mutex);
+
+    // Already left or no thread to handle
+    if (!room_member_impl->loop_thread) {
+        if (room_member_impl->client) {
+            enet_host_destroy(room_member_impl->client);
+            room_member_impl->client = nullptr;
+        }
+        return;
+    }
+
+    // Signal the network loop to stop
     room_member_impl->SetState(State::Idle);
-    room_member_impl->loop_thread->join();
+
+    // Join only if the thread is still joinable
+    if (room_member_impl->loop_thread->joinable()) {
+        room_member_impl->loop_thread->join();
+    }
     room_member_impl->loop_thread.reset();
 
-    enet_host_destroy(room_member_impl->client);
-    room_member_impl->client = nullptr;
+    if (room_member_impl->client) {
+        enet_host_destroy(room_member_impl->client);
+        room_member_impl->client = nullptr;
+    }
 }
 
 template void RoomMember::Unbind(CallbackHandle<WifiPacket>);
