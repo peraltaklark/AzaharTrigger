@@ -58,7 +58,7 @@ constexpr std::size_t MaxBeaconFrames = 15;
 constexpr u16 BroadcastNetworkNodeId = 0xFFFF;
 
 constexpr std::chrono::milliseconds HEARTBEAT_INTERVAL{500};
-constexpr std::chrono::milliseconds CONNECTION_TIMEOUT{20000};
+constexpr std::chrono::milliseconds CONNECTION_TIMEOUT{60000};
 constexpr std::chrono::milliseconds RECONNECT_DELAY{2000};
 constexpr int MAX_RECONNECT_ATTEMPTS = 3;
 constexpr u8 HEARTBEAT_CHANNEL = 0xF;
