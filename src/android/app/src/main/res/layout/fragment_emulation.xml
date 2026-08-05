@@ -190,7 +190,7 @@
             android:focusableInTouchMode="false"
             android:importantForAccessibility="no">
             
-            <androidx.recyclerview.widget.RecyclerView
+            <org.citra.citra_emu.overlay.PassthroughRecyclerView
                 android:id="@+id/chatRecycler"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
