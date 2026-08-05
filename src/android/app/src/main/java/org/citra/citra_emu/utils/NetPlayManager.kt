@@ -160,8 +160,12 @@ object NetPlayManager {
         }.start()
     }
 
-    fun getUsername(activity: Context): String {        val prefs = PreferenceManager.getDefaultSharedPreferences(activity)
-        val name = "Azahar${(Math.random() * 100).toInt()}"
+    fun getUsername(activity: Context): String {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(activity)
+        var name = NativeLibrary.getSystemUsername()
+        if (name.isEmpty()) {
+            name = "Azahar${(Math.random() * 100).toInt()}"
+        }
         return prefs.getString("NetPlayUsername", name) ?: name
     }
 
