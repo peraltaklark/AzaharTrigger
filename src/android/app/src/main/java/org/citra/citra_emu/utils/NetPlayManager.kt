@@ -16,6 +16,7 @@ import android.text.format.Formatter
 import android.widget.Toast
 import androidx.preference.PreferenceManager
 import org.citra.citra_emu.CitraApplication
+import org.citra.citra_emu.NativeLibrary
 import org.citra.citra_emu.R
 import org.citra.citra_emu.dialogs.ChatMessage
 import java.net.Inet4Address
