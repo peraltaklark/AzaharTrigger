@@ -468,6 +468,11 @@ class EmulationFragment :
                             emulationState.unpause()
                         }
                         .setOnCancelListener { emulationState.unpause() }
+                        .setOnDismissListener {
+                            binding.surfaceInputOverlay.requestFocus()
+                            binding.surfaceInputOverlay.isFocusableInTouchMode = true
+                            binding.surfaceInputOverlay.isEnabled = true
+                        }
                         .show()
                     true
                 }
@@ -575,6 +580,7 @@ class EmulationFragment :
 
         if (NativeLibrary.isRunning()) {
             emulationState.unpause()
+            screenAdjustmentUtil.swapScreen(false)
 
             // Resume chat overlay
             if (::chatOverlayManager.isInitialized) {
