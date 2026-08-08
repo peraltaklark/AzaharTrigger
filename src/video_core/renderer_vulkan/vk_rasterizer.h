@@ -1,3 +1,5 @@
+#include <array>
+#include <vector>
 // Copyright Citra Emulator Project / Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
@@ -50,6 +52,29 @@ public:
 
     void DrawTriangles() override;
     void FlushAll() override;
+    // Draw batching
+    struct DrawBatchEntry {
+        u32 vertex_count;
+        s32 vertex_offset;
+        u32 binding_count;
+        std::array<u32, 16> bindings;
+        bool is_indexed;
+        vk::Buffer index_buffer;
+        vk::DeviceSize index_offset;
+        vk::IndexType index_type;
+    };
+
+    std::vector<DrawBatchEntry> draw_batch;
+    PipelineInfo current_batch_pipeline_info;
+    bool batch_active = false;
+    static constexpr u32 MAX_BATCH_SIZE = 64;
+
+    void FlushDrawBatch();
+
+    vk::Buffer last_bound_index_buffer;
+    vk::DeviceSize last_bound_index_offset;
+    vk::IndexType last_bound_index_type;
+
     void FlushRegion(PAddr addr, u32 size) override;
     void InvalidateRegion(PAddr addr, u32 size) override;
     void FlushAndInvalidateRegion(PAddr addr, u32 size) override;
