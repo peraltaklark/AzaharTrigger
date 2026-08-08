@@ -39,14 +39,6 @@ constexpr u64 TEXTURE_BUFFER_SIZE = 2_MiB;
 constexpr vk::BufferUsageFlags BUFFER_USAGE =
     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer;
 
-struct DrawParams {
-    u32 vertex_count;
-    s32 vertex_offset;
-    u32 binding_count;
-    std::array<u32, 16> bindings;
-    bool is_indexed;
-};
-
 [[nodiscard]] u64 TextureBufferSize(const Instance& instance) {
     // Use the smallest texel size from the texel views
     // which corresponds to eR32G32Sfloat
@@ -109,7 +101,10 @@ RasterizerVulkan::RasterizerVulkan(Memory::MemorySystem& memory, Pica::PicaCore&
         .range = VK_WHOLE_SIZE,
     });
 
-    scheduler.RegisterOnSubmit([&renderpass_cache] { renderpass_cache.EndRendering(); });
+    scheduler.RegisterOnSubmit([this, &renderpass_cache] {
+        FlushDrawBatch();
+        renderpass_cache.EndRendering();
+    });
 
     // Prepare the static buffer descriptor set.
     const auto buffer_set = pipeline_cache.Acquire(DescriptorHeapType::Buffer);
@@ -468,29 +463,44 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
     }
 
     const bool wait_built = !async_shaders || regs.pipeline.num_vertices <= 6;
+
+    // A queued batch cannot cross a pipeline change.
+    if (batch_active && pipeline_info != batch_pipeline_info) {
+        FlushDrawBatch();
+    }
+
     if (!pipeline_cache.BindPipeline(pipeline_info, wait_built)) {
         return true;
     }
 
-    const DrawParams params = {
-        .vertex_count = regs.pipeline.num_vertices,
-        .vertex_offset = -static_cast<s32>(vertex_info.vs_input_index_min),
-        .binding_count = pipeline_info.state.vertex_layout.binding_count,
-        .bindings = binding_offsets,
-        .is_indexed = is_indexed,
-    };
+    if (!batch_active) {
+        batch_pipeline_info = pipeline_info;
+        batch_active = true;
+    }
 
-    scheduler.Record([this, params](vk::CommandBuffer cmdbuf) {
-        std::array<vk::DeviceSize, 16> offsets;
-        std::transform(params.bindings.begin(), params.bindings.end(), offsets.begin(),
-                       [](u32 offset) { return static_cast<vk::DeviceSize>(offset); });
-        cmdbuf.bindVertexBuffers(0, params.binding_count, vertex_buffers.data(), offsets.data());
-        if (params.is_indexed) {
-            cmdbuf.drawIndexed(params.vertex_count, 1, 0, params.vertex_offset, 0);
-        } else {
-            cmdbuf.draw(params.vertex_count, 1, 0, 0);
-        }
-    });
+    DrawBatchEntry entry{};
+    entry.vertex_count = regs.pipeline.num_vertices;
+    entry.vertex_offset = -static_cast<s32>(vertex_info.vs_input_index_min);
+    entry.binding_count = pipeline_info.state.vertex_layout.binding_count;
+
+    for (u32 i = 0; i < entry.binding_count; i++) {
+        entry.vertex_buffers[i] = vertex_buffers[i];
+        entry.vertex_offsets[i] = static_cast<vk::DeviceSize>(binding_offsets[i]);
+    }
+
+    entry.is_indexed = is_indexed;
+
+    if (is_indexed) {
+        entry.index_buffer = last_bound_index_buffer;
+        entry.index_offset = last_bound_index_offset;
+        entry.index_type = last_bound_index_type;
+    }
+
+    draw_batch.push_back(entry);
+
+    if (draw_batch.size() >= MAX_BATCH_SIZE) {
+        FlushDrawBatch();
+    }
 
     return true;
 }
@@ -518,10 +528,77 @@ void RasterizerVulkan::SetupIndexArray() {
 
     stream_buffer.Commit(index_buffer_size);
 
-    scheduler.Record(
-        [this, index_offset = index_offset, index_type = index_type](vk::CommandBuffer cmdbuf) {
-            cmdbuf.bindIndexBuffer(stream_buffer.Handle(), index_offset, index_type);
-        });
+    // Defer the index-buffer bind until FlushDrawBatch().
+    last_bound_index_buffer = stream_buffer.Handle();
+    last_bound_index_offset = index_offset;
+    last_bound_index_type = index_type;
+}
+
+void RasterizerVulkan::FlushDrawBatch() {
+    if (draw_batch.empty()) {
+        batch_active = false;
+        return;
+    }
+
+    auto entries = std::move(draw_batch);
+    draw_batch.clear();
+    batch_active = false;
+
+    scheduler.Record([this, entries = std::move(entries)](vk::CommandBuffer cmdbuf) {
+        std::array<vk::Buffer, 16> cur_bufs{};
+        std::array<vk::DeviceSize, 16> cur_offsets{};
+        u32 cur_binding_count = 0;
+
+        vk::Buffer cur_ib{};
+        vk::DeviceSize cur_ib_offset{};
+        vk::IndexType cur_ib_type{};
+
+        for (const auto& entry : entries) {
+            bool vertex_changed = entry.binding_count != cur_binding_count;
+
+            if (!vertex_changed) {
+                for (u32 i = 0; i < entry.binding_count; i++) {
+                    if (entry.vertex_buffers[i] != cur_bufs[i] ||
+                        entry.vertex_offsets[i] != cur_offsets[i]) {
+                        vertex_changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (vertex_changed) {
+                cmdbuf.bindVertexBuffers(0, entry.binding_count,
+                                         entry.vertex_buffers.data(),
+                                         entry.vertex_offsets.data());
+
+                cur_bufs = entry.vertex_buffers;
+                cur_offsets = entry.vertex_offsets;
+                cur_binding_count = entry.binding_count;
+            }
+
+            if (entry.is_indexed) {
+                const bool index_changed =
+                    entry.index_buffer != cur_ib ||
+                    entry.index_offset != cur_ib_offset ||
+                    entry.index_type != cur_ib_type;
+
+                if (index_changed) {
+                    cmdbuf.bindIndexBuffer(entry.index_buffer,
+                                           entry.index_offset,
+                                           entry.index_type);
+
+                    cur_ib = entry.index_buffer;
+                    cur_ib_offset = entry.index_offset;
+                    cur_ib_type = entry.index_type;
+                }
+
+                cmdbuf.drawIndexed(entry.vertex_count, 1, 0,
+                                   entry.vertex_offset, 0);
+            } else {
+                cmdbuf.draw(entry.vertex_count, 1, 0, 0);
+            }
+        }
+    });
 }
 
 void RasterizerVulkan::DrawTriangles() {
@@ -735,18 +812,22 @@ void RasterizerVulkan::BindTextureCube(const Pica::TexturingRegs::FullTextureCon
 }
 
 void RasterizerVulkan::FlushAll() {
+    FlushDrawBatch();
     res_cache.FlushAll();
 }
 
 void RasterizerVulkan::FlushRegion(PAddr addr, u32 size) {
+    FlushDrawBatch();
     res_cache.FlushRegion(addr, size);
 }
 
 void RasterizerVulkan::InvalidateRegion(PAddr addr, u32 size) {
+    FlushDrawBatch();
     res_cache.InvalidateRegion(addr, size);
 }
 
 void RasterizerVulkan::FlushAndInvalidateRegion(PAddr addr, u32 size) {
+    FlushDrawBatch();
     res_cache.FlushRegion(addr, size);
     res_cache.InvalidateRegion(addr, size);
 }
