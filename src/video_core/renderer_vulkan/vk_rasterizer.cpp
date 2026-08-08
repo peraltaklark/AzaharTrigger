@@ -456,6 +456,28 @@ bool RasterizerVulkan::AccelerateDrawBatch(bool is_indexed) {
     return Draw(true, is_indexed);
 }
 
+u64 RasterizerVulkan::GetFramebufferHash() const {
+    if (!current_framebuffer) {
+        return 0;
+    }
+
+    u64 hash = reinterpret_cast<uintptr_t>(current_framebuffer);
+
+    hash ^= static_cast<u64>(current_draw_rect.left) << 32;
+    hash ^= static_cast<u64>(current_draw_rect.right) << 16;
+    hash ^= static_cast<u64>(current_draw_rect.top) << 8;
+    hash ^= static_cast<u64>(current_draw_rect.bottom);
+
+    return hash;
+}
+
+u64 RasterizerVulkan::GetTextureHash() const {
+    // Commit 2 currently has no texture tracking yet.
+    // Keep this stable until texture state tracking is added.
+
+    return 0;
+}
+
 bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
     if (is_indexed) {
         SetupIndexArray();
@@ -463,17 +485,23 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
 
     const bool wait_built = !async_shaders || regs.pipeline.num_vertices <= 6;
 
-    // A queued batch cannot cross a pipeline change.
-    if (batch_active && pipeline_info != batch_pipeline_info) {
-        FlushDrawBatch();
-    }
-
     if (!pipeline_cache.BindPipeline(pipeline_info, wait_built)) {
         return true;
     }
 
+    DrawBatchState state{};
+    state.pipeline = pipeline_info;
+    state.texture_hash = GetTextureHash();
+    state.framebuffer_hash = GetFramebufferHash();
+    state.viewport = pipeline_info.dynamic_info.viewport;
+    state.scissor = pipeline_info.dynamic_info.scissor;
+
+    if (batch_active && !(state == current_batch_state)) {
+        FlushDrawBatch();
+    }
+
     if (!batch_active) {
-        batch_pipeline_info = pipeline_info;
+        current_batch_state = state;
         batch_active = true;
     }
 
@@ -672,6 +700,9 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
          current_draw_rect != draw_rect)) {
         FlushDrawBatch();
     }
+
+    current_framebuffer = framebuffer;
+    current_draw_rect = draw_rect;
 
     renderpass_cache.BeginRendering(framebuffer, draw_rect);
 
