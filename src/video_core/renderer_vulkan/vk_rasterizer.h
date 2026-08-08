@@ -108,6 +108,8 @@ private:
         PipelineInfo pipeline;
         u64 texture_hash;
         u64 framebuffer_hash;
+        Common::Rectangle<s32> viewport;
+        Common::Rectangle<s32> scissor;
         Common::Rectangle<s32> batch_viewport;
         Common::Rectangle<s32> batch_scissor;
 
