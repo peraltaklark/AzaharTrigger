@@ -131,6 +131,9 @@ private:
     std::array<TextureBindingState, 3> current_textures{};
     const Framebuffer* current_framebuffer = nullptr;
 
+    Common::Rectangle<s32> viewport;
+    Common::Rectangle<s32> scissor;
+
     // Deferred index buffer state
     vk::Buffer last_bound_index_buffer;
     vk::DeviceSize last_bound_index_offset;
