@@ -101,8 +101,7 @@ RasterizerVulkan::RasterizerVulkan(Memory::MemorySystem& memory, Pica::PicaCore&
         .range = VK_WHOLE_SIZE,
     });
 
-    scheduler.RegisterOnSubmit([this, &renderpass_cache] {
-        FlushDrawBatch();
+    scheduler.RegisterOnSubmit([&renderpass_cache] {
         renderpass_cache.EndRendering();
     });
 
@@ -544,7 +543,7 @@ void RasterizerVulkan::FlushDrawBatch() {
     draw_batch.clear();
     batch_active = false;
 
-    scheduler.Record([this, entries = std::move(entries)](vk::CommandBuffer cmdbuf) {
+    scheduler.Record([entries = std::move(entries)](vk::CommandBuffer cmdbuf) {
         std::array<vk::Buffer, 16> cur_bufs{};
         std::array<vk::DeviceSize, 16> cur_offsets{};
         u32 cur_binding_count = 0;
@@ -666,6 +665,7 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
 
     // Begin rendering
     const auto draw_rect = fb_helper.DrawRect();
+    FlushDrawBatch();
     renderpass_cache.BeginRendering(framebuffer, draw_rect);
 
     // Configure viewport and scissor
