@@ -665,8 +665,15 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
 
     // Begin rendering
     const auto draw_rect = fb_helper.DrawRect();
+
+    // Do not allow a draw batch to cross render passes.
+    if (batch_active &&
+        (current_framebuffer != framebuffer ||
+         current_draw_rect != draw_rect)) {
+        FlushDrawBatch();
+    }
+
     renderpass_cache.BeginRendering(framebuffer, draw_rect);
-    FlushDrawBatch();
 
     // Configure viewport and scissor
     const auto viewport = fb_helper.Viewport();
