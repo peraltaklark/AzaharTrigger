@@ -101,8 +101,11 @@ RasterizerVulkan::RasterizerVulkan(Memory::MemorySystem& memory, Pica::PicaCore&
         .range = VK_WHOLE_SIZE,
     });
 
-    scheduler.RegisterOnSubmit([this, &renderpass_cache] {
+    renderpass_cache.SetBeforeEndRendering([this] {
         FlushDrawBatch();
+    });
+
+    scheduler.RegisterOnSubmit([&renderpass_cache] {
         renderpass_cache.EndRendering();
     });
 
