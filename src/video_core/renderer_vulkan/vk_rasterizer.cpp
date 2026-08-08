@@ -665,8 +665,8 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
 
     // Begin rendering
     const auto draw_rect = fb_helper.DrawRect();
-    FlushDrawBatch();
     renderpass_cache.BeginRendering(framebuffer, draw_rect);
+    FlushDrawBatch();
 
     // Configure viewport and scissor
     const auto viewport = fb_helper.Viewport();
