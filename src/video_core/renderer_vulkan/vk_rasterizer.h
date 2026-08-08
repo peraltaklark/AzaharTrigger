@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <array>
+#include <vector>
+
 #include "video_core/rasterizer_accelerated.h"
 #include "video_core/renderer_vulkan/vk_descriptor_update_queue.h"
 #include "video_core/renderer_vulkan/vk_pipeline_cache.h"
@@ -61,59 +64,82 @@ public:
                            u32 pixel_stride, ScreenInfo& screen_info);
     bool AccelerateDrawBatch(bool is_indexed) override;
 
-    /// Switches the disk resources to the specified title
     void SwitchDiskResources(u64 title_id) override;
 
 private:
-    /// Syncs pipeline state from PICA registers
     void SyncDrawState();
-
-    /// Syncs and uploads the lighting, fog and proctex LUTs
     void SyncAndUploadLUTs();
     void SyncAndUploadLUTsLF();
-
-    /// Syncs all enabled PICA texture units
     void SyncTextureUnits(const Framebuffer* framebuffer);
-
-    /// Syncs all utility textures in the fragment shader.
     void SyncUtilityTextures(const Framebuffer* framebuffer);
-
-    /// Binds the PICA shadow cube required for shadow mapping
     void BindShadowCube(const Pica::TexturingRegs::FullTextureConfig& texture,
                         vk::DescriptorSet texture_set);
-
-    /// Binds a texture cube to texture unit 0
     void BindTextureCube(const Pica::TexturingRegs::FullTextureConfig& texture,
                          vk::DescriptorSet texture_set);
-
-    /// Upload the uniform blocks to the uniform buffer object
     void UploadUniforms(bool accelerate_draw);
-
-    /// Generic draw function for DrawTriangles and AccelerateDrawBatch
     bool Draw(bool accelerate, bool is_indexed);
-
-    /// Internal implementation for AccelerateDrawBatch
     bool AccelerateDrawBatchInternal(bool is_indexed);
-
-    /// Setup index array for AccelerateDrawBatch
     void SetupIndexArray();
-
-    /// Setup vertex array for AccelerateDrawBatch
     void SetupVertexArray();
-
-    /// Setup the fixed attribute emulation in vulkan
     void SetupFixedAttribs();
-
-    /// Setup vertex shader for AccelerateDrawBatch
     bool SetupVertexShader();
-
-    /// Setup geometry shader for AccelerateDrawBatch
     bool SetupGeometryShader();
-
-    /// Creates the vertex layout struct used for software shader pipelines
     void MakeSoftwareVertexLayout();
 
-private:
+    // -------------------- Batching infrastructure --------------------
+    struct TextureBindingState {
+        vk::ImageView view = nullptr;
+        vk::Sampler sampler = nullptr;
+    };
+
+    struct DrawBatchEntry {
+        u32 vertex_count;
+        s32 vertex_offset;
+        u32 binding_count;
+        std::array<vk::Buffer, 16> vertex_buffers{};
+        std::array<vk::DeviceSize, 16> vertex_offsets{};
+        bool is_indexed = false;
+        vk::Buffer index_buffer{};
+        vk::DeviceSize index_offset{};
+        vk::IndexType index_type{};
+    };
+
+    struct DrawBatchState {
+        PipelineInfo pipeline;
+        u64 texture_hash;
+        u64 framebuffer_hash;
+        Common::Rectangle<s32> viewport;
+        Common::Rectangle<s32> scissor;
+
+        bool operator==(const DrawBatchState& o) const {
+            return pipeline == o.pipeline && texture_hash == o.texture_hash &&
+                   framebuffer_hash == o.framebuffer_hash && viewport == o.viewport &&
+                   scissor == o.scissor;
+        }
+    };
+
+    void FlushDrawBatch();
+    u64 GetFramebufferHash() const;
+    u64 GetTextureHash() const;
+
+    std::vector<DrawBatchEntry> draw_batch;
+    DrawBatchState current_batch_state;
+    bool batch_active = false;
+    static constexpr size_t MAX_BATCH_SIZE = 128;
+
+    // Current Vulkan resource bindings (updated when descriptor sets are written)
+    std::array<TextureBindingState, 3> current_textures{};
+    const Framebuffer* current_framebuffer = nullptr;
+
+    Common::Rectangle<s32> batch_viewport;
+    Common::Rectangle<s32> batch_scissor;
+
+    // Deferred index buffer state
+    vk::Buffer last_bound_index_buffer{};
+    vk::DeviceSize last_bound_index_offset{};
+    vk::IndexType last_bound_index_type{};
+
+    // -------------------- Existing members --------------------
     const Instance& instance;
     Scheduler& scheduler;
     RenderManager& renderpass_cache;
