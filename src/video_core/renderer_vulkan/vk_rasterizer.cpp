@@ -590,7 +590,7 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
     pipeline_info.dynamic_info.scissor = draw_rect;
 
     // Store current viewport and scissor for batching
-    current_viewport = Common::Rectangle<s32>{
+    viewport = Common::Rectangle<s32>{
         viewport.x, viewport.y,
         viewport.x + viewport.width, viewport.y + viewport.height,
     };
@@ -730,11 +730,8 @@ void RasterizerVulkan::BindTextureCube(const Pica::TexturingRegs::FullTextureCon
 // ============== HASHES ==============
 
 u64 RasterizerVulkan::GetFramebufferHash() const {
-    if (!current_framebuffer) return 0;
-    u64 hash = reinterpret_cast<uintptr_t>(current_framebuffer);
-    hash ^= static_cast<u64>(current_framebuffer->Width()) << 32;
-    hash ^= static_cast<u64>(current_framebuffer->Height()) << 48;
-    return hash;
+    // The pointer uniquely identifies the framebuffer configuration.
+    return reinterpret_cast<uintptr_t>(current_framebuffer);
 }
 
 u64 RasterizerVulkan::GetTextureHash() const {
