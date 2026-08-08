@@ -416,8 +416,8 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
     state.pipeline = pipeline_info;
     state.texture_hash = GetTextureHash();
     state.framebuffer_hash = GetFramebufferHash();
-    state.viewport = viewport;
-    state.scissor = scissor;
+    state.viewport = batch_viewport;
+    state.scissor = batch_scissor;
 
     if (batch_active && !(state == current_batch_state)) {
         FlushDrawBatch();
@@ -583,7 +583,7 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
     renderpass_cache.BeginRendering(framebuffer, draw_rect);
 
     const auto viewport = fb_helper.Viewport();
-    pipeline_info.dynamic_info.batch_viewport = Common::Rectangle<s32>{
+    pipeline_info.dynamic_info.viewport = Common::Rectangle<s32>{
         viewport.x, viewport.y,
         viewport.x + viewport.width, viewport.y + viewport.height,
     };
