@@ -583,18 +583,18 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
     renderpass_cache.BeginRendering(framebuffer, draw_rect);
 
     const auto viewport = fb_helper.Viewport();
-    pipeline_info.dynamic_info.viewport = Common::Rectangle<s32>{
+    pipeline_info.dynamic_info.batch_viewport = Common::Rectangle<s32>{
         viewport.x, viewport.y,
         viewport.x + viewport.width, viewport.y + viewport.height,
     };
     pipeline_info.dynamic_info.scissor = draw_rect;
 
     // Store current viewport and scissor for batching
-    viewport = Common::Rectangle<s32>{
+    batch_viewport = Common::Rectangle<s32>{
         viewport.x, viewport.y,
         viewport.x + viewport.width, viewport.y + viewport.height,
     };
-    current_scissor = draw_rect;
+    batch_scissor = draw_rect;
 
     bool succeeded = true;
     if (accelerate) {
@@ -730,7 +730,6 @@ void RasterizerVulkan::BindTextureCube(const Pica::TexturingRegs::FullTextureCon
 // ============== HASHES ==============
 
 u64 RasterizerVulkan::GetFramebufferHash() const {
-    // The pointer uniquely identifies the framebuffer configuration.
     return reinterpret_cast<uintptr_t>(current_framebuffer);
 }
 
