@@ -416,8 +416,8 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
     state.pipeline = pipeline_info;
     state.texture_hash = GetTextureHash();
     state.framebuffer_hash = GetFramebufferHash();
-    state.viewport = current_viewport;
-    state.scissor = current_scissor;
+    state.viewport = viewport;
+    state.scissor = scissor;
 
     if (batch_active && !(state == current_batch_state)) {
         FlushDrawBatch();
