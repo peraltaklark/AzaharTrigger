@@ -107,16 +107,35 @@ private:
         vk::IndexType index_type{};
     };
 
+    struct DrawBatchState {
+        PipelineInfo pipeline;
+        u64 texture_hash{};
+        u64 framebuffer_hash{};
+        Common::Rectangle<s32> viewport{};
+        Common::Rectangle<s32> scissor{};
+
+        bool operator==(const DrawBatchState& o) const {
+            return pipeline == o.pipeline &&
+                   texture_hash == o.texture_hash &&
+                   framebuffer_hash == o.framebuffer_hash &&
+                   viewport == o.viewport &&
+                   scissor == o.scissor;
+        }
+    };
+
     static constexpr size_t MAX_BATCH_SIZE = 128;
 
     std::vector<DrawBatchEntry> draw_batch;
     bool batch_active = false;
-    PipelineInfo batch_pipeline_info{};
+    DrawBatchState current_batch_state{};
 
     const Framebuffer* current_framebuffer{};
     Common::Rectangle<u32> current_draw_rect{};
 
     void FlushDrawBatch();
+
+    u64 GetTextureHash() const;
+    u64 GetFramebufferHash() const;
 
     vk::Buffer last_bound_index_buffer{};
     vk::DeviceSize last_bound_index_offset{};
