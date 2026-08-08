@@ -293,6 +293,7 @@ void RasterizerVulkan::SetupVertexArray() {
     }
 
     stream_buffer.Commit(buffer_offset);
+    vertex_buffers.fill(stream_buffer.Handle());
     SetupFixedAttribs();
 }
 
@@ -512,6 +513,13 @@ void RasterizerVulkan::FlushDrawBatch() {
             }
 
             if (vertex_changed) {
+                LOG_ERROR(Render_Vulkan,
+                          "BATCH DRAW vc={} vb0={:#x} offset={}",
+                          entry.vertex_count,
+                          reinterpret_cast<uintptr_t>(
+                              static_cast<VkBuffer>(entry.vertex_buffers[0])),
+                          static_cast<u64>(entry.vertex_offsets[0]));
+
                 cmdbuf.bindVertexBuffers(0, entry.binding_count,
                                          entry.vertex_buffers.data(),
                                          entry.vertex_offsets.data());
@@ -529,7 +537,7 @@ void RasterizerVulkan::FlushDrawBatch() {
                 }
                 cmdbuf.drawIndexed(entry.vertex_count, 1, 0, entry.vertex_offset, 0);
             } else {
-                cmdbuf.draw(entry.vertex_count, 1, 0, 0);
+                cmdbuf.draw(entry.vertex_count, 1, entry.vertex_offset, 0);
             }
         }
     });
@@ -552,6 +560,11 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
 
     const bool shadow_rendering = regs.framebuffer.IsShadowRendering();
 
+LOG_ERROR(Render_Vulkan,
+          "Shadow rendering: {} color_addr={:#X} depth_addr={:#X}",
+          shadow_rendering,
+          regs.framebuffer.framebuffer.GetColorBufferPhysicalAddress(),
+          regs.framebuffer.framebuffer.GetDepthBufferPhysicalAddress());
     const bool has_stencil = regs.framebuffer.HasStencil();
     const bool write_color_fb = shadow_rendering || pipeline_info.GetFinalColorWriteMask(instance);
     const bool write_depth_fb = pipeline_info.IsDepthWriteEnabled();
