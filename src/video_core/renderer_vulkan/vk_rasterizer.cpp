@@ -529,7 +529,7 @@ void RasterizerVulkan::FlushDrawBatch() {
                 }
                 cmdbuf.drawIndexed(entry.vertex_count, 1, 0, entry.vertex_offset, 0);
             } else {
-                cmdbuf.draw(entry.vertex_count, 1, entry.vertex_offset, 0);
+                cmdbuf.draw(entry.vertex_count, 1, 0, 0);
             }
         }
     });
