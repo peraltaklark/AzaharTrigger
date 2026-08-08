@@ -95,6 +95,30 @@ private:
     /// Internal implementation for AccelerateDrawBatch
     bool AccelerateDrawBatchInternal(bool is_indexed);
 
+    struct DrawBatchEntry {
+        u32 vertex_count;
+        s32 vertex_offset;
+        u32 binding_count;
+        std::array<vk::Buffer, 16> vertex_buffers{};
+        std::array<vk::DeviceSize, 16> vertex_offsets{};
+        bool is_indexed = false;
+        vk::Buffer index_buffer{};
+        vk::DeviceSize index_offset{};
+        vk::IndexType index_type{};
+    };
+
+    static constexpr size_t MAX_BATCH_SIZE = 128;
+
+    std::vector<DrawBatchEntry> draw_batch;
+    bool batch_active = false;
+    PipelineInfo batch_pipeline_info{};
+
+    void FlushDrawBatch();
+
+    vk::Buffer last_bound_index_buffer{};
+    vk::DeviceSize last_bound_index_offset{};
+    vk::IndexType last_bound_index_type{};
+
     /// Setup index array for AccelerateDrawBatch
     void SetupIndexArray();
 
