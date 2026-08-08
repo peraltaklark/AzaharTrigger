@@ -113,6 +113,9 @@ private:
     bool batch_active = false;
     PipelineInfo batch_pipeline_info{};
 
+    const Framebuffer* current_framebuffer{};
+    Common::Rectangle<u32> current_draw_rect{};
+
     void FlushDrawBatch();
 
     vk::Buffer last_bound_index_buffer{};
