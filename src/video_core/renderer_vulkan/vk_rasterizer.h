@@ -108,8 +108,8 @@ private:
         PipelineInfo pipeline;
         u64 texture_hash;
         u64 framebuffer_hash;
-        Common::Rectangle<u32> viewport;
-        Common::Rectangle<u32> scissor;
+        Common::Rectangle<s32> viewport;
+        Common::Rectangle<s32> scissor;
 
         bool operator==(const DrawBatchState& o) const {
             return pipeline == o.pipeline && texture_hash == o.texture_hash &&
