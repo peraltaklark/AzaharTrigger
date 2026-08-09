@@ -794,7 +794,7 @@ void RasterizerVulkan::SyncTextureUnits(const Framebuffer* framebuffer) {
                 current_textures[texture_index] = {
                     surface.StorageView(),
                     sampler.Handle()
-                }
+                };
                 continue;
             }
             case TextureType::ShadowCube: {
