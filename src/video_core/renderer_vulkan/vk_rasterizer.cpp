@@ -632,6 +632,36 @@ void RasterizerVulkan::FlushDrawBatch() {
     });
 }
 
+u64 RasterizerVulkan::GetTextureHash() const {
+    u64 hash = 1469598103934665603ull;
+
+    for (const auto& tex : current_textures) {
+        const u64 view =
+            reinterpret_cast<uintptr_t>(static_cast<VkImageView>(tex.view));
+        hash ^= view;
+        hash *= 1099511628211ull;
+
+        const u64 sampler =
+            reinterpret_cast<uintptr_t>(static_cast<VkSampler>(tex.sampler));
+        hash ^= sampler;
+        hash *= 1099511628211ull;
+    }
+
+    return hash;
+}
+
+u64 RasterizerVulkan::GetFramebufferHash() const {
+    if (!current_framebuffer) {
+        return 0;
+    }
+
+    u64 hash = reinterpret_cast<uintptr_t>(current_framebuffer);
+    hash ^= static_cast<u64>(current_framebuffer->Width()) << 32;
+    hash ^= static_cast<u64>(current_framebuffer->Height()) << 48;
+
+    return hash;
+}
+
 void RasterizerVulkan::DrawTriangles() {
     if (vertex_batch.empty()) {
         return;
@@ -762,6 +792,11 @@ void RasterizerVulkan::SyncTextureUnits(const Framebuffer* framebuffer) {
             const Sampler& null_sampler = res_cache.GetSampler(VideoCore::NULL_SAMPLER_ID);
             update_queue.AddImageSampler(texture_set, texture_index, 0, null_surface.ImageView(),
                                          null_sampler.Handle());
+
+            current_textures[texture_index] = {
+            null_surface.ImageView(),
+            null_sampler.Handle()
+        };
             continue;
         }
 
@@ -774,6 +809,10 @@ void RasterizerVulkan::SyncTextureUnits(const Framebuffer* framebuffer) {
                 surface.flags |= VideoCore::SurfaceFlagBits::ShadowSource;
                 update_queue.AddImageSampler(texture_set, texture_index, 0, surface.StorageView(),
                                              sampler.Handle());
+
+                current_textures[texture_index] = {
+                surface.StorageView(),
+                sampler.Handle()
                 continue;
             }
             case TextureType::ShadowCube: {
@@ -797,6 +836,11 @@ void RasterizerVulkan::SyncTextureUnits(const Framebuffer* framebuffer) {
         const vk::ImageView texture_view =
             is_feedback_loop ? surface.CopyImageView() : surface.ImageView();
         update_queue.AddImageSampler(texture_set, texture_index, 0, texture_view, sampler.Handle());
+
+        current_textures[texture_index] = {
+            texture_view,
+            sampler.Handle()
+        };
     }
 }
 
