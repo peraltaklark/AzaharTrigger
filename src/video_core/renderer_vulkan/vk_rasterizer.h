@@ -107,6 +107,13 @@ private:
         vk::IndexType index_type{};
     };
 
+    struct TextureBindingState {
+        vk::ImageView view{};
+        vk::Sampler sampler{};
+    };
+
+    std::array<TextureBindingState, 3> current_textures{};
+
     struct DrawBatchState {
         PipelineInfo pipeline;
         u64 texture_hash{};
