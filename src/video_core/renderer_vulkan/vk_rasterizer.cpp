@@ -514,9 +514,11 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
               entry.is_indexed,
               entry.binding_count,
               entry.vertex_offset,
-              static_cast<VkBuffer>(entry.vertex_buffers[0]),
+              reinterpret_cast<uintptr_t>(
+                  static_cast<VkBuffer>(entry.vertex_buffers[0])),
               entry.vertex_offsets[0],
-              static_cast<VkBuffer>(entry.index_buffer),
+              reinterpret_cast<uintptr_t>(
+                  static_cast<VkBuffer>(entry.index_buffer)),
               entry.index_offset,
               static_cast<u32>(entry.index_type),
               draw_batch.size());
@@ -586,9 +588,11 @@ void RasterizerVulkan::FlushDrawBatch() {
                       entry.is_indexed,
                       entry.binding_count,
                       entry.vertex_offset,
-                      static_cast<VkBuffer>(entry.vertex_buffers[0]),
+                      reinterpret_cast<uintptr_t>(
+                  static_cast<VkBuffer>(entry.vertex_buffers[0])),
                       entry.vertex_offsets[0],
-                      static_cast<VkBuffer>(entry.index_buffer),
+                      reinterpret_cast<uintptr_t>(
+                  static_cast<VkBuffer>(entry.index_buffer)),
                       entry.index_offset,
                       static_cast<u32>(entry.index_type));
 
