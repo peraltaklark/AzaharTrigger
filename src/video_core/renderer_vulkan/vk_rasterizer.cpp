@@ -507,6 +507,20 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
 
     draw_batch.push_back(entry);
 
+    LOG_DEBUG(Render_Vulkan,
+              "BATCH ADD: count={} indexed={} bindings={} vertex_offset={} "
+              "vb0={} off0={} ib={} ib_off={} ib_type={} batch_size={}",
+              entry.vertex_count,
+              entry.is_indexed,
+              entry.binding_count,
+              entry.vertex_offset,
+              static_cast<VkBuffer>(entry.vertex_buffers[0]),
+              entry.vertex_offsets[0],
+              static_cast<VkBuffer>(entry.index_buffer),
+              entry.index_offset,
+              static_cast<u32>(entry.index_type),
+              draw_batch.size());
+
     if (draw_batch.size() >= MAX_BATCH_SIZE) {
         FlushDrawBatch();
     }
@@ -553,6 +567,8 @@ void RasterizerVulkan::FlushDrawBatch() {
     draw_batch.clear();
     batch_active = false;
 
+    LOG_DEBUG(Render_Vulkan, "BATCH FLUSH: {} entries", entries.size());
+
     scheduler.Record([entries = std::move(entries)](vk::CommandBuffer cmdbuf) {
         std::array<vk::Buffer, 16> cur_bufs{};
         std::array<vk::DeviceSize, 16> cur_offsets{};
@@ -563,6 +579,19 @@ void RasterizerVulkan::FlushDrawBatch() {
         vk::IndexType cur_ib_type{};
 
         for (const auto& entry : entries) {
+            LOG_DEBUG(Render_Vulkan,
+                      "BATCH DRAW: count={} indexed={} bindings={} vertex_offset={} "
+                      "vb0={} off0={} ib={} ib_off={} ib_type={}",
+                      entry.vertex_count,
+                      entry.is_indexed,
+                      entry.binding_count,
+                      entry.vertex_offset,
+                      static_cast<VkBuffer>(entry.vertex_buffers[0]),
+                      entry.vertex_offsets[0],
+                      static_cast<VkBuffer>(entry.index_buffer),
+                      entry.index_offset,
+                      static_cast<u32>(entry.index_type));
+
             bool vertex_changed = entry.binding_count != cur_binding_count;
 
             if (!vertex_changed) {
