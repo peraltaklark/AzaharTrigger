@@ -460,19 +460,6 @@ bool RasterizerVulkan::AccelerateDrawBatch(bool is_indexed) {
     return Draw(true, is_indexed);
 }
 
-u64 RasterizerVulkan::GetFramebufferHash() const {
-    u64 hash = 0;
-
-    hash ^= reinterpret_cast<u64>(current_framebuffer);
-
-    hash ^= static_cast<u64>(current_draw_rect.left) << 0;
-    hash ^= static_cast<u64>(current_draw_rect.right) << 16;
-    hash ^= static_cast<u64>(current_draw_rect.bottom) << 32;
-    hash ^= static_cast<u64>(current_draw_rect.top) << 48;
-
-    return hash;
-}
-
 bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
     if (is_indexed) {
         SetupIndexArray();
@@ -637,6 +624,21 @@ u64 RasterizerVulkan::GetTextureHash() const {
         hash ^= sampler;
         hash *= 1099511628211ull;
     }
+
+    return hash;
+}
+
+u64 RasterizerVulkan::GetFramebufferHash() const {
+    if (!current_framebuffer) {
+        return 0;
+    }
+
+    u64 hash = reinterpret_cast<uintptr_t>(current_framebuffer);
+
+    hash ^= static_cast<u64>(current_draw_rect.left) << 32;
+    hash ^= static_cast<u64>(current_draw_rect.right) << 16;
+    hash ^= static_cast<u64>(current_draw_rect.top) << 8;
+    hash ^= static_cast<u64>(current_draw_rect.bottom);
 
     return hash;
 }
