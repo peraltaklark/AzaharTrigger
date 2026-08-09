@@ -118,15 +118,13 @@ private:
         PipelineInfo pipeline;
         u64 texture_hash{};
         u64 framebuffer_hash{};
-        Common::Rectangle<s32> viewport{};
-        Common::Rectangle<s32> scissor{};
+        DynamicPipelineInfo dynamic_info{};
 
         bool operator==(const DrawBatchState& o) const {
             return pipeline == o.pipeline &&
                    texture_hash == o.texture_hash &&
                    framebuffer_hash == o.framebuffer_hash &&
-                   viewport == o.viewport &&
-                   scissor == o.scissor;
+                   dynamic_info == o.dynamic_info;
         }
     };
 
