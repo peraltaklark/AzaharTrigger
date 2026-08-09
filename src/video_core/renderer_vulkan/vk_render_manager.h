@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <functional>
 #include <mutex>
 
 #include "common/math_util.h"
@@ -51,6 +52,11 @@ public:
     /// Exits from any currently active renderpass instance
     void EndRendering();
 
+    /// Registers a callback that runs before the current renderpass is ended.
+    void SetBeforeEndRendering(std::function<void()>&& callback) {
+        before_end_rendering = std::move(callback);
+    }
+
     /// Returns the renderpass associated with the color-depth format pair
     vk::RenderPass GetRenderpass(VideoCore::PixelFormat color, VideoCore::PixelFormat depth,
                                  bool is_clear);
@@ -63,6 +69,7 @@ private:
 private:
     const Instance& instance;
     Scheduler& scheduler;
+    std::function<void()> before_end_rendering;
     vk::UniqueRenderPass cached_renderpasses[NumColorFormats + 1][NumDepthFormats + 1][2];
     std::mutex cache_mutex;
     std::array<vk::Image, 2> images;
