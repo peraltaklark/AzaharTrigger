@@ -461,25 +461,16 @@ bool RasterizerVulkan::AccelerateDrawBatch(bool is_indexed) {
 }
 
 u64 RasterizerVulkan::GetFramebufferHash() const {
-    if (!current_framebuffer) {
-        return 0;
-    }
+    u64 hash = 0;
 
-    u64 hash = reinterpret_cast<uintptr_t>(current_framebuffer);
+    hash ^= reinterpret_cast<u64>(current_framebuffer);
 
-    hash ^= static_cast<u64>(current_draw_rect.left) << 32;
+    hash ^= static_cast<u64>(current_draw_rect.left) << 0;
     hash ^= static_cast<u64>(current_draw_rect.right) << 16;
-    hash ^= static_cast<u64>(current_draw_rect.top) << 8;
-    hash ^= static_cast<u64>(current_draw_rect.bottom);
+    hash ^= static_cast<u64>(current_draw_rect.bottom) << 32;
+    hash ^= static_cast<u64>(current_draw_rect.top) << 48;
 
     return hash;
-}
-
-u64 RasterizerVulkan::GetTextureHash() const {
-    // Commit 2 currently has no texture tracking yet.
-    // Keep this stable until texture state tracking is added.
-
-    return 0;
 }
 
 bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
@@ -650,18 +641,6 @@ u64 RasterizerVulkan::GetTextureHash() const {
     return hash;
 }
 
-u64 RasterizerVulkan::GetFramebufferHash() const {
-    if (!current_framebuffer) {
-        return 0;
-    }
-
-    u64 hash = reinterpret_cast<uintptr_t>(current_framebuffer);
-    hash ^= static_cast<u64>(current_framebuffer->Width()) << 32;
-    hash ^= static_cast<u64>(current_framebuffer->Height()) << 48;
-
-    return hash;
-}
-
 void RasterizerVulkan::DrawTriangles() {
     if (vertex_batch.empty()) {
         return;
@@ -811,8 +790,9 @@ void RasterizerVulkan::SyncTextureUnits(const Framebuffer* framebuffer) {
                                              sampler.Handle());
 
                 current_textures[texture_index] = {
-                surface.StorageView(),
-                sampler.Handle()
+                    surface.StorageView(),
+                    sampler.Handle()
+                }
                 continue;
             }
             case TextureType::ShadowCube: {
