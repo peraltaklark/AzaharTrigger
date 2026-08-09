@@ -436,7 +436,7 @@ bool RasterizerVulkan::AccelerateDrawBatch(bool is_indexed) {
     pipeline_info.state.rasterization.topology.Assign(regs.pipeline.triangle_topology);
     if (regs.pipeline.triangle_topology == TriangleTopology::Fan &&
         !instance.IsTriangleFanSupported()) {
-        LOG_DEBUG(Render_Vulkan,
+        LOG_ERROR(Render_Vulkan,
                   "Skipping accelerated draw with unsupported triangle fan topology");
         return false;
     }
@@ -507,7 +507,7 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
 
     draw_batch.push_back(entry);
 
-    LOG_DEBUG(Render_Vulkan,
+    LOG_ERROR(Render_Vulkan,
               "BATCH ADD: count={} indexed={} bindings={} vertex_offset={} "
               "vb0={} off0={} ib={} ib_off={} ib_type={} batch_size={}",
               entry.vertex_count,
@@ -569,7 +569,7 @@ void RasterizerVulkan::FlushDrawBatch() {
     draw_batch.clear();
     batch_active = false;
 
-    LOG_DEBUG(Render_Vulkan, "BATCH FLUSH: {} entries", entries.size());
+    LOG_ERROR(Render_Vulkan, "BATCH FLUSH: {} entries", entries.size());
 
     scheduler.Record([entries = std::move(entries)](vk::CommandBuffer cmdbuf) {
         std::array<vk::Buffer, 16> cur_bufs{};
@@ -581,7 +581,7 @@ void RasterizerVulkan::FlushDrawBatch() {
         vk::IndexType cur_ib_type{};
 
         for (const auto& entry : entries) {
-            LOG_DEBUG(Render_Vulkan,
+            LOG_ERROR(Render_Vulkan,
                       "BATCH DRAW: count={} indexed={} bindings={} vertex_offset={} "
                       "vb0={} off0={} ib={} ib_off={} ib_type={}",
                       entry.vertex_count,
