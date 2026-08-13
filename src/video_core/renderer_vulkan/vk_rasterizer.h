@@ -128,7 +128,7 @@ private:
         }
     };
 
-    static constexpr size_t MAX_BATCH_SIZE = 32;
+    static constexpr size_t MAX_BATCH_SIZE = 128;
 
     std::vector<DrawBatchEntry> draw_batch;
     bool batch_active = false;
