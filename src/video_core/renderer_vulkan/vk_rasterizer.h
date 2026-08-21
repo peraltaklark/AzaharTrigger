@@ -101,6 +101,7 @@ private:
         u32 binding_count;
         std::array<vk::Buffer, 16> vertex_buffers{};
         std::array<vk::DeviceSize, 16> vertex_offsets{};
+        std::array<u32, 3> uniform_offsets{};
         bool is_indexed = false;
         vk::Buffer index_buffer{};
         vk::DeviceSize index_offset{};
