@@ -1140,8 +1140,6 @@ void RasterizerVulkan::UploadUniforms(bool accelerate_draw) {
         return;
     }
 
-    FlushDrawBatch();
-
     const u32 uniform_size =
         uniform_size_aligned_vs_pica + uniform_size_aligned_vs + uniform_size_aligned_fs;
     auto [uniforms, offset, invalidate] =
