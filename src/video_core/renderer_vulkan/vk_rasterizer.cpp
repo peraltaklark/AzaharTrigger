@@ -487,6 +487,7 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
     }
 
     DrawBatchEntry entry{};
+    entry.uniform_offsets = pipeline_cache.GetOffsets();
     entry.vertex_count = regs.pipeline.num_vertices;
     entry.vertex_offset = -static_cast<s32>(vertex_info.vs_input_index_min);
     entry.binding_count = pipeline_info.state.vertex_layout.binding_count;
