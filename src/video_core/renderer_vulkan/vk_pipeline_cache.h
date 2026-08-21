@@ -58,6 +58,10 @@ public:
         offsets[binding] = offset;
     }
 
+    std::array<u32, NumDynamicOffsets> GetOffsets() const {
+        return offsets;
+    }
+
     /// Loads the driver pipeline cache and the disk shader cache
     void LoadCache(const std::atomic_bool& stop_loading = std::atomic_bool{false},
                    const VideoCore::DiskResourceLoadCallback& callback = {});
