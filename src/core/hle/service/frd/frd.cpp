@@ -114,7 +114,7 @@ void Module::Interface::GetMyFriendKey(Kernel::HLERequestContext& ctx) {
                                      (static_cast<u64>(second) << 16) |
                                      static_cast<u64>(third);
 
-    LOG_INFO(Service_FRD, "Computed friend code: {:04u}-{:04u}-{:04u}", first, second, third);
+    LOG_INFO(Service_FRD, "Computed friend code: {:04d}-{:04d}-{:04d}", (int)first, (int)second, (int)third);
 
     IPC::RequestBuilder rb = rp.MakeBuilder(5, 0);
     rb.Push(ResultSuccess);
