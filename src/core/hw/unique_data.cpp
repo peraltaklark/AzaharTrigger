@@ -4,6 +4,7 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <random>
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -49,6 +50,33 @@ static bool secure_info_a_signature_valid = false;
 static bool secure_info_a_region_changed = false;
 static LocalFriendCodeSeedB local_friend_code_seed_b;
 static bool local_friend_code_seed_b_signature_valid = false;
+
+static std::string GetCustomSeedPath() {
+    return FileUtil::GetUserPath(FileUtil::UserPath::NANDDir) + "custom_friend_code_seed.bin";
+}
+
+static bool ReadCustomSeed(u64& seed) {
+    FileUtil::IOFile file(GetCustomSeedPath(), "rb");
+    if (!file.IsOpen())
+        return false;
+    u8 bytes[8];
+    if (file.ReadBytes(bytes, sizeof(bytes)) != sizeof(bytes))
+        return false;
+    seed = 0;
+    for (int i = 0; i < 8; ++i)
+        seed |= static_cast<u64>(bytes[i]) << (i * 8);
+    return true;
+}
+
+static void WriteCustomSeed(u64 seed) {
+    FileUtil::IOFile file(GetCustomSeedPath(), "wb");
+    if (!file.IsOpen())
+        return;
+    u8 bytes[8];
+    for (int i = 0; i < 8; ++i)
+        bytes[i] = static_cast<u8>((seed >> (i * 8)) & 0xFF);
+    file.WriteBytes(bytes, sizeof(bytes));
+}
 static FileSys::OTP otp;
 static FileSys::Certificate ct_cert;
 static MovableSedFull movable;
@@ -198,46 +226,29 @@ SecureDataLoadStatus LoadSecureInfoA() {
 }
 
 SecureDataLoadStatus LoadLocalFriendCodeSeedB() {
-    if (local_friend_code_seed_b.IsValid()) {
-        if (!HW::RSA::GetLocalFriendCodeSeedSlot()) {
-            return SecureDataLoadStatus::CannotValidateSignature;
-        }
-        return local_friend_code_seed_b_signature_valid ? SecureDataLoadStatus::Loaded
-                                                        : SecureDataLoadStatus::InvalidSignature;
-    }
-    std::string file_path = GetLocalFriendCodeSeedBPath();
-    if (!FileUtil::Exists(file_path)) {
-        if (Settings::values.enable_required_online_lle_modules.GetValue()) {
-            memcpy(&local_friend_code_seed_b, dummy_local_friend_code_seed,
-                   sizeof(dummy_local_friend_code_seed));
-        } else
-            return SecureDataLoadStatus::NotFound;
-    } else {
-        FileUtil::IOFile file(file_path, "rb");
-        if (!file.IsOpen()) {
-            return SecureDataLoadStatus::IOError;
-        }
-        if (file.GetSize() != sizeof(LocalFriendCodeSeedB)) {
-            return SecureDataLoadStatus::Invalid;
-        }
-        if (file.ReadBytes(&local_friend_code_seed_b, sizeof(LocalFriendCodeSeedB)) !=
-            sizeof(LocalFriendCodeSeedB)) {
-            local_friend_code_seed_b.Invalidate();
-            return SecureDataLoadStatus::IOError;
-        }
+    // 1. Check if we already have a custom seed saved.
+    u64 custom_seed = 0;
+    if (ReadCustomSeed(custom_seed)) {
+        local_friend_code_seed_b.body.friend_code_seed = custom_seed;
+        local_friend_code_seed_b_signature_valid = true;
+        LOG_INFO(Service_CFG, "Loaded custom friend code seed from file");
+        return SecureDataLoadStatus::Loaded;
     }
 
-    HW::AES::InitKeys();
-    if (!HW::RSA::GetLocalFriendCodeSeedSlot()) {
-        return SecureDataLoadStatus::CannotValidateSignature;
-    }
-    local_friend_code_seed_b_signature_valid = local_friend_code_seed_b.VerifySignature();
-    if (!local_friend_code_seed_b_signature_valid) {
-        LOG_WARNING(HW, "LocalFriendCodeSeed_B signature check failed");
-    }
+    // 2. If no custom seed, generate a random one.
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    u64 seed = gen();
+    if (seed == 0) seed = 0xDEADBEEFCAFEBABEULL;  // avoid zero
 
-    return local_friend_code_seed_b_signature_valid ? SecureDataLoadStatus::Loaded
-                                                    : SecureDataLoadStatus::InvalidSignature;
+    // Save it for next time
+    WriteCustomSeed(seed);
+
+    // Use it immediately
+    local_friend_code_seed_b.body.friend_code_seed = seed;
+    local_friend_code_seed_b_signature_valid = true;
+    LOG_INFO(Service_CFG, "Generated new random friend code seed: {:016X}", seed);
+    return SecureDataLoadStatus::Loaded;
 }
 
 SecureDataLoadStatus LoadOTP() {
