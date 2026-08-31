@@ -26,9 +26,19 @@
                 android:paddingHorizontal="16dp"
                 android:gravity="center_vertical">
 
-                <Space
-                    android:layout_width="48dp"
-                    android:layout_height="0dp" />
+                <EditText
+    android:id="@+id/username_input"
+    android:layout_width="100dp"
+    android:layout_height="wrap_content"
+    android:hint="Username"
+    android:inputType="text"
+    android:maxLines="1"
+    android:imeOptions="actionDone"
+    android:textColor="?android:attr/textColorPrimary"
+    android:textColorHint="?android:attr/textColorSecondary"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:background="@android:color/transparent" />
 
                 <TextView
                     android:id="@+id/title"
