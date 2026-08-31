@@ -39,6 +39,14 @@ constexpr u64 TEXTURE_BUFFER_SIZE = 2_MiB;
 constexpr vk::BufferUsageFlags BUFFER_USAGE =
     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer;
 
+struct DrawParams {
+    u32 vertex_count;
+    s32 vertex_offset;
+    u32 binding_count;
+    std::array<u32, 16> bindings;
+    bool is_indexed;
+};
+
 [[nodiscard]] u64 TextureBufferSize(const Instance& instance) {
     // Use the smallest texel size from the texel views
     // which corresponds to eR32G32Sfloat
@@ -101,13 +109,7 @@ RasterizerVulkan::RasterizerVulkan(Memory::MemorySystem& memory, Pica::PicaCore&
         .range = VK_WHOLE_SIZE,
     });
 
-    renderpass_cache.SetBeforeEndRendering([this] {
-        FlushDrawBatch();
-    });
-
-    scheduler.RegisterOnSubmit([&renderpass_cache] {
-        renderpass_cache.EndRendering();
-    });
+    scheduler.RegisterOnSubmit([&renderpass_cache] { renderpass_cache.EndRendering(); });
 
     // Prepare the static buffer descriptor set.
     const auto buffer_set = pipeline_cache.Acquire(DescriptorHeapType::Buffer);
@@ -436,7 +438,7 @@ bool RasterizerVulkan::AccelerateDrawBatch(bool is_indexed) {
     pipeline_info.state.rasterization.topology.Assign(regs.pipeline.triangle_topology);
     if (regs.pipeline.triangle_topology == TriangleTopology::Fan &&
         !instance.IsTriangleFanSupported()) {
-        LOG_ERROR(Render_Vulkan,
+        LOG_DEBUG(Render_Vulkan,
                   "Skipping accelerated draw with unsupported triangle fan topology");
         return false;
     }
@@ -466,66 +468,29 @@ bool RasterizerVulkan::AccelerateDrawBatchInternal(bool is_indexed) {
     }
 
     const bool wait_built = !async_shaders || regs.pipeline.num_vertices <= 6;
-
     if (!pipeline_cache.BindPipeline(pipeline_info, wait_built)) {
         return true;
     }
 
-    DrawBatchState state{};
-    state.pipeline = pipeline_info;
-    state.texture_hash = GetTextureHash();
-    state.framebuffer_hash = GetFramebufferHash();
-    state.dynamic_info = pipeline_info.dynamic_info;
+    const DrawParams params = {
+        .vertex_count = regs.pipeline.num_vertices,
+        .vertex_offset = -static_cast<s32>(vertex_info.vs_input_index_min),
+        .binding_count = pipeline_info.state.vertex_layout.binding_count,
+        .bindings = binding_offsets,
+        .is_indexed = is_indexed,
+    };
 
-    if (batch_active && !(state == current_batch_state)) {
-        FlushDrawBatch();
-    }
-
-    if (!batch_active) {
-        current_batch_state = state;
-        batch_active = true;
-    }
-
-    DrawBatchEntry entry{};
-    entry.uniform_offsets = pipeline_cache.GetOffsets();
-    entry.vertex_count = regs.pipeline.num_vertices;
-    entry.vertex_offset = -static_cast<s32>(vertex_info.vs_input_index_min);
-    entry.binding_count = pipeline_info.state.vertex_layout.binding_count;
-
-    for (u32 i = 0; i < entry.binding_count; i++) {
-        entry.vertex_buffers[i] = vertex_buffers[i];
-        entry.vertex_offsets[i] = static_cast<vk::DeviceSize>(binding_offsets[i]);
-    }
-
-    entry.is_indexed = is_indexed;
-
-    if (is_indexed) {
-        entry.index_buffer = last_bound_index_buffer;
-        entry.index_offset = last_bound_index_offset;
-        entry.index_type = last_bound_index_type;
-    }
-
-    draw_batch.push_back(entry);
-
-    LOG_ERROR(Render_Vulkan,
-              "BATCH ADD: count={} indexed={} bindings={} vertex_offset={} "
-              "vb0={} off0={} ib={} ib_off={} ib_type={} batch_size={}",
-              entry.vertex_count,
-              entry.is_indexed,
-              entry.binding_count,
-              entry.vertex_offset,
-              reinterpret_cast<uintptr_t>(
-                  static_cast<VkBuffer>(entry.vertex_buffers[0])),
-              entry.vertex_offsets[0],
-              reinterpret_cast<uintptr_t>(
-                  static_cast<VkBuffer>(entry.index_buffer)),
-              entry.index_offset,
-              static_cast<u32>(entry.index_type),
-              draw_batch.size());
-
-    if (draw_batch.size() >= MAX_BATCH_SIZE) {
-        FlushDrawBatch();
-    }
+    scheduler.Record([this, params](vk::CommandBuffer cmdbuf) {
+        std::array<vk::DeviceSize, 16> offsets;
+        std::transform(params.bindings.begin(), params.bindings.end(), offsets.begin(),
+                       [](u32 offset) { return static_cast<vk::DeviceSize>(offset); });
+        cmdbuf.bindVertexBuffers(0, params.binding_count, vertex_buffers.data(), offsets.data());
+        if (params.is_indexed) {
+            cmdbuf.drawIndexed(params.vertex_count, 1, 0, params.vertex_offset, 0);
+        } else {
+            cmdbuf.draw(params.vertex_count, 1, 0, 0);
+        }
+    });
 
     return true;
 }
@@ -553,127 +518,10 @@ void RasterizerVulkan::SetupIndexArray() {
 
     stream_buffer.Commit(index_buffer_size);
 
-    // Defer the index-buffer bind until FlushDrawBatch().
-    last_bound_index_buffer = stream_buffer.Handle();
-    last_bound_index_offset = index_offset;
-    last_bound_index_type = index_type;
-}
-
-void RasterizerVulkan::FlushDrawBatch() {
-    if (draw_batch.empty()) {
-        batch_active = false;
-        return;
-    }
-
-    auto entries = std::move(draw_batch);
-    draw_batch.clear();
-    batch_active = false;
-
-    LOG_ERROR(Render_Vulkan, "BATCH FLUSH: {} entries", entries.size());
-
-    scheduler.Record([entries = std::move(entries)](vk::CommandBuffer cmdbuf) {
-        std::array<vk::Buffer, 16> cur_bufs{};
-        std::array<vk::DeviceSize, 16> cur_offsets{};
-        u32 cur_binding_count = 0;
-
-        vk::Buffer cur_ib{};
-        vk::DeviceSize cur_ib_offset{};
-        vk::IndexType cur_ib_type{};
-
-        for (const auto& entry : entries) {
-            LOG_ERROR(Render_Vulkan,
-                      "BATCH DRAW: count={} indexed={} bindings={} vertex_offset={} "
-                      "vb0={} off0={} ib={} ib_off={} ib_type={}",
-                      entry.vertex_count,
-                      entry.is_indexed,
-                      entry.binding_count,
-                      entry.vertex_offset,
-                      reinterpret_cast<uintptr_t>(
-                  static_cast<VkBuffer>(entry.vertex_buffers[0])),
-                      entry.vertex_offsets[0],
-                      reinterpret_cast<uintptr_t>(
-                  static_cast<VkBuffer>(entry.index_buffer)),
-                      entry.index_offset,
-                      static_cast<u32>(entry.index_type));
-
-            bool vertex_changed = entry.binding_count != cur_binding_count;
-
-            if (!vertex_changed) {
-                for (u32 i = 0; i < entry.binding_count; i++) {
-                    if (entry.vertex_buffers[i] != cur_bufs[i] ||
-                        entry.vertex_offsets[i] != cur_offsets[i]) {
-                        vertex_changed = true;
-                        break;
-                    }
-                }
-            }
-
-            if (vertex_changed) {
-                cmdbuf.bindVertexBuffers(0, entry.binding_count,
-                                         entry.vertex_buffers.data(),
-                                         entry.vertex_offsets.data());
-
-                cur_bufs = entry.vertex_buffers;
-                cur_offsets = entry.vertex_offsets;
-                cur_binding_count = entry.binding_count;
-            }
-
-            if (entry.is_indexed) {
-                const bool index_changed =
-                    entry.index_buffer != cur_ib ||
-                    entry.index_offset != cur_ib_offset ||
-                    entry.index_type != cur_ib_type;
-
-                if (index_changed) {
-                    cmdbuf.bindIndexBuffer(entry.index_buffer,
-                                           entry.index_offset,
-                                           entry.index_type);
-
-                    cur_ib = entry.index_buffer;
-                    cur_ib_offset = entry.index_offset;
-                    cur_ib_type = entry.index_type;
-                }
-
-                cmdbuf.drawIndexed(entry.vertex_count, 1, 0,
-                                   entry.vertex_offset, 0);
-            } else {
-                cmdbuf.draw(entry.vertex_count, 1, 0, 0);
-            }
-        }
-    });
-}
-
-u64 RasterizerVulkan::GetTextureHash() const {
-    u64 hash = 1469598103934665603ull;
-
-    for (const auto& tex : current_textures) {
-        const u64 view =
-            reinterpret_cast<uintptr_t>(static_cast<VkImageView>(tex.view));
-        hash ^= view;
-        hash *= 1099511628211ull;
-
-        const u64 sampler =
-            reinterpret_cast<uintptr_t>(static_cast<VkSampler>(tex.sampler));
-        hash ^= sampler;
-        hash *= 1099511628211ull;
-    }
-
-    return hash;
-}
-
-u64 RasterizerVulkan::GetFramebufferHash() const {
-    if (!current_framebuffer) {
-        return 0;
-    }
-
-    u64 hash = reinterpret_cast<uintptr_t>(current_framebuffer);
-
-    hash ^= static_cast<u64>(current_draw_rect.left) << 32;
-    hash ^= static_cast<u64>(current_draw_rect.right) << 16;
-    hash ^= static_cast<u64>(current_draw_rect.top) << 8;
-    hash ^= static_cast<u64>(current_draw_rect.bottom);
-
-    return hash;
+    scheduler.Record(
+        [this, index_offset = index_offset, index_type = index_type](vk::CommandBuffer cmdbuf) {
+            cmdbuf.bindIndexBuffer(stream_buffer.Handle(), index_offset, index_type);
+        });
 }
 
 void RasterizerVulkan::DrawTriangles() {
@@ -741,17 +589,6 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
 
     // Begin rendering
     const auto draw_rect = fb_helper.DrawRect();
-
-    // Do not allow a draw batch to cross render passes.
-    if (batch_active &&
-        (current_framebuffer != framebuffer ||
-         current_draw_rect != draw_rect)) {
-        FlushDrawBatch();
-    }
-
-    current_framebuffer = framebuffer;
-    current_draw_rect = draw_rect;
-
     renderpass_cache.BeginRendering(framebuffer, draw_rect);
 
     // Configure viewport and scissor
@@ -806,11 +643,6 @@ void RasterizerVulkan::SyncTextureUnits(const Framebuffer* framebuffer) {
             const Sampler& null_sampler = res_cache.GetSampler(VideoCore::NULL_SAMPLER_ID);
             update_queue.AddImageSampler(texture_set, texture_index, 0, null_surface.ImageView(),
                                          null_sampler.Handle());
-
-            current_textures[texture_index] = {
-            null_surface.ImageView(),
-            null_sampler.Handle()
-        };
             continue;
         }
 
@@ -823,11 +655,6 @@ void RasterizerVulkan::SyncTextureUnits(const Framebuffer* framebuffer) {
                 surface.flags |= VideoCore::SurfaceFlagBits::ShadowSource;
                 update_queue.AddImageSampler(texture_set, texture_index, 0, surface.StorageView(),
                                              sampler.Handle());
-
-                current_textures[texture_index] = {
-                    surface.StorageView(),
-                    sampler.Handle()
-                };
                 continue;
             }
             case TextureType::ShadowCube: {
@@ -851,11 +678,6 @@ void RasterizerVulkan::SyncTextureUnits(const Framebuffer* framebuffer) {
         const vk::ImageView texture_view =
             is_feedback_loop ? surface.CopyImageView() : surface.ImageView();
         update_queue.AddImageSampler(texture_set, texture_index, 0, texture_view, sampler.Handle());
-
-        current_textures[texture_index] = {
-            texture_view,
-            sampler.Handle()
-        };
     }
 }
 
@@ -913,22 +735,18 @@ void RasterizerVulkan::BindTextureCube(const Pica::TexturingRegs::FullTextureCon
 }
 
 void RasterizerVulkan::FlushAll() {
-    FlushDrawBatch();
     res_cache.FlushAll();
 }
 
 void RasterizerVulkan::FlushRegion(PAddr addr, u32 size) {
-    FlushDrawBatch();
     res_cache.FlushRegion(addr, size);
 }
 
 void RasterizerVulkan::InvalidateRegion(PAddr addr, u32 size) {
-    FlushDrawBatch();
     res_cache.InvalidateRegion(addr, size);
 }
 
 void RasterizerVulkan::FlushAndInvalidateRegion(PAddr addr, u32 size) {
-    FlushDrawBatch();
     res_cache.FlushRegion(addr, size);
     res_cache.InvalidateRegion(addr, size);
 }
