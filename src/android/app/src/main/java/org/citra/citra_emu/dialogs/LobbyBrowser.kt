@@ -4,6 +4,7 @@
 
 package org.citra.citra_emu.dialogs
 
+import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
@@ -61,7 +62,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
 
         // Save username automatically as user types
         binding.usernameInput.doOnTextChanged { text, _, _, _ ->
-            NetPlayManager.setUsername(context, text.toString())
+            NetPlayManager.setUsername(context as Activity, text.toString())
         }
 
 
