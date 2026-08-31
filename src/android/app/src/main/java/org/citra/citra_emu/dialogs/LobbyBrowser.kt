@@ -62,7 +62,11 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
 
         // Save username automatically as user types
         binding.usernameInput.doOnTextChanged { text, _, _, _ ->
-            NetPlayManager.setUsername(context as Activity, text.toString())
+            val activity = context as? Activity
+                ?: (context as? android.content.ContextWrapper)?.baseContext as? Activity
+            if (activity != null) {
+                NetPlayManager.setUsername(activity, text.toString())
+            }
         }
 
 
