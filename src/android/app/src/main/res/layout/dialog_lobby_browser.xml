@@ -26,29 +26,32 @@
                 android:paddingHorizontal="16dp"
                 android:gravity="center_vertical">
 
-                <com.google.android.material.textfield.TextInputLayout
-    android:layout_width="120dp"
-    android:layout_height="wrap_content"
-    android:hint="@string/multiplayer_username"
-    android:paddingHorizontal="4dp">
-
-    <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/username_input"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="text"
-        android:maxLines="1"
-        android:imeOptions="actionDone" />
-</com.google.android.material.textfield.TextInputLayout>
-
                 <TextView
                     android:id="@+id/title"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center"
+                    android:gravity="start"
                     android:text="@string/multiplayer_room_browser"
                     android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="140dp"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/multiplayer_username"
+                    android:paddingHorizontal="4dp"
+                    app:startIconDrawable="@drawable/ic_user"
+                    app:startIconTint="?attr/colorAccent">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/username_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:imeOptions="actionDone"
+                        android:paddingStart="8dp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <FrameLayout
                     android:layout_width="48dp"
