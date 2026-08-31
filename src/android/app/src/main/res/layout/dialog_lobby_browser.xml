@@ -46,10 +46,6 @@
                     app:boxCornerRadiusBottomStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"
                     app:boxCornerRadiusTopStart="12dp"
-                    app:startIconDrawable="@drawable/ic_user"
-                    app:startIconTint="?attr/colorAccent"
-                    app:startIconSize="16dp"
-                    app:startIconPadding="2dp">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/username_input"
@@ -57,7 +53,10 @@
                         android:layout_height="wrap_content"
                         android:inputType="text"
                         android:textSize="14sp"
-                        android:paddingStart="0dp"
+                        android:paddingStart="8dp"
+                        android:drawableStart="@drawable/ic_user"
+                        android:drawableTint="?attr/colorAccent"
+                        android:drawablePadding="4dp"
                         android:paddingEnd="4dp"
                         android:maxLines="1"
                         android:imeOptions="actionDone" />
