@@ -56,6 +56,15 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         binding = DialogLobbyBrowserBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Load saved username from NetPlayManager
+        binding.usernameInput.setText(NetPlayManager.getUsername(context))
+
+        // Save username automatically as user types
+        binding.usernameInput.doOnTextChanged { text, _, _, _ ->
+            NetPlayManager.setUsername(context, text.toString())
+        }
+
+
         // Cache last visited room details in memory
         lastIp = preferences.getString("last_room_ip", null)
         lastPort = preferences.getInt("last_room_port", -1)
@@ -191,7 +200,9 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     }
 
     private fun joinRoom(room: NetPlayManager.RoomInfo, password: String) {
-        val username = NetPlayManager.getUsername(context)
+        val username = binding.usernameInput.text.toString().ifEmpty {
+            NetPlayManager.getUsername(context)
+        }
 
         Thread {
             val result = NetPlayManager.netPlayJoinRoom(room.ip, room.port, username, password)
