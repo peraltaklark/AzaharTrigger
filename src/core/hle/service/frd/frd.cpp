@@ -1,4 +1,4 @@
-// Copyright 2015 Citra Emulator Project.
+// Copyright 2015 Citra Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -18,8 +18,6 @@
 #include "core/hle/service/frd/frd.h"
 #include "core/hle/service/frd/frd_a.h"
 #include "core/hle/service/frd/frd_u.h"
-#include <boost/crc.hpp>
-#include "core/hw/unique_data.h"
 
 SERVICE_CONSTRUCT_IMPL(Service::FRD::Module)
 
@@ -90,35 +88,11 @@ void Module::Interface::GetFriendAttributeFlags(Kernel::HLERequestContext& ctx) 
 
 void Module::Interface::GetMyFriendKey(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx);
-
-    // Compute friend code from seed and console ID
-    const auto& lfcs = HW::UniqueData::GetLocalFriendCodeSeedB();
-    const u64 seed = lfcs.body.friend_code_seed;
-
-    auto cfg = Service::CFG::GetModule(frd->system);
-    const u64 console_id = cfg->GetConsoleUniqueId();
-
-    u8 data[16];
-    std::memcpy(data, &seed, sizeof(seed));
-    std::memcpy(data + sizeof(seed), &console_id, sizeof(console_id));
-    const u16 crc = boost::crc<16, 0x1021, 0, 0, false, false>(data, sizeof(data));
-
-    const u32 first = (seed & 0xFFFFFFFF) % 10000;
-    const u32 second = ((seed >> 32) & 0xFFFFFFFF) % 10000;
-    const u32 third = crc % 10000;
-
-    // Pack into u64 (adjust shifts if needed)
-    frd->my_friend_key.friend_id = 0;
-    frd->my_friend_key.unknown = 0;
-    frd->my_friend_key.friend_code = (static_cast<u64>(first) << 32) |
-                                     (static_cast<u64>(second) << 16) |
-                                     static_cast<u64>(third);
-
-    LOG_INFO(Service_FRD, "Computed friend code: {:04d}-{:04d}-{:04d}", (int)first, (int)second, (int)third);
-
     IPC::RequestBuilder rb = rp.MakeBuilder(5, 0);
     rb.Push(ResultSuccess);
     rb.PushRaw(frd->my_friend_key);
+
+    LOG_WARNING(Service_FRD, "(STUBBED) called");
 }
 
 void Module::Interface::GetMyScreenName(Kernel::HLERequestContext& ctx) {
@@ -307,32 +281,7 @@ void Module::Interface::GetLastResponseResult(Kernel::HLERequestContext& ctx) {
     rb.Push(ResultSuccess);
 }
 
-Module::Module(Core::System& system) : system(system) {
-    const auto& lfcs = HW::UniqueData::GetLocalFriendCodeSeedB();
-    const u64 seed = lfcs.body.friend_code_seed;
-
-    // Get the console ID from the CFG service
-    auto cfg = Service::CFG::GetModule(system);
-    const u64 console_id = cfg->GetConsoleUniqueId();
-
-    // Concatenate seed and console ID, compute CRC-16/CCITT
-    u8 data[16];
-    std::memcpy(data, &seed, sizeof(seed));
-    std::memcpy(data + sizeof(seed), &console_id, sizeof(console_id));
-    const u16 crc = boost::crc<16, 0x1021, 0, 0, false, false>(data, sizeof(data));
-
-    // Generate the three 4‑digit groups
-    const u32 first = (seed & 0xFFFFFFFF) % 10000;
-    const u32 second = ((seed >> 32) & 0xFFFFFFFF) % 10000;
-    const u32 third = crc % 10000;
-
-    // Pack into u64 (16 bits per group)
-    my_friend_key.friend_id = 0;
-    my_friend_key.unknown = 0;
-    my_friend_key.friend_code = (static_cast<u64>(first) << 32) |
-                                (static_cast<u64>(second) << 16) |
-                                static_cast<u64>(third);
-}
+Module::Module(Core::System& system) : system(system) {};
 Module::~Module() = default;
 
 void InstallInterfaces(Core::System& system) {
