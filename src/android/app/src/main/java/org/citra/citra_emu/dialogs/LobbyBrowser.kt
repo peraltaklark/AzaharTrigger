@@ -36,6 +36,8 @@ import java.util.Locale
 
 class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     private lateinit var binding: DialogLobbyBrowserBinding
+    private val activity: Activity? = context as? Activity
+        ?: (context as? android.content.ContextWrapper)?.baseContext as? Activity
     private lateinit var adapter: LobbyRoomAdapter
     private val handler = Handler(Looper.getMainLooper())
     
@@ -62,10 +64,8 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
 
         // Save username automatically as user types
         binding.usernameInput.doOnTextChanged { text, _, _, _ ->
-            val activity = context as? Activity
-                ?: (context as? android.content.ContextWrapper)?.baseContext as? Activity
-            if (activity != null) {
-                NetPlayManager.setUsername(activity, text.toString())
+            activity?.let {
+                NetPlayManager.setUsername(it, text.toString())
             }
         }
 
@@ -88,6 +88,9 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         refreshRoomList()
 
         setOnDismissListener {
+            activity?.let {
+                NetPlayManager.setUsername(it, binding.usernameInput.text.toString())
+            }
             NetPlayDialog(context).show()
         }
     }
