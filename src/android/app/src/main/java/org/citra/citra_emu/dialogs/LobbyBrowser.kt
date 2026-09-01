@@ -233,11 +233,8 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             RecyclerView.ViewHolder(binding.root) {
             fun bind(room: NetPlayManager.RoomInfo) {
                 binding.roomName.text = room.name
-                binding.playerCount.text = context.getString(
-                    R.string.multiplayer_player_count,
-                    room.members.size,
-                    room.maxPlayers
-                )
+                // Player count with icon (icon is in the layout)
+                binding.playerCount.text = "${room.members.size}/${room.maxPlayers}"
 
                 binding.lockIcon.visibility = if (room.hasPassword) View.VISIBLE else View.GONE
 
@@ -255,6 +252,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                     binding.roomHost.visibility = View.GONE
                 }
 
+                // Populate player chips
                 binding.playerChipGroup.removeAllViews()
                 
                 if (room.members.isNotEmpty()) {
