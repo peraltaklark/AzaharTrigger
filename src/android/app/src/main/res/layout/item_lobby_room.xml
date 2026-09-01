@@ -29,6 +29,7 @@
             app:tint="?attr/colorOnSurface" />
 
         <LinearLayout
+            android:id="@+id/room_info_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -38,6 +39,7 @@
             app:layout_constraintEnd_toStartOf="@id/lock_icon"
             app:layout_constraintBottom_toBottomOf="parent">
 
+            <!-- Room Name -->
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/room_name"
                 style="@style/TextAppearance.Material3.BodyMedium"
@@ -46,23 +48,36 @@
                 android:textAlignment="viewStart"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                tools:text="Room Name" />
+                tools:text="[BRA] #2 Monster Hunter Brasil - discord.gg/mhbrasil" />
 
+            <!-- Room Host -->
             <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/room_owner"
+                android:id="@+id/room_host"
                 style="@style/TextAppearance.Material3.BodySmall"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
+                android:layout_marginTop="2dp"
                 android:textAlignment="viewStart"
-                android:textSize="14sp"
-                tools:text="Hosted by: Owner" />
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="Host: RathalosHunter" />
 
+            <!-- Player Chips -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/player_chip_group"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                app:chipSpacingHorizontal="6dp"
+                app:chipSpacingVertical="4dp"
+                android:paddingBottom="2dp" />
+
+            <!-- Game Info -->
             <LinearLayout
                 android:id="@+id/game_info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
+                android:layout_marginTop="4dp"
                 android:orientation="horizontal">
 
                 <ImageView
@@ -81,10 +96,11 @@
                     android:ellipsize="end"
                     android:singleLine="true"
                     android:textStyle="bold"
-                    tools:text="Game Name" />
+                    tools:text="Monster Hunter" />
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Player Count with Stars -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -93,21 +109,13 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
-            <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_user"
-                android:contentDescription="@string/multiplayer_player_count"
-                app:tint="?attr/colorAccent" />
-
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/player_count"
                 style="@style/TextAppearance.Material3.BodyMedium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
                 android:textColor="?attr/colorAccent"
-                tools:text="2/4" />
+                tools:text="⭐ 4/4" />
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
