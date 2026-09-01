@@ -261,7 +261,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                 
                 if (room.members.isNotEmpty()) {
                     for (member in room.members) {
-                        val chip = com.google.android.material.chip.Chip(context).apply {
+                        val chip = com.google.android.material.chip.Chip(context).apply { textSize = 10f; chipMinHeight = 20f; chipMinTouchTargetSize = 0f; chipCornerRadius = 4f }.apply {
                             text = if (member.username.isNotEmpty()) member.username else member.nickname
                             isClickable = false
                             isCheckable = false
