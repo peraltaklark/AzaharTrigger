@@ -327,12 +327,15 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                 }
 
                 if (query.isNotEmpty()) {
-                    filteredList = filteredList.filter { room ->
-                        room.name.lowercase(Locale.getDefault()).contains(query) ||
-                        room.owner.lowercase(Locale.getDefault()).contains(query) ||
-                        room.preferredGameName.lowercase(Locale.getDefault()).contains(query)
+                filteredList = filteredList.filter { room ->
+                    room.name.lowercase(Locale.getDefault()).contains(query) ||
+                    room.owner.lowercase(Locale.getDefault()).contains(query) ||
+                    room.preferredGameName.lowercase(Locale.getDefault()).contains(query) ||
+                    room.members.any { member ->
+                        member.username.lowercase(Locale.getDefault()).contains(query)
                     }
                 }
+            }
 
                 val finalList = moveLastVisitedRoomToTop(filteredList)
 
