@@ -100,7 +100,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Player Count with Stars -->
+        <!-- Player Count with Icon -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -109,13 +109,21 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_user"
+                android:contentDescription="@string/multiplayer_player_count"
+                app:tint="?attr/colorAccent" />
+
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/player_count"
                 style="@style/TextAppearance.Material3.BodyMedium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
                 android:textColor="?attr/colorAccent"
-                tools:text="⭐ 4/4" />
+                tools:text="4/4" />
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
