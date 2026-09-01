@@ -121,18 +121,20 @@ object NetPlayManager {
         val rooms = mutableMapOf<String, RoomInfo>()
 
         for (data in roomData) {
-            val parts = data.split("|")
+            val parts = data.split("|fun getPublicRooms(): List<RoomInfo> {
+        val roomData = netPlayGetPublicRooms()
+        val rooms = mutableMapOf<String, RoomInfo>()
 
-            if (parts[0] == "MEMBER" && parts.size >= 6) {
-                val roomName = parts[1]
-                val member = RoomMember(
-                    username = parts[2],
-                    nickname = parts[3],
-                    gameId = parts[4].toLongOrNull() ?: 0L,
-                    gameName = parts[5]
-                )
-                rooms[roomName]?.members?.add(member)
-            } else if (parts.size >= 9) {
+        // FIRST PASS: Create all room entries
+        for (data in roomData) {
+            val parts = data.split("|")
+            
+            // Skip MEMBER entries in first pass
+            if (parts[0] == "MEMBER") {
+                continue
+            }
+            
+            if (parts.size >= 9) {
                 val roomInfo = RoomInfo(
                     name = parts[0],
                     hasPassword = parts[1] == "1",
@@ -147,7 +149,27 @@ object NetPlayManager {
                 rooms[roomInfo.name] = roomInfo
             }
         }
-
+        
+        // SECOND PASS: Add members to their rooms
+        for (data in roomData) {
+            val parts = data.split("|")
+            
+            if (parts[0] == "MEMBER" && parts.size >= 6) {
+                val roomName = parts[1]
+                val member = RoomMember(
+                    username = parts[2],
+                    nickname = parts[3],
+                    gameId = parts[4].toLongOrNull() ?: 0L,
+                    gameName = parts[5]
+                )
+                
+                val room = rooms[roomName]
+                if (room != null) {
+                    room.members.add(member)
+                }
+            }
+        }
+        
         return rooms.values.toList()
     }
 
