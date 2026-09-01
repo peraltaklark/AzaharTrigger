@@ -40,7 +40,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         ?: (context as? android.content.ContextWrapper)?.baseContext as? Activity
     private lateinit var adapter: LobbyRoomAdapter
     private val handler = Handler(Looper.getMainLooper())
-    
+
     private val preferences: SharedPreferences =
         context.getSharedPreferences("lobby_history", Context.MODE_PRIVATE)
 
@@ -69,7 +69,6 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             }
         }
 
-
         // Cache last visited room details in memory
         lastIp = preferences.getString("last_room_ip", null)
         lastPort = preferences.getInt("last_room_port", -1)
@@ -83,7 +82,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         setupRecyclerView()
         setupRefreshButton()
         setupSearchBar()
-        
+
         // Show local cache instantly while network refresh runs
         refreshRoomList()
 
@@ -234,12 +233,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             RecyclerView.ViewHolder(binding.root) {
             fun bind(room: NetPlayManager.RoomInfo) {
                 binding.roomName.text = room.name
-                binding.roomOwner.text = room.owner
-                binding.playerCount.text = context.getString(
-                    R.string.multiplayer_player_count,
-                    room.members.size,
-                    room.maxPlayers
-                )
+                binding.playerCount.text = "⭐ ${room.members.size}/${room.maxPlayers}"
 
                 binding.lockIcon.visibility = if (room.hasPassword) View.VISIBLE else View.GONE
 
@@ -247,6 +241,32 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                     binding.gameName.text = room.preferredGameName
                 } else {
                     binding.gameName.text = context.getString(R.string.multiplayer_no_game_info)
+                }
+
+                // Show host only if it exists and is not empty
+                if (room.owner.isNotEmpty()) {
+                    binding.roomHost.text = "Host: ${room.owner}"
+                    binding.roomHost.visibility = View.VISIBLE
+                } else {
+                    binding.roomHost.visibility = View.GONE
+                }
+
+                binding.playerChipGroup.removeAllViews()
+                
+                if (room.members.isNotEmpty()) {
+                    for (member in room.members) {
+                        val chip = com.google.android.material.chip.Chip(context).apply {
+                            text = member.username
+                            isClickable = false
+                            isCheckable = false
+                            chipCornerRadius = 16f
+                            setChipBackgroundColorResource(com.google.android.material.R.attr.colorSurface)
+                            textSize = 12f
+                            chipStrokeWidth = 1f
+                            setChipStrokeColorResource(com.google.android.material.R.attr.colorOutline)
+                        }
+                        binding.playerChipGroup.addView(chip)
+                    }
                 }
 
                 itemView.setOnClickListener { onRoomSelected(room) }
@@ -269,7 +289,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         override fun getItemCount() = rooms.size
 
         /**
-         * Updates rooms smoothly using DiffUtil. Detects player count, 
+         * Updates rooms smoothly using DiffUtil. Detects player count,
          * password status, and room name changes without re-rendering the whole list.
          */
         fun updateRooms(newRooms: List<NetPlayManager.RoomInfo>) {
@@ -327,15 +347,15 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                 }
 
                 if (query.isNotEmpty()) {
-                filteredList = filteredList.filter { room ->
-                    room.name.lowercase(Locale.getDefault()).contains(query) ||
-                    room.owner.lowercase(Locale.getDefault()).contains(query) ||
-                    room.preferredGameName.lowercase(Locale.getDefault()).contains(query) ||
-                    room.members.any { member ->
-                        member.username.lowercase(Locale.getDefault()).contains(query)
+                    filteredList = filteredList.filter { room ->
+                        room.name.lowercase(Locale.getDefault()).contains(query) ||
+                        room.owner.lowercase(Locale.getDefault()).contains(query) ||
+                        room.preferredGameName.lowercase(Locale.getDefault()).contains(query) ||
+                        room.members.any { member ->
+                            member.username.lowercase(Locale.getDefault()).contains(query)
+                        }
                     }
                 }
-            }
 
                 val finalList = moveLastVisitedRoomToTop(filteredList)
 
