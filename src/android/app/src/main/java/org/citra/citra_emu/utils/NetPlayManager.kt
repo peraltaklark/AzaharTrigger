@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.format.Formatter
+import android.util.Log
 import android.widget.Toast
 import androidx.preference.PreferenceManager
 import org.citra.citra_emu.CitraApplication
@@ -36,7 +37,6 @@ object NetPlayManager {
         melonLANEndSession()
         netPlayLeaveRoom()
         notifyMessageListeners(NetPlayStatus.ROOM_IDLE, "")
-
     }
     external fun netPlayIsModerator(): Boolean
     external fun netPlayGetBanList(): Array<String>
@@ -117,11 +117,6 @@ object NetPlayManager {
     }
 
     fun getPublicRooms(): List<RoomInfo> {
-        val roomData = netPlayGetPublicRooms()
-        val rooms = mutableMapOf<String, RoomInfo>()
-
-        for (data in roomData) {
-            val parts = data.split("|fun getPublicRooms(): List<RoomInfo> {
         val roomData = netPlayGetPublicRooms()
         val rooms = mutableMapOf<String, RoomInfo>()
 
