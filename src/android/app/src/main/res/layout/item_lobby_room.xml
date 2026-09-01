@@ -69,7 +69,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="0dp"
                 app:chipSpacingHorizontal="4dp"
-                app:chipSpacingVertical="0dp"
+                app:chipSpacingVertical="-4dp"
                 android:paddingBottom="0dp" />
 
             <!-- Game Info -->
