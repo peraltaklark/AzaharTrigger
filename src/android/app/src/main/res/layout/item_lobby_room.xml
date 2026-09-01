@@ -68,9 +68,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                app:chipSpacingHorizontal="4dp"
-                app:chipSpacingVertical="1dp"
-                android:paddingBottom="2dp" />
+                app:chipSpacingHorizontal="6dp"
+                app:chipSpacingVertical="4dp"
+                android:paddingBottom="0dp" />
 
             <!-- Game Info -->
             <LinearLayout
