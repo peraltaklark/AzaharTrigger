@@ -266,9 +266,8 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                             isClickable = false
                             isCheckable = false
                             chipCornerRadius = 16f
-                            chipMinHeight = 24f
                             setChipBackgroundColorResource(android.R.color.darker_gray)
-                            textSize = 11f
+                            textSize = 12f
                             chipStrokeWidth = 1f
                             setChipStrokeColorResource(android.R.color.darker_gray)
                         }
