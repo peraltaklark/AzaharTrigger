@@ -350,7 +350,7 @@ object NetPlayManager {
     }
 
     fun getBanList(): List<String> {
-        Log.info("Netplay Ban ${netPlayGetBanList()}.toList()")
+        Log.i("Netplay Ban ${netPlayGetBanList()}.toList()")
         return netPlayGetBanList().toList()
     }
 
