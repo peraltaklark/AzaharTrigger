@@ -40,6 +40,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         ?: (context as? android.content.ContextWrapper)?.baseContext as? Activity
     private lateinit var adapter: LobbyRoomAdapter
     private val handler = Handler(Looper.getMainLooper())
+    private val searchRunnable = Runnable { adapter.filterAndSearch() }
 
     private val preferences: SharedPreferences =
         context.getSharedPreferences("lobby_history", Context.MODE_PRIVATE)
@@ -120,11 +121,14 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         binding.searchText.doOnTextChanged { text: CharSequence?, _: Int, _: Int, _: Int ->
             binding.clearButton.visibility =
                 if (text.isNullOrEmpty()) View.INVISIBLE else View.VISIBLE
-            adapter.filterAndSearch()
+            // Debounce: wait 300ms after user stops typing before filtering
+            handler.removeCallbacks(searchRunnable)
+            handler.postDelayed(searchRunnable, 300)
         }
 
         binding.clearButton.setOnClickListener {
             binding.searchText.setText("")
+            handler.removeCallbacks(searchRunnable)
             adapter.filterAndSearch()
         }
     }
@@ -262,8 +266,9 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                             isClickable = false
                             isCheckable = false
                             chipCornerRadius = 16f
+                            chipMinHeight = 24f
                             setChipBackgroundColorResource(android.R.color.darker_gray)
-                            textSize = 12f
+                            textSize = 11f
                             chipStrokeWidth = 1f
                             setChipStrokeColorResource(android.R.color.darker_gray)
                         }
@@ -354,7 +359,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                         room.owner.lowercase(Locale.getDefault()).contains(query) ||
                         room.preferredGameName.lowercase(Locale.getDefault()).contains(query) ||
                         room.members.any { member ->
-                            member.username.lowercase(Locale.getDefault()).contains(query)
+                            member.nickname.lowercase(Locale.getDefault()).contains(query)
                         }
                     }
                 }
