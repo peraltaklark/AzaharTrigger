@@ -233,7 +233,11 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             RecyclerView.ViewHolder(binding.root) {
             fun bind(room: NetPlayManager.RoomInfo) {
                 binding.roomName.text = room.name
-                binding.playerCount.text = "⭐ ${room.members.size}/${room.maxPlayers}"
+                binding.playerCount.text = context.getString(
+                    R.string.multiplayer_player_count,
+                    room.members.size,
+                    room.maxPlayers
+                )
 
                 binding.lockIcon.visibility = if (room.hasPassword) View.VISIBLE else View.GONE
 
@@ -260,10 +264,10 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                             isClickable = false
                             isCheckable = false
                             chipCornerRadius = 16f
-                            setChipBackgroundColorResource(com.google.android.material.R.attr.colorSurface)
+                            setChipBackgroundColorResource(android.R.color.darker_gray)
                             textSize = 12f
                             chipStrokeWidth = 1f
-                            setChipStrokeColorResource(com.google.android.material.R.attr.colorOutline)
+                            setChipStrokeColorResource(android.R.color.darker_gray)
                         }
                         binding.playerChipGroup.addView(chip)
                     }
