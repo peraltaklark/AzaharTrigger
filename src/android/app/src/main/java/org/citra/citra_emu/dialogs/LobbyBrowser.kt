@@ -266,11 +266,10 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     isClickable = false
     isCheckable = false
     textSize = 10f
-    chipMinHeight = 28f
+    chipMinHeight = 20f
     chipCornerRadius = 4f
     setChipBackgroundColorResource(android.R.color.darker_gray)
-    chipStrokeWidth = 1f
-    setChipStrokeColorResource(android.R.color.darker_gray)
+    setPadding(8, 2, 8, 2)
 }
                         binding.playerChipGroup.addView(chip)
                     }
