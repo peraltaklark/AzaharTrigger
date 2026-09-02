@@ -63,14 +63,16 @@
                 tools:text="Hosted by: Owner" />
 
             <!-- Player Chips -->
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/player_chip_group"
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/player_list"
+                style="@style/TextAppearance.Material3.BodySmall"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
-                app:chipSpacingHorizontal="4dp"
-                app:chipSpacingVertical="-4dp"
-                android:paddingBottom="0dp" />
+                android:layout_marginTop="2dp"
+                android:textAlignment="viewStart"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="Players: Player1, Player2, Player3" />
 
             <!-- Game Info -->
             <LinearLayout
