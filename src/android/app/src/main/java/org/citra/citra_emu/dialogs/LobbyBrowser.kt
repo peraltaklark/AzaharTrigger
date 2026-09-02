@@ -261,16 +261,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                 
                 if (room.members.isNotEmpty()) {
                     for (member in room.members) {
-                        val chip = com.google.android.material.chip.Chip(context).apply { textSize = 10f; chipMinHeight = 20f; chipCornerRadius = 4f }.apply { textSize = 10f; chipMinHeight = 20f; chipMinTouchTargetSize = 0f; chipCornerRadius = 4f }.apply {
-                            text = if (member.username.isNotEmpty()) member.username else member.nickname
-                            isClickable = false
-                            isCheckable = false
-                            chipCornerRadius = 16f
-                            setChipBackgroundColorResource(android.R.color.darker_gray)
-                            textSize = 12f
-                            chipStrokeWidth = 1f
-                            setChipStrokeColorResource(android.R.color.darker_gray)
-                        }
+                        val chip = com.google.android.material.chip.Chip(context).apply { textSize = 10f; chipMinHeight = 20f; chipCornerRadius = 4f }
                         binding.playerChipGroup.addView(chip)
                     }
                 }
