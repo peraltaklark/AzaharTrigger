@@ -265,7 +265,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     text = if (member.username.isNotEmpty()) member.username else member.nickname
     isClickable = false
     isCheckable = false
-    textSize = 11f
+    textSize = 8f
     chipCornerRadius = 4f
 }
                         binding.playerChipGroup.addView(chip)
