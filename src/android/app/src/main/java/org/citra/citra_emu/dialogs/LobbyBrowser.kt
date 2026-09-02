@@ -256,20 +256,15 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                     binding.roomHost.visibility = View.GONE
                 }
 
-                // Populate player chips
-                binding.playerChipGroup.removeAllViews()
-                
-                if (room.members.isNotEmpty()) {
-                    for (member in room.members) {
-                        val chip = com.google.android.material.chip.Chip(context, null, com.google.android.material.R.style.Widget_Material3_Chip_Filter).apply {
-    text = if (member.username.isNotEmpty()) member.username else member.nickname
-    isClickable = false
-    isCheckable = false
-    textSize = 11f
-    chipCornerRadius = 4f
-}
-                        binding.playerChipGroup.addView(chip)
-                    }
+                                // Populate player list (Text instead of chips)
+                val playerNames = room.members.joinToString(", ") {
+                    if (it.username.isNotEmpty()) it.username else it.nickname
+                }
+                if (playerNames.isNotEmpty()) {
+                    binding.playerList.text = "Players: $playerNames"
+                    binding.playerList.visibility = View.VISIBLE
+                } else {
+                    binding.playerList.visibility = View.GONE
                 }
 
                 itemView.setOnClickListener { onRoomSelected(room) }
