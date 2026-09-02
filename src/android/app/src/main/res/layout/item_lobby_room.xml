@@ -48,8 +48,8 @@
                 android:textAlignment="viewStart"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                tools:text="[BRA] #2 Monster Hunter Brasil - discord.gg/mhbrasil" />
-
+                tools:text="Room Name" />
+            
             <!-- Room Host -->
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/room_host"
@@ -60,7 +60,7 @@
                 android:textAlignment="viewStart"
                 android:textSize="13sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                tools:text="Host: RathalosHunter" />
+                tools:text="Hosted by: Owner" />
 
             <!-- Player Chips -->
             <com.google.android.material.chip.ChipGroup
