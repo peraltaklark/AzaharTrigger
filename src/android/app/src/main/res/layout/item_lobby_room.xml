@@ -70,6 +70,7 @@
                 android:layout_marginTop="0dp"
                 app:chipSpacingHorizontal="4dp"
                 app:chipSpacingVertical="-4dp"
+                app:boxBackgroundColor="?attr/colorSecondaryContainer"
                 android:paddingBottom="0dp" />
 
             <!-- Game Info -->
