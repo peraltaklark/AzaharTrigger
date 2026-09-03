@@ -112,22 +112,35 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <com.google.android.material.card.MaterialCardView
-                        style="?attr/materialCardViewFilledStyle"
+                    <FrameLayout
                         android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="8dp"
-                        android:backgroundTint="?attr/colorPrimary">
+                        android:layout_height="40dp">
 
-                        <ImageView
-                            android:id="@+id/refresh_button"
+                        <com.google.android.material.card.MaterialCardView
+                            style="?attr/materialCardViewFilledStyle"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            app:cardCornerRadius="8dp"
+                            android:backgroundTint="?attr/colorPrimary">
+
+                            <ImageView
+                                android:id="@+id/refresh_button"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_refresh"
+                                android:contentDescription="Refresh"
+                                app:tint="?attr/colorOnPrimary" />
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <ProgressBar
+                            android:id="@+id/progress_bar"
+                            style="?android:attr/progressBarStyleSmall"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:layout_gravity="center"
-                            android:src="@drawable/ic_refresh"
-                            android:contentDescription="Refresh"
-                            app:tint="?attr/colorOnPrimary" />
-                    </com.google.android.material.card.MaterialCardView>
+                            android:visibility="gone" />
+                    </FrameLayout>
                 </LinearLayout>
             </LinearLayout>
 
