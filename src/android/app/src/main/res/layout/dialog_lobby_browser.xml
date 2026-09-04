@@ -86,7 +86,17 @@
                                     android:textColor="?attr/colorOnSurface" />
 
                                 <com.google.android.material.textfield.TextInputEditText
-                                android:textColor="?attr/colorOnSurface"
+                                    android:id="@+id/username_input"
+                                    android:layout_width="70dp"
+                                    android:layout_height="wrap_content"
+                                    android:background="@android:color/transparent"
+                                    android:inputType="text"
+                                    android:textSize="13sp"
+                                    android:paddingStart="0dp"
+                                    android:paddingEnd="0dp"
+                                    android:maxLines="1"
+                                    android:imeOptions="actionDone"
+                                    android:textColor="?attr/colorOnSurface" />
                             </LinearLayout>
 
                             <ImageView
