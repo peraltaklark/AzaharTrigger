@@ -42,31 +42,31 @@
                     android:gravity="center_vertical">
 
                     <com.google.android.material.card.MaterialCardView
-                        style="?attr/materialCardViewFilledStyle"
+                        style="?attr/materialCardViewOutlinedStyle"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="40dp"
                         app:cardCornerRadius="8dp"
                         android:layout_marginEnd="8dp"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
-                        android:paddingTop="4dp"
-                        android:paddingBottom="4dp">
+                        app:strokeColor="?attr/colorPrimary"
+                        app:strokeWidth="1dp">
 
                         <LinearLayout
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:orientation="horizontal"
                             android:gravity="center_vertical">
 
                             <FrameLayout
-                                android:layout_width="32dp"
-                                android:layout_height="32dp"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
                                 android:background="?attr/colorPrimary"
-                                android:layout_marginEnd="8dp">
+                                android:layout_marginEnd="6dp">
 
                                 <ImageView
-                                    android:layout_width="18dp"
-                                    android:layout_height="18dp"
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
                                     android:layout_gravity="center"
                                     android:src="@drawable/ic_user"
                                     app:tint="?attr/colorOnPrimary" />
@@ -82,20 +82,11 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="@string/multiplayer_username"
-                                    android:textSize="10sp"
-                                    android:textColor="?attr/colorOnSurfaceVariant" />
+                                    android:textSize="9sp"
+                                    android:textColor="?attr/colorOnSurface" />
 
                                 <com.google.android.material.textfield.TextInputEditText
-                                    android:id="@+id/username_input"
-                                    android:layout_width="80dp"
-                                    android:layout_height="wrap_content"
-                                    android:background="@android:color/transparent"
-                                    android:inputType="text"
-                                    android:textSize="13sp"
-                                    android:paddingStart="0dp"
-                                    android:paddingEnd="0dp"
-                                    android:maxLines="1"
-                                    android:imeOptions="actionDone" />
+                                android:textColor="?attr/colorOnSurface"
                             </LinearLayout>
 
                             <ImageView
@@ -110,35 +101,22 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <FrameLayout
-                        android:layout_width="40dp"
-                        android:layout_height="40dp">
+                    <ImageView
+                        android:id="@+id/refresh_button"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_refresh"
+                        android:contentDescription="Refresh"
+                        android:background="@android:color/transparent"
+                        app:tint="?attr/colorPrimary" />
 
-                        <com.google.android.material.card.MaterialCardView
-                            style="?attr/materialCardViewFilledStyle"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            app:cardCornerRadius="8dp"
-                            android:backgroundTint="?attr/colorPrimary">
-
-                            <ImageView
-                                android:id="@+id/refresh_button"
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_refresh"
-                                android:contentDescription="Refresh"
-                                app:tint="?attr/colorOnPrimary" />
-                        </com.google.android.material.card.MaterialCardView>
-
-                        <ProgressBar
-                            android:id="@+id/progress_bar"
-                            style="?android:attr/progressBarStyleSmall"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_gravity="center"
-                            android:visibility="gone" />
-                    </FrameLayout>
+                    <ProgressBar
+                        android:id="@+id/progress_bar"
+                        style="?android:attr/progressBarStyleSmall"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginStart="4dp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </LinearLayout>
 
