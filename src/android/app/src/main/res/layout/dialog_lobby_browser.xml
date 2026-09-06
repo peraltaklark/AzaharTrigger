@@ -46,7 +46,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/multiplayer_username"
                         android:textSize="10sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textColor="?attr/colorSurfaceVariant"
                         android:layout_marginEnd="44dp"
                         android:layout_marginBottom="2dp" />
 
@@ -74,19 +74,15 @@
                                 android:orientation="horizontal"
                                 android:gravity="center_vertical">
 
-                                <FrameLayout
-                                    android:layout_width="28dp"
-                                    android:layout_height="28dp"
-                                    android:background="@drawable/bg_number_circle"
-                                    android:layout_marginEnd="6dp">
-
-                                    <ImageView
-                                        android:layout_width="16dp"
-                                        android:layout_height="16dp"
-                                        android:layout_gravity="center"
-                                        android:src="@drawable/ic_user"
-                                        app:tint="?attr/colorOnSurfaceVariant" />
-                                </FrameLayout>
+                                <ImageView
+                                    android:id="@+id/edit_username_button"
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:src="@drawable/ic_edit"
+                                    app:tint="?attr/colorOnSurfaceVariant"
+                                    android:layout_marginEnd="6dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:padding="2dp" />
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/username_input"
@@ -101,16 +97,6 @@
                                     android:maxLines="1"
                                     android:imeOptions="actionDone"
                                     android:textColor="?attr/colorOnSurface" />
-
-                                <ImageView
-                                    android:id="@+id/edit_username_button"
-                                    android:layout_width="22dp"
-                                    android:layout_height="22dp"
-                                    android:src="@drawable/ic_edit"
-                                    app:tint="?attr/colorOnSurfaceVariant"
-                                    android:layout_marginStart="4dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
-                                    android:padding="2dp" />
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
 
