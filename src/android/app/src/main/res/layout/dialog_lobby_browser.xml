@@ -38,51 +38,54 @@
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:orientation="vertical"
+                    android:gravity="end">
 
-                    <com.google.android.material.card.MaterialCardView
-                        style="?attr/materialCardViewOutlinedStyle"
+                    <TextView
                         android:layout_width="wrap_content"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="8dp"
-                        android:layout_marginEnd="8dp"
-                        android:paddingStart="10dp"
-                        android:paddingEnd="10dp"
-                        app:strokeColor="?attr/colorOnSurfaceVariant"
-                        app:strokeWidth="1dp">
+                        android:layout_height="wrap_content"
+                        android:text="@string/multiplayer_username"
+                        android:textSize="10sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginEnd="44dp"
+                        android:layout_marginBottom="2dp" />
 
-                        <LinearLayout
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <com.google.android.material.card.MaterialCardView
+                            style="?attr/materialCardViewOutlinedStyle"
                             android:layout_width="wrap_content"
-                            android:layout_height="match_parent"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <FrameLayout
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
-                                android:layout_marginEnd="6dp">
-
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:layout_gravity="center"
-                                    android:src="@drawable/ic_user"
-                                    app:tint="?attr/colorOnSurfaceVariant" />
-                            </FrameLayout>
+                            android:layout_height="40dp"
+                            app:cardCornerRadius="8dp"
+                            android:layout_marginEnd="8dp"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            app:strokeColor="?attr/colorOnSurfaceVariant"
+                            app:strokeWidth="1dp">
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
+                                android:layout_height="match_parent"
+                                android:orientation="horizontal"
                                 android:gravity="center_vertical">
 
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/multiplayer_username"
-                                    android:textSize="9sp"
-                                    android:textColor="?attr/colorOnSurfaceVariant" />
+                                <FrameLayout
+                                    android:layout_width="28dp"
+                                    android:layout_height="28dp"
+                                    android:background="@drawable/bg_number_circle"
+                                    android:layout_marginEnd="6dp">
+
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_user"
+                                        app:tint="?attr/colorOnSurfaceVariant" />
+                                </FrameLayout>
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/username_input"
@@ -90,53 +93,53 @@
                                     android:layout_height="wrap_content"
                                     android:background="@android:color/transparent"
                                     android:inputType="text"
-                                    android:textSize="13sp"
+                                    android:textSize="14sp"
                                     android:textStyle="bold"
                                     android:paddingStart="0dp"
                                     android:paddingEnd="0dp"
                                     android:maxLines="1"
                                     android:imeOptions="actionDone"
                                     android:textColor="?attr/colorOnSurface" />
+
+                                <ImageView
+                                    android:id="@+id/edit_username_button"
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:src="@drawable/ic_edit"
+                                    app:tint="?attr/colorOnSurfaceVariant"
+                                    android:layout_marginStart="4dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:padding="2dp" />
                             </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            style="?attr/materialCardViewOutlinedStyle"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="?attr/colorOnSurfaceVariant"
+                            app:strokeWidth="1dp"
+                            android:background="@android:color/transparent">
 
                             <ImageView
-                                android:id="@+id/edit_username_button"
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:src="@drawable/ic_edit"
-                                app:tint="?attr/colorOnSurfaceVariant"
-                                android:layout_marginStart="4dp"
-                                android:background="?attr/selectableItemBackgroundBorderless"
-                                android:padding="2dp" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
+                                android:id="@+id/refresh_button"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_refresh"
+                                android:contentDescription="Refresh"
+                                app:tint="?attr/colorOnSurfaceVariant" />
+                        </com.google.android.material.card.MaterialCardView>
 
-                    <com.google.android.material.card.MaterialCardView
-                        style="?attr/materialCardViewOutlinedStyle"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="8dp"
-                        app:strokeColor="?attr/colorOnSurfaceVariant"
-                        app:strokeWidth="1dp"
-                        android:background="@android:color/transparent">
-
-                        <ImageView
-                            android:id="@+id/refresh_button"
+                        <ProgressBar
+                            android:id="@+id/progress_bar"
+                            style="?android:attr/progressBarStyleSmall"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_refresh"
-                            android:contentDescription="Refresh"
-                            app:tint="?attr/colorOnSurfaceVariant" />
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <ProgressBar
-                        android:id="@+id/progress_bar"
-                        style="?android:attr/progressBarStyleSmall"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_marginStart="4dp"
-                        android:visibility="gone" />
+                            android:layout_marginStart="4dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
