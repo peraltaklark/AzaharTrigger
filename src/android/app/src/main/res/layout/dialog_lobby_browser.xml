@@ -62,9 +62,10 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:background="@drawable/bg_number_circle"
+                            android:backgroundTint="?attr/colorOnSecondaryContainer"
                             android:padding="4dp"
                             android:src="@drawable/ic_user"
-                            app:tint="?attr/colorOnSecondaryContainer" />
+                            app:tint="?attr/colorSecondaryContainer" />
 
                         <LinearLayout
                             android:layout_width="wrap_content"
@@ -193,7 +194,7 @@
                 android:id="@+id/horizontalScrollView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginVertical="4dp"
+                android:layout_marginVertical="8dp"
                 android:clipToPadding="false"
                 android:fadingEdge="horizontal"
                 android:paddingHorizontal="16dp"
