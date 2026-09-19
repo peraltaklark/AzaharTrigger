@@ -16,6 +16,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.widget.doOnTextChanged
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -100,6 +101,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         binding.roomList.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = this@LobbyBrowser.adapter
+            addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         }
     }
 
@@ -254,7 +256,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                     binding.roomHost.visibility = View.GONE
                 }
 
-                // Populate player list (Text instead of chips)
+                                // Populate player list (Text instead of chips)
                 val playerNames = room.members.joinToString(", ") {
                     if (it.username.isNotEmpty()) it.username else it.nickname
                 }
