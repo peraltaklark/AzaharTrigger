@@ -58,7 +58,7 @@ constexpr std::size_t MaxBeaconFrames = 15;
 constexpr u16 BroadcastNetworkNodeId = 0xFFFF;
 
 constexpr std::chrono::milliseconds HEARTBEAT_INTERVAL{500};
-constexpr std::chrono::milliseconds CONNECTION_TIMEOUT{60000};
+constexpr std::chrono::milliseconds CONNECTION_TIMEOUT{120000};
 constexpr std::chrono::milliseconds RECONNECT_DELAY{2000};
 constexpr int MAX_RECONNECT_ATTEMPTS = 3;
 constexpr u8 HEARTBEAT_CHANNEL = 0xF;
@@ -250,6 +250,8 @@ void NWM_UDS::HandleEAPoLPacket(const Network::WifiPacket& packet) {
             node_map[packet.transmitter_address].node_id = node.network_node_id;
             node_map[packet.transmitter_address].connected = true;
             node_map[packet.transmitter_address].spec = false;
+            node_map[packet.transmitter_address].last_activity =
+                std::chrono::steady_clock::now();
 
             BroadcastNodeMap();
         } else if (eapol_start.packet.connection_type == ConnectionType::Spectator) {
@@ -521,7 +523,6 @@ void NWM_UDS::HandleDeauthenticationFrame(const Network::WifiPacket& packet) {
 
     if (connection_status.status != NetworkStatus::ConnectedAsHost) {
         LOG_ERROR(Service_NWM, "Got deauthentication frame but we are not the host");
-        HandleConnectionLost();
         return;
     }
     if (node_map.find(packet.transmitter_address) == node_map.end()) {
@@ -1688,7 +1689,6 @@ void NWM_UDS::SendHeartbeat() {
         hb.data = GenerateDataPayload(std::vector<u8>{0x00}, HEARTBEAT_CHANNEL, HostDestNodeId,
                                        connection_status.network_node_id, 0);
     }
-    last_packet_time = std::chrono::steady_clock::now();
     SendPacket(hb);
 }
 
@@ -1697,10 +1697,11 @@ void NWM_UDS::CheckConnectionHealth() {
         std::chrono::steady_clock::now() - last_packet_time);
     if (e > CONNECTION_TIMEOUT) {
         if (connection_status.status == NetworkStatus::ConnectedAsClient ||
-            connection_status.status == NetworkStatus::ConnectedAsSpectator)
-            HandleConnectionLost();
-        else if (connection_status.status == NetworkStatus::ConnectedAsHost)
+            connection_status.status == NetworkStatus::ConnectedAsSpectator) {
+            LOG_WARNING(Service_NWM, "No packets for a long time, keeping connection");
+        } else if (connection_status.status == NetworkStatus::ConnectedAsHost) {
             CleanupTimedOutClients();
+        }
     }
 }
 
