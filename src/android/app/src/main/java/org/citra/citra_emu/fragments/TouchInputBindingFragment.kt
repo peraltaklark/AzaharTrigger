@@ -1,5 +1,5 @@
 // Copyright Citra Emulator Project / Azahar Emulator Project
-// Licensed under GPLv2 or any later version
+// Licensed under GPLv2 or any later version.
 // Refer to the license.txt file included.
 
 package org.citra.citra_emu.fragments
@@ -14,6 +14,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -26,25 +27,17 @@ import org.citra.citra_emu.features.touchinput.TouchInputBinding
 import org.citra.citra_emu.features.touchinput.TouchInputBindingAdapter
 import org.citra.citra_emu.features.touchinput.TouchInputBindingManager
 import org.citra.citra_emu.features.touchinput.TouchInputBindingProfileManager
+import java.util.Locale
+import kotlin.math.roundToInt
 
 class TouchInputBindingFragment : Fragment() {
-
     private var _binding: FragmentTouchInputBinding? = null
     private val binding get() = _binding!!
 
     private lateinit var profileManager: TouchInputBindingProfileManager
     private lateinit var bindingAdapter: TouchInputBindingAdapter
 
-    private var currentProfile = DEFAULT_PROFILE
-
-    companion object {
-        private const val DEFAULT_PROFILE = "Default"
-        private const val MASK_COORDINATE_FORMAT = "%.3f"
-
-        private const val MENU_CREATE_PROFILE = Menu.FIRST
-        private const val MENU_RENAME_PROFILE = Menu.FIRST + 1
-        private const val MENU_DELETE_PROFILE = Menu.FIRST + 2
-    }
+    private var currentProfile = TouchInputBindingProfileManager.DEFAULT_PROFILE
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,34 +48,34 @@ class TouchInputBindingFragment : Fragment() {
         return binding.root
     }
 
-    override fun onViewCreated(
-        view: View,
-        savedInstanceState: Bundle?
-    ) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         profileManager = TouchInputBindingProfileManager(requireContext())
         currentProfile = profileManager.getCurrentProfile()
 
-        setupBindingRecyclerView()
-        setupFragmentResultListener()
+        setupBindingList()
+        setupResultListeners()
         setupProfileSpinner()
-        setupProfileButtons()
-        setupTouchInputView()
+
+        binding.profileMenuButton.setOnClickListener { showProfileMenu(it) }
+        binding.deleteAllButton.setOnClickListener { showDeleteAllDialog() }
+        binding.touchInputBindingView.onTouchPointSelected = { x, y -> showBindSheet(x, y) }
 
         loadCurrentProfile()
     }
 
     override fun onResume() {
         super.onResume()
-        refreshBindingList()
+        refreshBindings()
     }
 
-    // ----------------------------------------------------
-    // RecyclerView Setup
-    // ----------------------------------------------------
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 
-    private fun setupBindingRecyclerView() {
+    private fun setupBindingList() {
         bindingAdapter = TouchInputBindingAdapter(
             onEditClicked = { showEditBindingDialog(it) },
             onDeleteClicked = { showDeleteBindingDialog(it) }
@@ -95,74 +88,23 @@ class TouchInputBindingFragment : Fragment() {
         }
     }
 
-    private fun refreshBindingList() {
-        val bindings = TouchInputBindingManager.getBindings()
-
-        binding.touchInputBindingView.setBindings(bindings)
-        bindingAdapter.submitList(bindings)
-    }
-
-    // ----------------------------------------------------
-    // Fragment Result Listeners
-    // ----------------------------------------------------
-
-    private fun setupFragmentResultListener() {
-        val resultListener = { _: String, _: Bundle ->
-            commitBindings()
-            refreshBindingList()
-        }
+    private fun setupResultListeners() {
+        val onBindingsChanged = { _: String, _: Bundle -> commitChanges() }
 
         parentFragmentManager.setFragmentResultListener(
-            "touch_binding_added",
+            TouchInputBindingBottomSheetDialogFragment.RESULT_BINDING_ADDED,
             viewLifecycleOwner,
-            resultListener
+            onBindingsChanged
         )
-
         parentFragmentManager.setFragmentResultListener(
-            "touch_binding_removed",
+            RESULT_BINDING_REMOVED,
             viewLifecycleOwner,
-            resultListener
+            onBindingsChanged
         )
-
         parentFragmentManager.setFragmentResultListener(
-            "touch_binding_cancelled",
+            TouchInputBindingBottomSheetDialogFragment.RESULT_BINDING_CANCELLED,
             viewLifecycleOwner
-        ) { _, _ ->
-            binding.touchInputBindingView.clearSelection()
-        }
-    }
-
-    // ----------------------------------------------------
-    // Touch Preview View
-    // ----------------------------------------------------
-
-    private fun setupTouchInputView() {
-        binding.touchInputBindingView.onTouchPointSelected = { x, y ->
-            showBindingDialog(x, y)
-        }
-    }
-
-    // ----------------------------------------------------
-    // Profile Management
-    // ----------------------------------------------------
-
-    private fun selectProfile(profileName: String) {
-        currentProfile = profileName
-        profileManager.setCurrentProfile(currentProfile)
-        loadCurrentProfile()
-    }
-
-    private fun loadCurrentProfile() {
-        val bindings = profileManager.loadProfile(currentProfile)
-        TouchInputBindingManager.setBindings(bindings)
-        refreshBindingList()
-    }
-
-    private fun commitBindings() {
-        profileManager.saveProfile(
-            currentProfile,
-            TouchInputBindingManager.getBindings()
-        )
+        ) { _, _ -> binding.touchInputBindingView.clearSelection() }
     }
 
     private fun setupProfileSpinner() {
@@ -176,28 +118,26 @@ class TouchInputBindingFragment : Fragment() {
                     position: Int,
                     id: Long
                 ) {
-                    val selectedProfile = parent?.getItemAtPosition(position)?.toString() ?: return
-
-                    if (selectedProfile != currentProfile) {
-                        selectProfile(selectedProfile)
+                    val profile = parent?.getItemAtPosition(position)?.toString() ?: return
+                    if (profile != currentProfile) {
+                        selectProfile(profile)
                     }
                 }
 
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
             }
     }
 
     private fun updateProfileSpinner() {
         val profiles = profileManager.getProfiles()
 
-        val adapter = ArrayAdapter(
+        binding.profileSpinner.adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_item,
             profiles
-        )
-
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.profileSpinner.adapter = adapter
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
 
         val index = profiles.indexOf(currentProfile)
         if (index >= 0) {
@@ -205,104 +145,92 @@ class TouchInputBindingFragment : Fragment() {
         }
     }
 
-    // ----------------------------------------------------
-    // Profile Actions & Popup Menu
-    // ----------------------------------------------------
+    private fun selectProfile(profileName: String) {
+        currentProfile = profileName
+        profileManager.setCurrentProfile(profileName)
+        loadCurrentProfile()
+    }
 
-    private fun setupProfileButtons() {
-        binding.profileMenuButton.setOnClickListener { view ->
-            showProfileMenu(view)
-        }
+    private fun loadCurrentProfile() {
+        TouchInputBindingManager.setBindings(profileManager.loadProfile(currentProfile))
+        refreshBindings()
+    }
 
-        binding.deleteAllButton.setOnClickListener {
-            showDeleteAllBindingsDialog()
-        }
+    /** Saves the active bindings to the current profile and updates the UI. */
+    private fun commitChanges() {
+        profileManager.saveProfile(currentProfile, TouchInputBindingManager.getBindings())
+        refreshBindings()
+    }
+
+    private fun refreshBindings() {
+        val bindings = TouchInputBindingManager.getBindings()
+        binding.touchInputBindingView.setBindings(bindings)
+        bindingAdapter.submitList(bindings)
+    }
+
+    private fun showBindSheet(x: Float, y: Float) {
+        TouchInputBindingBottomSheetDialogFragment
+            .newInstance(x, y)
+            .show(parentFragmentManager, BIND_SHEET_TAG)
     }
 
     private fun showProfileMenu(anchor: View) {
-        val popup = PopupMenu(requireContext(), anchor)
+        PopupMenu(requireContext(), anchor).apply {
+            menu.add(Menu.NONE, MENU_CREATE_PROFILE, 1, R.string.create_profile)
+            menu.add(Menu.NONE, MENU_RENAME_PROFILE, 2, R.string.rename_profile)
+            menu.add(Menu.NONE, MENU_DELETE_PROFILE, 3, R.string.delete_profile)
 
-        popup.menu.add(Menu.NONE, MENU_CREATE_PROFILE, 1, getString(R.string.create_profile))
-        popup.menu.add(Menu.NONE, MENU_RENAME_PROFILE, 2, getString(R.string.rename_profile))
-        popup.menu.add(Menu.NONE, MENU_DELETE_PROFILE, 3, getString(R.string.delete_profile))
-
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                MENU_CREATE_PROFILE -> {
-                    showCreateProfileDialog()
-                    true
+            setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    MENU_CREATE_PROFILE -> showCreateProfileDialog()
+                    MENU_RENAME_PROFILE -> showRenameProfileDialog()
+                    MENU_DELETE_PROFILE -> showDeleteProfileDialog()
+                    else -> return@setOnMenuItemClickListener false
                 }
-
-                MENU_RENAME_PROFILE -> {
-                    showEditProfileDialog()
-                    true
-                }
-
-                MENU_DELETE_PROFILE -> {
-                    showDeleteProfileDialog()
-                    true
-                }
-
-                else -> false
+                true
             }
+            show()
         }
-
-        popup.show()
     }
 
-    // ----------------------------------------------------
-    // Material Profile Dialogs
-    // ----------------------------------------------------
-
     private fun showCreateProfileDialog() {
-        val (inputLayout, inputEditText) = createInputField(
-            hint = getString(R.string.profile_name)
-        )
+        val nameField = createTextField(R.string.profile_name)
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.create_new_profile)
-            .setView(inputLayout)
+            .setView(createDialogContent(nameField))
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val name = inputEditText.text.toString().trim()
+                val name = nameField.text
                 if (name.isEmpty()) return@setPositiveButton
 
                 if (profileManager.createProfile(name)) {
                     selectProfile(name)
                     updateProfileSpinner()
                 } else {
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.profile_already_exists),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showToast(R.string.profile_already_exists)
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    private fun showEditProfileDialog() {
-        val (inputLayout, inputEditText) = createInputField(
-            hint = getString(R.string.profile_name),
-            initialText = currentProfile
-        )
+    private fun showRenameProfileDialog() {
+        val nameField = createTextField(R.string.profile_name, currentProfile)
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.edit_profile_name)
-            .setView(inputLayout)
+            .setView(createDialogContent(nameField))
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val newName = inputEditText.text.toString().trim()
-                if (newName.isEmpty() || newName == currentProfile) return@setPositiveButton
+                val newName = nameField.text
+                if (newName.isEmpty() || newName == currentProfile) {
+                    return@setPositiveButton
+                }
 
                 if (profileManager.renameProfile(currentProfile, newName)) {
                     currentProfile = newName
                     updateProfileSpinner()
                 } else {
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.profile_name_already_exists),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showToast(R.string.profile_name_already_exists)
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -310,12 +238,8 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     private fun showDeleteProfileDialog() {
-        if (currentProfile == DEFAULT_PROFILE) {
-            Toast.makeText(
-                requireContext(),
-                getString(R.string.cannot_delete_default_profile),
-                Toast.LENGTH_SHORT
-            ).show()
+        if (currentProfile == TouchInputBindingProfileManager.DEFAULT_PROFILE) {
+            showToast(R.string.cannot_delete_default_profile)
             return
         }
 
@@ -324,94 +248,56 @@ class TouchInputBindingFragment : Fragment() {
             .setMessage(getString(R.string.delete_profile_confirm, currentProfile))
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 if (profileManager.deleteProfile(currentProfile)) {
-                    selectProfile(DEFAULT_PROFILE)
+                    selectProfile(TouchInputBindingProfileManager.DEFAULT_PROFILE)
                     updateProfileSpinner()
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.profile_deleted),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showToast(R.string.profile_deleted)
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    private fun showDeleteAllBindingsDialog() {
+    private fun showDeleteAllDialog() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.delete_all)
             .setMessage(R.string.delete_all_touch_input_confirm)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 TouchInputBindingManager.clearBindings()
-                commitBindings()
-                refreshBindingList()
+                commitChanges()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    // ----------------------------------------------------
-    // Material Binding Dialogs
-    // ----------------------------------------------------
-
-    private fun showBindingDialog(x: Float, y: Float) {
-        TouchInputBindingBottomSheetDialogFragment
-            .newInstance(x, y)
-            .show(
-                parentFragmentManager,
-                "TouchInputBindingBottomSheet"
-            )
-    }
-
     private fun showEditBindingDialog(touchBinding: TouchInputBinding) {
-        val density = resources.displayMetrics.density
-
-        val container = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            val horizontalPadding = (24 * density).toInt()
-            val topPadding = (16 * density).toInt()
-            setPadding(horizontalPadding, topPadding, horizontalPadding, 0)
-        }
-
-        val (xLayout, xInput) = createInputField(
-            hint = getString(R.string.x_coordinate),
-            initialText = formatCoordinate(touchBinding.x),
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        val decimalInput = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        val xField = createTextField(
+            R.string.x_coordinate,
+            formatCoordinate(touchBinding.x),
+            decimalInput
         )
-
-        val (yLayout, yInput) = createInputField(
-            hint = getString(R.string.y_coordinate),
-            initialText = formatCoordinate(touchBinding.y),
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        val yField = createTextField(
+            R.string.y_coordinate,
+            formatCoordinate(touchBinding.y),
+            decimalInput
         )
-
-        xLayout.setPadding(0, 0, 0, (12 * density).toInt())
-        yLayout.setPadding(0, 0, 0, 0)
-
-        container.addView(xLayout)
-        container.addView(yLayout)
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.edit)
-            .setView(container)
+            .setView(createDialogContent(xField, yField))
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val x = xInput.text.toString().toFloatOrNull()
-                val y = yInput.text.toString().toFloatOrNull()
-
-                if (x != null && y != null && x in 0f..1f && y in 0f..1f) {
-                    TouchInputBindingManager.removeBinding(touchBinding)
-                    TouchInputBindingManager.addBinding(
-                        touchBinding.copy(x = x, y = y)
-                    )
-                    commitBindings()
-                    refreshBindingList()
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.invalid_coordinates),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                val x = parseCoordinate(xField.text)
+                val y = parseCoordinate(yField.text)
+                if (x == null || y == null) {
+                    showToast(R.string.invalid_coordinates)
+                    return@setPositiveButton
                 }
+
+                TouchInputBindingManager.replaceBinding(
+                    touchBinding,
+                    touchBinding.copy(x = x, y = y)
+                )
+                commitChanges()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -423,53 +309,78 @@ class TouchInputBindingFragment : Fragment() {
             .setMessage(R.string.delete_touch_input_confirm)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 TouchInputBindingManager.removeBinding(touchBinding)
-                commitBindings()
-                refreshBindingList()
+                commitChanges()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    // ----------------------------------------------------
-    // Dynamic View Generators & Helpers
-    // ----------------------------------------------------
-
-    private fun createInputField(
-        hint: String,
+    private fun createTextField(
+        @StringRes hintRes: Int,
         initialText: String = "",
         inputType: Int = InputType.TYPE_CLASS_TEXT
-    ): Pair<TextInputLayout, TextInputEditText> {
-        val density = resources.displayMetrics.density
-        val cornerRadius = 28f * density
+    ): TextInputLayout {
+        val cornerRadius = dpToPx(TEXT_FIELD_CORNER_RADIUS_DP).toFloat()
 
-        val inputLayout = TextInputLayout(
+        val layout = TextInputLayout(
             requireContext(),
             null,
             com.google.android.material.R.style.Widget_Material3_TextInputLayout_OutlinedBox
         ).apply {
-            this.hint = hint
+            setHint(hintRes)
             setBoxCornerRadii(cornerRadius, cornerRadius, cornerRadius, cornerRadius)
-
-            val horizontalPadding = (24 * density).toInt()
-            val topPadding = (16 * density).toInt()
-            setPadding(horizontalPadding, topPadding, horizontalPadding, 0)
         }
 
-        val editText = TextInputEditText(inputLayout.context).apply {
-            setText(initialText)
-            this.inputType = inputType
+        layout.addView(
+            TextInputEditText(layout.context).apply {
+                setText(initialText)
+                this.inputType = inputType
+            }
+        )
+        return layout
+    }
+
+    private fun createDialogContent(vararg fields: TextInputLayout): LinearLayout =
+        LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(24), dpToPx(16), dpToPx(24), 0)
+
+            fields.forEachIndexed { index, field ->
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                if (index > 0) {
+                    params.topMargin = dpToPx(12)
+                }
+                addView(field, params)
+            }
         }
 
-        inputLayout.addView(editText)
-        return Pair(inputLayout, editText)
+    private val TextInputLayout.text: String
+        get() = editText?.text?.toString()?.trim().orEmpty()
+
+    private fun formatCoordinate(value: Float): String =
+        String.format(Locale.US, "%.3f", value)
+
+    /** Accepts "0.5" or "0,5"; returns null unless the value is within 0..1. */
+    private fun parseCoordinate(text: String): Float? =
+        text.replace(',', '.').toFloatOrNull()?.takeIf { it in 0f..1f }
+
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).roundToInt()
+
+    private fun showToast(@StringRes message: Int) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun formatCoordinate(value: Float): String {
-        return String.format(MASK_COORDINATE_FORMAT, value)
-    }
+    companion object {
+        private const val BIND_SHEET_TAG = "TouchInputBindingBottomSheet"
+        private const val RESULT_BINDING_REMOVED = "touch_binding_removed"
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+        private const val TEXT_FIELD_CORNER_RADIUS_DP = 28
+
+        private const val MENU_CREATE_PROFILE = Menu.FIRST
+        private const val MENU_RENAME_PROFILE = Menu.FIRST + 1
+        private const val MENU_DELETE_PROFILE = Menu.FIRST + 2
     }
 }

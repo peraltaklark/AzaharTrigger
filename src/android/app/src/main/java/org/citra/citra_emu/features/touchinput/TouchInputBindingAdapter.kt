@@ -1,10 +1,9 @@
 // Copyright Citra Emulator Project / Azahar Emulator Project
-// Licensed under GPLv2 or any later version
+// Licensed under GPLv2 or any later version.
 // Refer to the license.txt file included.
 
 package org.citra.citra_emu.features.touchinput
 
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
@@ -17,14 +16,26 @@ import org.citra.citra_emu.databinding.ItemTouchInputBindingBinding
 class TouchInputBindingAdapter(
     private val onEditClicked: (TouchInputBinding) -> Unit,
     private val onDeleteClicked: (TouchInputBinding) -> Unit
-) : ListAdapter<TouchInputBinding, TouchInputBindingAdapter.ViewHolder>(
-    TouchInputBindingDiffCallback()
-) {
+) : ListAdapter<TouchInputBinding, TouchInputBindingAdapter.ViewHolder>(DiffCallback) {
 
-    override fun onCreateViewHolder(
-        parent: ViewGroup,
-        viewType: Int
-    ): ViewHolder {
+    private companion object {
+        const val PAYLOAD_NUMBER = "number"
+        const val MENU_EDIT = 1
+        const val MENU_DELETE = 2
+    }
+
+    /**
+     * Row numbers depend on list position, so unchanged rows that shift after an
+     * insert or delete still need their badge refreshed. The payload keeps the
+     * refresh silent (no change animation).
+     */
+    override fun submitList(list: List<TouchInputBinding>?) {
+        super.submitList(list) {
+            notifyItemRangeChanged(0, itemCount, PAYLOAD_NUMBER)
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemTouchInputBindingBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
@@ -33,79 +44,66 @@ class TouchInputBindingAdapter(
         return ViewHolder(binding)
     }
 
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(position + 1, getItem(position))
+    }
+
     override fun onBindViewHolder(
         holder: ViewHolder,
-        position: Int
+        position: Int,
+        payloads: MutableList<Any>
     ) {
-        holder.bind(
-            position + 1,
-            getItem(position)
-        )
+        if (payloads.contains(PAYLOAD_NUMBER)) {
+            holder.bindNumber(position + 1)
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 
     inner class ViewHolder(
         private val binding: ItemTouchInputBindingBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(
-            number: Int,
-            touchBinding: TouchInputBinding
-        ) {
+        fun bind(number: Int, touchBinding: TouchInputBinding) {
+            bindNumber(number)
+            binding.bindingName.text = touchBinding.displayName()
+            binding.bindingCoordinates.text = touchBinding.positionLabel()
+            binding.menuButton.setOnClickListener { showMenu(touchBinding) }
+        }
+
+        fun bindNumber(number: Int) {
             binding.bindingNumber.text = number.toString()
-            binding.bindingName.text = getBindingName(touchBinding)
+        }
 
-            binding.bindingCoordinates.text = binding.root.context.getString(
-                R.string.touch_input_coordinates,
-                String.format("%.3f", touchBinding.x),
-                String.format("%.3f", touchBinding.y)
-            )
+        private fun showMenu(touchBinding: TouchInputBinding) {
+            PopupMenu(binding.root.context, binding.menuButton).apply {
+                menu.add(0, MENU_EDIT, 0, R.string.edit)
+                menu.add(0, MENU_DELETE, 1, R.string.delete)
 
-            binding.menuButton.setOnClickListener {
-                PopupMenu(binding.root.context, binding.menuButton).apply {
-                    menu.add(0, 1, 0, R.string.edit)
-                    menu.add(0, 2, 1, R.string.delete)
-
-                    setOnMenuItemClickListener { item ->
-                        when (item.itemId) {
-                            1 -> {
-                                onEditClicked(touchBinding)
-                                true
-                            }
-                            2 -> {
-                                onDeleteClicked(touchBinding)
-                                true
-                            }
-                            else -> false
-                        }
+                setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        MENU_EDIT -> onEditClicked(touchBinding)
+                        MENU_DELETE -> onDeleteClicked(touchBinding)
+                        else -> return@setOnMenuItemClickListener false
                     }
-                    show()
+                    true
                 }
+                show()
             }
         }
     }
 
-    private fun getBindingName(touchBinding: TouchInputBinding): String {
-        return if (touchBinding.axis >= 0) {
-            "Axis ${touchBinding.axis} ${if (touchBinding.positive) "+" else "-"}"
-        } else {
-            KeyEvent.keyCodeToString(touchBinding.keyCode)
-        }
-    }
-}
+    private object DiffCallback : DiffUtil.ItemCallback<TouchInputBinding>() {
 
-class TouchInputBindingDiffCallback : DiffUtil.ItemCallback<TouchInputBinding>() {
+        // A binding is identified by the physical input it listens to
+        override fun areItemsTheSame(
+            oldItem: TouchInputBinding,
+            newItem: TouchInputBinding
+        ): Boolean = oldItem.hasSameInputAs(newItem)
 
-    override fun areItemsTheSame(
-        oldItem: TouchInputBinding,
-        newItem: TouchInputBinding
-    ): Boolean {
-        return oldItem == newItem
-    }
-
-    override fun areContentsTheSame(
-        oldItem: TouchInputBinding,
-        newItem: TouchInputBinding
-    ): Boolean {
-        return oldItem == newItem
+        override fun areContentsTheSame(
+            oldItem: TouchInputBinding,
+            newItem: TouchInputBinding
+        ): Boolean = oldItem == newItem
     }
 }

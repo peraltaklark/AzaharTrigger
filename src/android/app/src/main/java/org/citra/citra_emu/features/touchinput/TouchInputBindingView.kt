@@ -6,13 +6,14 @@ package org.citra.citra_emu.features.touchinput
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.graphics.ColorUtils
 import com.google.android.material.color.MaterialColors
 import org.citra.citra_emu.NativeLibrary
 import kotlin.math.min
@@ -22,11 +23,12 @@ class TouchInputBindingView @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
+    private val density = resources.displayMetrics.density
+
     private val bottomScreenRect = RectF()
     private val clipPath = Path()
 
     private val bottomScreenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#F4F4F6")
         style = Paint.Style.FILL
     }
 
@@ -37,21 +39,28 @@ class TouchInputBindingView @JvmOverloads constructor(
 
     private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 1.5f * resources.displayMetrics.density
+        strokeWidth = 1.5f * density
     }
 
-    private val pointOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+    private val pointRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
 
-    private val pointInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val pointFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+
+    private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        textSize = POINT_LABEL_TEXT_SIZE
+        textSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP,
+            POINT_LABEL_TEXT_SIZE_SP,
+            resources.displayMetrics
+        )
         isFakeBoldText = true
     }
 
@@ -64,16 +73,24 @@ class TouchInputBindingView @JvmOverloads constructor(
 
     companion object {
         private const val UNSELECTED_COORDINATE = -1f
-        private const val SCREEN_SCALE_FACTOR = 0.8f
-        private const val BINDING_POINT_RADIUS = 18f
-        private const val SELECTED_POINT_RADIUS = 20f
-        private const val POINT_LABEL_TEXT_SIZE = 22f
+
+        // Use nearly the full view; the outline needs a little room
+        private const val SCREEN_SCALE_FACTOR = 0.98f
+
+        private const val BINDING_POINT_RADIUS_DP = 12f
+        private const val SELECTED_POINT_RADIUS_DP = 14f
+        private const val SELECTED_HALO_RADIUS_DP = 26f
+        private const val POINT_RING_WIDTH_DP = 2f
+        private const val POINT_LABEL_TEXT_SIZE_SP = 13f
         private const val CORNER_RADIUS_DP = 16f
 
         // Grid lines density (16 columns x 12 rows)
         private const val GRID_COLUMNS = 16
         private const val GRID_ROWS = 12
     }
+
+    private fun themeColor(attr: Int): Int =
+        MaterialColors.getColor(this, attr)
 
     override fun onSizeChanged(
         width: Int,
@@ -118,7 +135,7 @@ class TouchInputBindingView @JvmOverloads constructor(
             )
 
             // Update clip path for rounded corner grid clipping
-            val cornerPx = CORNER_RADIUS_DP * resources.displayMetrics.density
+            val cornerPx = CORNER_RADIUS_DP * density
             clipPath.reset()
             clipPath.addRoundRect(bottomScreenRect, cornerPx, cornerPx, Path.Direction.CW)
         }
@@ -129,22 +146,20 @@ class TouchInputBindingView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val cornerPx = CORNER_RADIUS_DP * resources.displayMetrics.density
+        val cornerPx = CORNER_RADIUS_DP * density
 
-        // 1. Draw rounded bottom screen background
+        // 1. Rounded "screen" background. Theme-aware, so it works in dark mode too.
+        bottomScreenPaint.color = themeColor(com.google.android.material.R.attr.colorSurface)
         canvas.drawRoundRect(bottomScreenRect, cornerPx, cornerPx, bottomScreenPaint)
 
-        // 2. Draw subtle grid pattern clipped inside rounded rectangle
+        // 2. Subtle grid clipped to the rounded rectangle
         drawGrid(canvas)
 
-        // 3. Draw rounded grey outline stroke
-        outlinePaint.color = MaterialColors.getColor(
-            this,
-            com.google.android.material.R.attr.colorOutlineVariant
-        )
+        // 3. Outline
+        outlinePaint.color = themeColor(com.google.android.material.R.attr.colorOutlineVariant)
         canvas.drawRoundRect(bottomScreenRect, cornerPx, cornerPx, outlinePaint)
 
-        // 4. Draw existing confirmed bindings with their numbers (1, 2, 3...)
+        // 4. Confirmed bindings, numbered 1, 2, 3...
         bindings.forEachIndexed { index, binding ->
             val pointX = bottomScreenRect.left + binding.x * bottomScreenRect.width()
             val pointY = bottomScreenRect.top + binding.y * bottomScreenRect.height()
@@ -158,24 +173,21 @@ class TouchInputBindingView @JvmOverloads constructor(
             )
         }
 
-        // 5. Draw active selection as BLANK (number = 0) while waiting for user to bind a key
+        // 5. Pending selection: blank marker with a halo while waiting for a button press
         if (selectedX >= 0f && selectedY >= 0f) {
             drawBindingPoint(
                 canvas = canvas,
                 x = selectedX,
                 y = selectedY,
-                number = 0, // 0 = Keep blank during selection prompt
+                number = 0,
                 selected = true
             )
         }
     }
 
     private fun drawGrid(canvas: Canvas) {
-        gridPaint.color = MaterialColors.getColor(
-            this,
-            com.google.android.material.R.attr.colorOutlineVariant
-        )
-        gridPaint.alpha = 55 // Subtle grid intensity
+        gridPaint.color = themeColor(com.google.android.material.R.attr.colorOutlineVariant)
+        gridPaint.alpha = 55
 
         canvas.save()
         canvas.clipPath(clipPath)
@@ -183,14 +195,12 @@ class TouchInputBindingView @JvmOverloads constructor(
         val width = bottomScreenRect.width()
         val height = bottomScreenRect.height()
 
-        // Draw Vertical Grid Lines
         val columnWidth = width / GRID_COLUMNS
         for (i in 1 until GRID_COLUMNS) {
             val x = bottomScreenRect.left + (i * columnWidth)
             canvas.drawLine(x, bottomScreenRect.top, x, bottomScreenRect.bottom, gridPaint)
         }
 
-        // Draw Horizontal Grid Lines
         val rowHeight = height / GRID_ROWS
         for (i in 1 until GRID_ROWS) {
             val y = bottomScreenRect.top + (i * rowHeight)
@@ -207,23 +217,29 @@ class TouchInputBindingView @JvmOverloads constructor(
         number: Int,
         selected: Boolean
     ) {
-        val radius = if (selected) SELECTED_POINT_RADIUS else BINDING_POINT_RADIUS
+        val radius = (if (selected) SELECTED_POINT_RADIUS_DP else BINDING_POINT_RADIUS_DP) * density
+        val ringWidth = POINT_RING_WIDTH_DP * density
 
-        pointOuterPaint.color = Color.WHITE
-        pointInnerPaint.color = MaterialColors.getColor(
-            this,
-            com.google.android.material.R.attr.colorPrimaryContainer
-        )
+        val primary = themeColor(androidx.appcompat.R.attr.colorPrimary)
+        val primaryContainer = themeColor(com.google.android.material.R.attr.colorPrimaryContainer)
+        val surface = themeColor(com.google.android.material.R.attr.colorSurface)
 
-        canvas.drawCircle(x, y, radius, pointOuterPaint)
-        canvas.drawCircle(x, y, radius - 3f, pointInnerPaint)
+        if (selected) {
+            // Soft halo so the pending point stands out from confirmed ones
+            haloPaint.color = ColorUtils.setAlphaComponent(primary, 60)
+            canvas.drawCircle(x, y, SELECTED_HALO_RADIUS_DP * density, haloPaint)
+        }
 
-        // Only draw the number inside the circle when a valid number (> 0) exists
+        // Ring uses the surface color so it follows light/dark theme
+        pointRingPaint.color = surface
+        canvas.drawCircle(x, y, radius, pointRingPaint)
+
+        pointFillPaint.color = if (selected) primary else primaryContainer
+        canvas.drawCircle(x, y, radius - ringWidth, pointFillPaint)
+
+        // Number only for confirmed bindings
         if (number > 0) {
-            labelPaint.color = MaterialColors.getColor(
-                this,
-                com.google.android.material.R.attr.colorOnPrimaryContainer
-            )
+            labelPaint.color = themeColor(com.google.android.material.R.attr.colorOnPrimaryContainer)
 
             val textY = y - (labelPaint.ascent() + labelPaint.descent()) / 2f
             canvas.drawText(number.toString(), x, textY, labelPaint)

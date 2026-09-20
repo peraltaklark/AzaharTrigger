@@ -1,5 +1,5 @@
 // Copyright Citra Emulator Project / Azahar Emulator Project
-// Licensed under GPLv2 or any later version
+// Licensed under GPLv2 or any later version.
 // Refer to the license.txt file included.
 
 package org.citra.citra_emu.features.touchinput
@@ -9,204 +9,117 @@ import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
 import org.citra.citra_emu.CitraApplication
 import org.json.JSONArray
-import org.json.JSONObject
+import org.json.JSONException
 
+/**
+ * Stores named sets of touch input bindings. The Default profile always exists and can't be
+ * renamed or deleted.
+ */
 class TouchInputBindingProfileManager(context: Context) {
-
     private val preferences: SharedPreferences =
         PreferenceManager.getDefaultSharedPreferences(
             context.applicationContext ?: CitraApplication.appContext
         )
 
-    companion object {
-        private const val KEY_CURRENT_PROFILE = "current_profile"
-        private const val KEY_PROFILES_LIST = "profiles_list"
-        private const val KEY_BINDINGS_PREFIX = "bindings_profile_"
-        private const val DEFAULT_PROFILE = "Default"
-
-        // JSON Serialization Keys
-        private const val JSON_KEY_CODE = "keyCode"
-        private const val JSON_AXIS = "axis"
-        private const val JSON_POSITIVE = "positive"
-        private const val JSON_ANALOG = "analog"
-        private const val JSON_THRESHOLD = "threshold"
-        private const val JSON_X = "x"
-        private const val JSON_Y = "y"
-    }
-
     init {
-        val currentProfiles = getProfiles()
-        if (!currentProfiles.contains(DEFAULT_PROFILE)) {
-            val updatedProfiles = currentProfiles.toMutableList().apply {
-                add(0, DEFAULT_PROFILE)
-            }
-            saveProfilesList(updatedProfiles)
+        val profiles = getProfiles()
+        if (!profiles.contains(DEFAULT_PROFILE)) {
+            saveProfilesList(listOf(DEFAULT_PROFILE) + profiles)
             if (!hasProfileData(DEFAULT_PROFILE)) {
                 saveProfile(DEFAULT_PROFILE, emptyList())
             }
         }
     }
 
-    fun getCurrentProfile(): String {
-        return preferences.getString(
-            KEY_CURRENT_PROFILE,
-            DEFAULT_PROFILE
-        ) ?: DEFAULT_PROFILE
-    }
+    fun getCurrentProfile(): String =
+        preferences.getString(KEY_CURRENT_PROFILE, DEFAULT_PROFILE) ?: DEFAULT_PROFILE
 
     fun setCurrentProfile(profileName: String) {
-        preferences.edit()
-            .putString(KEY_CURRENT_PROFILE, profileName)
-            .apply()
+        preferences.edit().putString(KEY_CURRENT_PROFILE, profileName).apply()
     }
 
     fun getProfiles(): List<String> {
-        val json = preferences.getString(KEY_PROFILES_LIST, null) ?: return listOf(DEFAULT_PROFILE)
+        val json = preferences.getString(KEY_PROFILES_LIST, null)
+            ?: return listOf(DEFAULT_PROFILE)
 
         return try {
             val array = JSONArray(json)
-            List(array.length()) { index ->
-                array.getString(index)
-            }
-        } catch (_: Exception) {
+            List(array.length()) { array.getString(it) }
+        } catch (_: JSONException) {
             listOf(DEFAULT_PROFILE)
         }
-    }
-
-    private fun saveProfilesList(profiles: List<String>) {
-        val array = JSONArray()
-        profiles.forEach { profile ->
-            array.put(profile)
-        }
-
-        preferences.edit()
-            .putString(KEY_PROFILES_LIST, array.toString())
-            .apply()
     }
 
     fun createProfile(profileName: String): Boolean {
         if (profileName.isBlank()) return false
 
-        val profiles = getProfiles().toMutableList()
-        if (profiles.contains(profileName)) {
-            return false
-        }
+        val profiles = getProfiles()
+        if (profiles.contains(profileName)) return false
 
-        profiles.add(profileName)
-        saveProfilesList(profiles)
+        saveProfilesList(profiles + profileName)
         saveProfile(profileName, emptyList())
-
         return true
     }
 
     fun deleteProfile(profileName: String): Boolean {
-        if (profileName == DEFAULT_PROFILE) {
-            return false
-        }
+        if (profileName == DEFAULT_PROFILE) return false
 
-        val profiles = getProfiles().toMutableList()
-        if (!profiles.contains(profileName)) {
-            return false
-        }
+        val profiles = getProfiles()
+        if (!profiles.contains(profileName)) return false
 
-        profiles.remove(profileName)
-        saveProfilesList(profiles)
-
-        preferences.edit()
-            .remove(getProfileStorageKey(profileName))
-            .apply()
+        saveProfilesList(profiles - profileName)
+        preferences.edit().remove(getStorageKey(profileName)).apply()
 
         if (getCurrentProfile() == profileName) {
             setCurrentProfile(DEFAULT_PROFILE)
         }
-
         return true
     }
 
     fun renameProfile(oldName: String, newName: String): Boolean {
-        if (oldName == DEFAULT_PROFILE || newName.isBlank() || oldName == newName) {
-            return false
-        }
+        if (oldName == DEFAULT_PROFILE || newName.isBlank() || oldName == newName) return false
 
-        val profiles = getProfiles().toMutableList()
+        val profiles = getProfiles()
         val index = profiles.indexOf(oldName)
-        if (index == -1 || profiles.contains(newName)) {
-            return false
-        }
+        if (index == -1 || profiles.contains(newName)) return false
 
         val bindings = loadProfile(oldName)
 
-        // Atomic update: rename entry in list and update keys
-        profiles[index] = newName
-        saveProfilesList(profiles)
-
+        saveProfilesList(profiles.toMutableList().also { it[index] = newName })
         saveProfile(newName, bindings)
-        preferences.edit()
-            .remove(getProfileStorageKey(oldName))
-            .apply()
+        preferences.edit().remove(getStorageKey(oldName)).apply()
 
         if (getCurrentProfile() == oldName) {
             setCurrentProfile(newName)
         }
-
         return true
     }
 
-    fun saveProfile(
-        profileName: String,
-        bindings: List<TouchInputBinding>
-    ) {
-        val array = JSONArray()
-
-        bindings.forEach { binding ->
-            val obj = JSONObject().apply {
-                put(JSON_KEY_CODE, binding.keyCode)
-                put(JSON_AXIS, binding.axis)
-                put(JSON_POSITIVE, binding.positive)
-                put(JSON_ANALOG, binding.analog)
-                put(JSON_THRESHOLD, binding.threshold)
-                put(JSON_X, binding.x)
-                put(JSON_Y, binding.y)
-            }
-            array.put(obj)
-        }
-
+    fun saveProfile(profileName: String, bindings: List<TouchInputBinding>) {
         preferences.edit()
-            .putString(getProfileStorageKey(profileName), array.toString())
+            .putString(getStorageKey(profileName), TouchInputBinding.listToJson(bindings))
             .apply()
     }
 
-    fun loadProfile(profileName: String): List<TouchInputBinding> {
-        val json = preferences.getString(
-            getProfileStorageKey(profileName),
-            null
-        ) ?: return emptyList()
+    fun loadProfile(profileName: String): List<TouchInputBinding> =
+        TouchInputBinding.listFromJson(preferences.getString(getStorageKey(profileName), null))
 
-        return try {
-            val array = JSONArray(json)
-            List(array.length()) { index ->
-                val obj = array.getJSONObject(index)
-
-                TouchInputBinding(
-                    keyCode = obj.optInt(JSON_KEY_CODE, -1),
-                    axis = obj.optInt(JSON_AXIS, -1),
-                    positive = obj.optBoolean(JSON_POSITIVE, true),
-                    analog = obj.optBoolean(JSON_ANALOG, false),
-                    threshold = obj.optDouble(JSON_THRESHOLD, 0.5).toFloat(),
-                    x = obj.optDouble(JSON_X, 0.5).toFloat(),
-                    y = obj.optDouble(JSON_Y, 0.5).toFloat()
-                )
-            }
-        } catch (_: Exception) {
-            emptyList()
-        }
+    private fun saveProfilesList(profiles: List<String>) {
+        val array = JSONArray()
+        profiles.forEach { array.put(it) }
+        preferences.edit().putString(KEY_PROFILES_LIST, array.toString()).apply()
     }
 
-    private fun hasProfileData(profileName: String): Boolean {
-        return preferences.contains(getProfileStorageKey(profileName))
-    }
+    private fun hasProfileData(profileName: String): Boolean =
+        preferences.contains(getStorageKey(profileName))
 
-    private fun getProfileStorageKey(profileName: String): String {
-        return "$KEY_BINDINGS_PREFIX$profileName"
+    private fun getStorageKey(profileName: String): String = "$KEY_BINDINGS_PREFIX$profileName"
+
+    companion object {
+        const val DEFAULT_PROFILE = "Default"
+
+        private const val KEY_CURRENT_PROFILE = "current_profile"
+        private const val KEY_PROFILES_LIST = "profiles_list"
+        private const val KEY_BINDINGS_PREFIX = "bindings_profile_"
     }
 }
