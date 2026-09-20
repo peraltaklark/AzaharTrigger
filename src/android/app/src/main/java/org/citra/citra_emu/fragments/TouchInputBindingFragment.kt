@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.annotation.StringRes
@@ -41,13 +42,29 @@ class TouchInputBindingFragment : Fragment() {
     private var currentProfile = TouchInputBindingProfileManager.DEFAULT_PROFILE
     private var selectedBinding: TouchInputBinding? = null
 
+    // The fragment's root never changes; its content is re-inflated when the configuration does
+    private var contentHost: FrameLayout? = null
+    private var inflatedOrientation = Configuration.ORIENTATION_UNDEFINED
+    private var inflatedNightMode = 0
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentTouchInputBinding.inflate(inflater, container, false)
-        return binding.root
+        val host = FrameLayout(inflater.context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            // Fallback for hosts that don't pass configuration changes on to fragments
+            addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                post { rebuildContentIfNeeded() }
+            }
+        }
+        contentHost = host
+        inflateContent()
+        return host
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -56,8 +73,53 @@ class TouchInputBindingFragment : Fragment() {
         profileManager = TouchInputBindingProfileManager(requireContext())
         currentProfile = profileManager.getCurrentProfile()
 
-        setupBindingList()
         setupResultListeners()
+        bindViews()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshBindings()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        rebuildContentIfNeeded()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+        contentHost = null
+    }
+
+    private fun inflateContent() {
+        val host = contentHost ?: return
+        host.removeAllViews()
+        _binding = FragmentTouchInputBinding.inflate(LayoutInflater.from(host.context), host, true)
+
+        val config = resources.configuration
+        inflatedOrientation = config.orientation
+        inflatedNightMode = config.uiMode and Configuration.UI_MODE_NIGHT_MASK
+    }
+
+    /**
+     * The host activity handles rotation and light/dark changes itself, so the view is not
+     * rebuilt automatically. Re-inflate it to pick up the matching layout and colors.
+     */
+    private fun rebuildContentIfNeeded() {
+        if (_binding == null || !isAdded) return
+
+        val config = resources.configuration
+        val nightMode = config.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        if (config.orientation == inflatedOrientation && nightMode == inflatedNightMode) return
+
+        inflateContent()
+        bindViews()
+    }
+
+    private fun bindViews() {
+        setupBindingList()
         setupProfileSpinner()
 
         binding.profileMenuButton.setOnClickListener { showProfileMenu(it) }
@@ -68,29 +130,6 @@ class TouchInputBindingFragment : Fragment() {
         }
 
         loadCurrentProfile()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        refreshBindings()
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-
-        // The host activity handles rotation itself, so rebuild this screen's view to pick up
-        // the portrait or landscape layout
-        if (isAdded && !parentFragmentManager.isStateSaved) {
-            parentFragmentManager.beginTransaction()
-                .detach(this)
-                .attach(this)
-                .commit()
-        }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 
     private fun setupBindingList() {
