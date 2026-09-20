@@ -325,7 +325,7 @@ class TouchInputBindingFragment : Fragment() {
         val layout = TextInputLayout(
             requireContext(),
             null,
-            com.google.android.material.R.style.Widget_Material3_TextInputLayout_OutlinedBox
+            com.google.android.material.R.attr.textInputOutlinedStyle
         ).apply {
             setHint(hintRes)
             setBoxCornerRadii(cornerRadius, cornerRadius, cornerRadius, cornerRadius)
