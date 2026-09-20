@@ -38,6 +38,7 @@ class TouchInputBindingFragment : Fragment() {
     private lateinit var bindingAdapter: TouchInputBindingAdapter
 
     private var currentProfile = TouchInputBindingProfileManager.DEFAULT_PROFILE
+    private var selectedBinding: TouchInputBinding? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -60,7 +61,10 @@ class TouchInputBindingFragment : Fragment() {
 
         binding.profileMenuButton.setOnClickListener { showProfileMenu(it) }
         binding.deleteAllButton.setOnClickListener { showDeleteAllDialog() }
-        binding.touchInputBindingView.onTouchPointSelected = { x, y -> showBindSheet(x, y) }
+        binding.touchInputBindingView.onTouchPointSelected = { x, y ->
+            selectBinding(null)
+            showBindSheet(x, y)
+        }
 
         loadCurrentProfile()
     }
@@ -77,6 +81,7 @@ class TouchInputBindingFragment : Fragment() {
 
     private fun setupBindingList() {
         bindingAdapter = TouchInputBindingAdapter(
+            onRowClicked = { selectBinding(if (it == selectedBinding) null else it) },
             onEditClicked = { showEditBindingDialog(it) },
             onDeleteClicked = { showDeleteBindingDialog(it) }
         )
@@ -84,7 +89,6 @@ class TouchInputBindingFragment : Fragment() {
         binding.bindingList.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = bindingAdapter
-            setHasFixedSize(true)
         }
     }
 
@@ -164,8 +168,28 @@ class TouchInputBindingFragment : Fragment() {
 
     private fun refreshBindings() {
         val bindings = TouchInputBindingManager.getBindings()
+        val isEmpty = bindings.isEmpty()
+
         binding.touchInputBindingView.setBindings(bindings)
         bindingAdapter.submitList(bindings)
+
+        binding.emptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
+        binding.bindingList.visibility = if (isEmpty) View.GONE else View.VISIBLE
+        binding.deleteAllButton.isEnabled = !isEmpty
+
+        if (selectedBinding !in bindings) {
+            selectedBinding = null
+        }
+        selectBinding(selectedBinding)
+    }
+
+    /** Highlights [touchBinding] in the list and on the preview, or clears it if null. */
+    private fun selectBinding(touchBinding: TouchInputBinding?) {
+        selectedBinding = touchBinding
+
+        val index = touchBinding?.let { TouchInputBindingManager.getBindings().indexOf(it) } ?: -1
+        binding.touchInputBindingView.setHighlightedIndex(index)
+        bindingAdapter.selectedBinding = touchBinding
     }
 
     private fun showBindSheet(x: Float, y: Float) {

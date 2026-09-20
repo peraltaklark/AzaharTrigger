@@ -15,7 +15,6 @@ import android.view.MotionEvent
 import android.view.View
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.color.MaterialColors
-import org.citra.citra_emu.NativeLibrary
 import kotlin.math.min
 
 class TouchInputBindingView @JvmOverloads constructor(
@@ -68,11 +67,16 @@ class TouchInputBindingView @JvmOverloads constructor(
 
     private var selectedX = UNSELECTED_COORDINATE
     private var selectedY = UNSELECTED_COORDINATE
+    private var highlightedIndex = NO_HIGHLIGHT
 
     var onTouchPointSelected: ((Float, Float) -> Unit)? = null
 
     companion object {
         private const val UNSELECTED_COORDINATE = -1f
+        private const val NO_HIGHLIGHT = -1
+
+        private const val BOTTOM_SCREEN_WIDTH = 320f
+        private const val BOTTOM_SCREEN_HEIGHT = 240f
 
         // Use nearly the full view; the outline needs a little room
         private const val SCREEN_SCALE_FACTOR = 0.98f
@@ -92,6 +96,18 @@ class TouchInputBindingView @JvmOverloads constructor(
     private fun themeColor(attr: Int): Int =
         MaterialColors.getColor(this, attr)
 
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        // With wrap_content the view takes the 4:3 shape of the 3DS bottom screen
+        if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+            return
+        }
+
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        val height = (width * BOTTOM_SCREEN_HEIGHT / BOTTOM_SCREEN_WIDTH / SCREEN_SCALE_FACTOR).toInt()
+        setMeasuredDimension(width, height)
+    }
+
     override fun onSizeChanged(
         width: Int,
         height: Int,
@@ -105,40 +121,27 @@ class TouchInputBindingView @JvmOverloads constructor(
     private fun updateScreenRect() {
         if (width <= 0 || height <= 0) return
 
-        val layout = NativeLibrary.getFramebufferLayout()
-        if (layout.size >= 6) {
-            val bottomLeft = layout[2]
-            val bottomTop = layout[3]
-            val bottomRight = layout[4]
-            val bottomBottom = layout[5]
+        // The 3DS bottom screen is always 4:3, whatever layout or orientation the emulator uses
+        val scale = min(
+            (width * SCREEN_SCALE_FACTOR) / BOTTOM_SCREEN_WIDTH,
+            (height * SCREEN_SCALE_FACTOR) / BOTTOM_SCREEN_HEIGHT
+        )
+        val scaledWidth = BOTTOM_SCREEN_WIDTH * scale
+        val scaledHeight = BOTTOM_SCREEN_HEIGHT * scale
+        val offsetX = (width - scaledWidth) / 2f
+        val offsetY = (height - scaledHeight) / 2f
 
-            val bottomWidth = (bottomRight - bottomLeft).toFloat()
-            val bottomHeight = (bottomBottom - bottomTop).toFloat()
+        bottomScreenRect.set(
+            offsetX,
+            offsetY,
+            offsetX + scaledWidth,
+            offsetY + scaledHeight
+        )
 
-            if (bottomWidth <= 0 || bottomHeight <= 0) return
-
-            val scaleX = (width * SCREEN_SCALE_FACTOR) / bottomWidth
-            val scaleY = (height * SCREEN_SCALE_FACTOR) / bottomHeight
-            val scale = min(scaleX, scaleY)
-
-            val scaledWidth = bottomWidth * scale
-            val scaledHeight = bottomHeight * scale
-
-            val offsetX = (width - scaledWidth) / 2f
-            val offsetY = (height - scaledHeight) / 2f
-
-            bottomScreenRect.set(
-                offsetX,
-                offsetY,
-                offsetX + scaledWidth,
-                offsetY + scaledHeight
-            )
-
-            // Update clip path for rounded corner grid clipping
-            val cornerPx = CORNER_RADIUS_DP * density
-            clipPath.reset()
-            clipPath.addRoundRect(bottomScreenRect, cornerPx, cornerPx, Path.Direction.CW)
-        }
+        // Rounded clip path so the grid stays inside the corners
+        val cornerPx = CORNER_RADIUS_DP * density
+        clipPath.reset()
+        clipPath.addRoundRect(bottomScreenRect, cornerPx, cornerPx, Path.Direction.CW)
 
         invalidate()
     }
@@ -159,18 +162,14 @@ class TouchInputBindingView @JvmOverloads constructor(
         outlinePaint.color = themeColor(com.google.android.material.R.attr.colorOutlineVariant)
         canvas.drawRoundRect(bottomScreenRect, cornerPx, cornerPx, outlinePaint)
 
-        // 4. Confirmed bindings, numbered 1, 2, 3...
+        // 4. Confirmed bindings, numbered 1, 2, 3... The highlighted one is drawn last, on top
         bindings.forEachIndexed { index, binding ->
-            val pointX = bottomScreenRect.left + binding.x * bottomScreenRect.width()
-            val pointY = bottomScreenRect.top + binding.y * bottomScreenRect.height()
-
-            drawBindingPoint(
-                canvas = canvas,
-                x = pointX,
-                y = pointY,
-                number = index + 1,
-                selected = false
-            )
+            if (index != highlightedIndex) {
+                drawBinding(canvas, binding, index + 1, selected = false)
+            }
+        }
+        bindings.getOrNull(highlightedIndex)?.let {
+            drawBinding(canvas, it, highlightedIndex + 1, selected = true)
         }
 
         // 5. Pending selection: blank marker with a halo while waiting for a button press
@@ -210,6 +209,21 @@ class TouchInputBindingView @JvmOverloads constructor(
         canvas.restore()
     }
 
+    private fun drawBinding(
+        canvas: Canvas,
+        binding: TouchInputBinding,
+        number: Int,
+        selected: Boolean
+    ) {
+        drawBindingPoint(
+            canvas = canvas,
+            x = bottomScreenRect.left + binding.x * bottomScreenRect.width(),
+            y = bottomScreenRect.top + binding.y * bottomScreenRect.height(),
+            number = number,
+            selected = selected
+        )
+    }
+
     private fun drawBindingPoint(
         canvas: Canvas,
         x: Float,
@@ -239,7 +253,13 @@ class TouchInputBindingView @JvmOverloads constructor(
 
         // Number only for confirmed bindings
         if (number > 0) {
-            labelPaint.color = themeColor(com.google.android.material.R.attr.colorOnPrimaryContainer)
+            labelPaint.color = themeColor(
+                if (selected) {
+                    com.google.android.material.R.attr.colorOnPrimary
+                } else {
+                    com.google.android.material.R.attr.colorOnPrimaryContainer
+                }
+            )
 
             val textY = y - (labelPaint.ascent() + labelPaint.descent()) / 2f
             canvas.drawText(number.toString(), x, textY, labelPaint)
@@ -286,6 +306,12 @@ class TouchInputBindingView @JvmOverloads constructor(
                 invalidate()
             }
         }
+    }
+
+    /** Highlights the binding at [index] in the list, or nothing for a negative index. */
+    fun setHighlightedIndex(index: Int) {
+        highlightedIndex = if (index in bindings.indices) index else NO_HIGHLIGHT
+        invalidate()
     }
 
     fun clearSelection() {

@@ -6,38 +6,13 @@
     android:background="?attr/colorSurface"
     android:orientation="vertical">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="20dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="16dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/touch_input_bindings"
-            android:textAppearance="?attr/textAppearanceHeadlineSmall"
-            android:textColor="?attr/colorOnSurface"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/touch_input_bindings_description"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-    </LinearLayout>
-
+    <!-- Profile -->
     <com.google.android.material.card.MaterialCardView
         style="@style/Widget.Azahar.TouchInput.Card"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
+        android:layout_height="64dp"
         android:layout_marginStart="@dimen/touch_input_margin"
+        android:layout_marginTop="8dp"
         android:layout_marginEnd="@dimen/touch_input_margin"
         android:layout_marginBottom="@dimen/touch_input_card_gap">
 
@@ -85,13 +60,13 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Touchscreen preview: sized by width, always 4:3 -->
     <com.google.android.material.card.MaterialCardView
         style="@style/Widget.Azahar.TouchInput.Card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/touch_input_margin"
-        android:layout_marginEnd="@dimen/touch_input_margin"
-        android:layout_marginBottom="@dimen/touch_input_margin">
+        android:layout_marginEnd="@dimen/touch_input_margin">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -100,52 +75,27 @@
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="260dp"
+                android:layout_height="wrap_content"
                 android:padding="@dimen/touch_input_margin">
 
                 <org.citra.citra_emu.features.touchinput.TouchInputBindingView
                     android:id="@+id/touchInputBindingView"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
+                    android:layout_height="wrap_content" />
 
             </FrameLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:paddingStart="@dimen/touch_input_margin"
-                android:paddingEnd="@dimen/touch_input_margin"
-                android:paddingBottom="@dimen/touch_input_margin">
-
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_marginEnd="8dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_touch_input"
-                    app:tint="?attr/colorOnSurfaceVariant" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text="@string/touch_input_instruction"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-
-            </LinearLayout>
 
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- List header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:paddingStart="20dp"
+        android:paddingTop="8dp"
         android:paddingEnd="12dp">
 
         <TextView
@@ -167,15 +117,68 @@
 
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/bindingList"
+    <!-- Bindings: takes the remaining height and scrolls -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingStart="@dimen/touch_input_margin"
-        android:paddingTop="4dp"
-        android:paddingEnd="@dimen/touch_input_margin"
-        android:paddingBottom="24dp" />
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/bindingList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingStart="@dimen/touch_input_margin"
+            android:paddingTop="4dp"
+            android:paddingEnd="@dimen/touch_input_margin"
+            android:paddingBottom="@dimen/touch_input_margin" />
+
+        <LinearLayout
+            android:id="@+id/emptyState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingHorizontal="32dp"
+            android:visibility="gone">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Azahar.TouchInput.Card"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                app:cardBackgroundColor="?attr/colorPrimaryContainer"
+                app:cardCornerRadius="28dp">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_touch_input"
+                    app:tint="?attr/colorOnPrimaryContainer" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/touch_input_empty_title"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:text="@string/touch_input_empty_message"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+        </LinearLayout>
+
+    </FrameLayout>
 
 </LinearLayout>
