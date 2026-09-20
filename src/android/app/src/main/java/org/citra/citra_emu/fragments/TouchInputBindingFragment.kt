@@ -7,12 +7,11 @@ package org.citra.citra_emu.fragments
 import android.content.res.Configuration
 import android.os.Bundle
 import android.text.InputType
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -120,7 +119,7 @@ class TouchInputBindingFragment : Fragment() {
 
     private fun bindViews() {
         setupBindingList()
-        setupProfileSpinner()
+        setupProfilePicker()
 
         binding.profileMenuButton.setOnClickListener { showProfileMenu(it) }
         binding.deleteAllButton.setOnClickListener { showDeleteAllDialog() }
@@ -164,41 +163,41 @@ class TouchInputBindingFragment : Fragment() {
         ) { _, _ -> binding.touchInputBindingView.clearSelection() }
     }
 
-    private fun setupProfileSpinner() {
-        updateProfileSpinner()
-
-        binding.profileSpinner.onItemSelectedListener =
-            object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    val profile = parent?.getItemAtPosition(position)?.toString() ?: return
-                    if (profile != currentProfile) {
-                        selectProfile(profile)
-                    }
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-            }
+    private fun setupProfilePicker() {
+        updateProfileName()
+        binding.profileCard.setOnClickListener { showProfilePicker(it) }
     }
 
-    private fun updateProfileSpinner() {
+    private fun updateProfileName() {
+        binding.profileName.text = currentProfile
+    }
+
+    /** Lists every profile, with the current one checked, plus an item to create a new one. */
+    private fun showProfilePicker(anchor: View) {
         val profiles = profileManager.getProfiles()
 
-        binding.profileSpinner.adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_item,
-            profiles
-        ).apply {
-            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
+        PopupMenu(requireContext(), anchor, Gravity.START).apply {
+            profiles.forEachIndexed { index, name ->
+                menu.add(GROUP_PROFILES, MENU_PROFILE_BASE + index, index, name)
+            }
+            menu.setGroupCheckable(GROUP_PROFILES, true, true)
+            menu.findItem(MENU_PROFILE_BASE + profiles.indexOf(currentProfile))?.isChecked = true
+            menu.add(Menu.NONE, MENU_CREATE_PROFILE, profiles.size, R.string.create_profile)
 
-        val index = profiles.indexOf(currentProfile)
-        if (index >= 0) {
-            binding.profileSpinner.setSelection(index)
+            setOnMenuItemClickListener { item ->
+                if (item.itemId == MENU_CREATE_PROFILE) {
+                    showCreateProfileDialog()
+                } else {
+                    val profile = profiles.getOrNull(item.itemId - MENU_PROFILE_BASE)
+                        ?: return@setOnMenuItemClickListener false
+                    if (profile != currentProfile) {
+                        selectProfile(profile)
+                        updateProfileName()
+                    }
+                }
+                true
+            }
+            show()
         }
     }
 
@@ -254,13 +253,11 @@ class TouchInputBindingFragment : Fragment() {
 
     private fun showProfileMenu(anchor: View) {
         PopupMenu(requireContext(), anchor).apply {
-            menu.add(Menu.NONE, MENU_CREATE_PROFILE, 1, R.string.create_profile)
-            menu.add(Menu.NONE, MENU_RENAME_PROFILE, 2, R.string.rename_profile)
-            menu.add(Menu.NONE, MENU_DELETE_PROFILE, 3, R.string.delete_profile)
+            menu.add(Menu.NONE, MENU_RENAME_PROFILE, 1, R.string.rename_profile)
+            menu.add(Menu.NONE, MENU_DELETE_PROFILE, 2, R.string.delete_profile)
 
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    MENU_CREATE_PROFILE -> showCreateProfileDialog()
                     MENU_RENAME_PROFILE -> showRenameProfileDialog()
                     MENU_DELETE_PROFILE -> showDeleteProfileDialog()
                     else -> return@setOnMenuItemClickListener false
@@ -283,7 +280,7 @@ class TouchInputBindingFragment : Fragment() {
 
                 if (profileManager.createProfile(name)) {
                     selectProfile(name)
-                    updateProfileSpinner()
+                    updateProfileName()
                 } else {
                     showToast(R.string.profile_already_exists)
                 }
@@ -306,7 +303,7 @@ class TouchInputBindingFragment : Fragment() {
 
                 if (profileManager.renameProfile(currentProfile, newName)) {
                     currentProfile = newName
-                    updateProfileSpinner()
+                    updateProfileName()
                 } else {
                     showToast(R.string.profile_name_already_exists)
                 }
@@ -327,7 +324,7 @@ class TouchInputBindingFragment : Fragment() {
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 if (profileManager.deleteProfile(currentProfile)) {
                     selectProfile(TouchInputBindingProfileManager.DEFAULT_PROFILE)
-                    updateProfileSpinner()
+                    updateProfileName()
                     showToast(R.string.profile_deleted)
                 }
             }
@@ -461,5 +458,9 @@ class TouchInputBindingFragment : Fragment() {
         private const val MENU_CREATE_PROFILE = Menu.FIRST
         private const val MENU_RENAME_PROFILE = Menu.FIRST + 1
         private const val MENU_DELETE_PROFILE = Menu.FIRST + 2
+
+        // Profile items in the picker use ids from MENU_PROFILE_BASE upwards
+        private const val GROUP_PROFILES = 1
+        private const val MENU_PROFILE_BASE = 100
     }
 }

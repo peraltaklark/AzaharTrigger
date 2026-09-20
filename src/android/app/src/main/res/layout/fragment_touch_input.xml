@@ -8,6 +8,9 @@
 
     <!-- Profile -->
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/profileCard"
+        android:clickable="true"
+        android:focusable="true"
         style="@style/Widget.Azahar.TouchInput.Card"
         android:layout_width="match_parent"
         android:layout_height="64dp"
@@ -37,12 +40,17 @@
                     android:textAppearance="?attr/textAppearanceLabelMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
-                <Spinner
-                    android:id="@+id/profileSpinner"
-                    android:layout_width="match_parent"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="-8dp"
-                    android:popupTheme="?attr/actionBarPopupTheme" />
+                <TextView
+                    android:id="@+id/profileName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:drawableEnd="@drawable/ic_profile_dropdown"
+                    android:drawablePadding="4dp"
+                    android:drawableTint="?attr/colorOnSurfaceVariant"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textColor="?attr/colorOnSurface" />
 
             </LinearLayout>
 
