@@ -4,6 +4,7 @@
 
 package org.citra.citra_emu.fragments
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
@@ -72,6 +73,19 @@ class TouchInputBindingFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         refreshBindings()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        // The host activity handles rotation itself, so rebuild this screen's view to pick up
+        // the portrait or landscape layout
+        if (isAdded && !parentFragmentManager.isStateSaved) {
+            parentFragmentManager.beginTransaction()
+                .detach(this)
+                .attach(this)
+                .commit()
+        }
     }
 
     override fun onDestroyView() {
@@ -176,6 +190,7 @@ class TouchInputBindingFragment : Fragment() {
         binding.emptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
         binding.bindingList.visibility = if (isEmpty) View.GONE else View.VISIBLE
         binding.deleteAllButton.isEnabled = !isEmpty
+        binding.deleteAllButton.alpha = if (isEmpty) DISABLED_ALPHA else 1f
 
         if (selectedBinding !in bindings) {
             selectedBinding = null
@@ -402,6 +417,7 @@ class TouchInputBindingFragment : Fragment() {
         private const val RESULT_BINDING_REMOVED = "touch_binding_removed"
 
         private const val TEXT_FIELD_CORNER_RADIUS_DP = 28
+        private const val DISABLED_ALPHA = 0.38f
 
         private const val MENU_CREATE_PROFILE = Menu.FIRST
         private const val MENU_RENAME_PROFILE = Menu.FIRST + 1
