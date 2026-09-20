@@ -918,6 +918,54 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
                     IntListSetting.COMBO_BUTTON_BUTTONS.defaultValue
                 )
             )
+
+            add(
+                MultiChoiceSetting(
+                    IntListSetting.COMBO_BUTTON_BUTTONS_2,
+                    R.string.combo_button_settings_2,
+                    R.string.combo_button_settings_description,
+                    R.array.comboOptions,
+                    R.array.comboOptionValues,
+                    IntListSetting.COMBO_BUTTON_BUTTONS_2.key,
+                    IntListSetting.COMBO_BUTTON_BUTTONS_2.defaultValue
+                )
+            )
+
+            add(
+                MultiChoiceSetting(
+                    IntListSetting.COMBO_BUTTON_BUTTONS_3,
+                    R.string.combo_button_settings_3,
+                    R.string.combo_button_settings_description,
+                    R.array.comboOptions,
+                    R.array.comboOptionValues,
+                    IntListSetting.COMBO_BUTTON_BUTTONS_3.key,
+                    IntListSetting.COMBO_BUTTON_BUTTONS_3.defaultValue
+                )
+            )
+
+            add(
+                MultiChoiceSetting(
+                    IntListSetting.COMBO_BUTTON_BUTTONS_4,
+                    R.string.combo_button_settings_4,
+                    R.string.combo_button_settings_description,
+                    R.array.comboOptions,
+                    R.array.comboOptionValues,
+                    IntListSetting.COMBO_BUTTON_BUTTONS_4.key,
+                    IntListSetting.COMBO_BUTTON_BUTTONS_4.defaultValue
+                )
+            )
+
+            add(
+                MultiChoiceSetting(
+                    IntListSetting.COMBO_BUTTON_BUTTONS_5,
+                    R.string.combo_button_settings_5,
+                    R.string.combo_button_settings_description,
+                    R.array.comboOptions,
+                    R.array.comboOptionValues,
+                    IntListSetting.COMBO_BUTTON_BUTTONS_5.key,
+                    IntListSetting.COMBO_BUTTON_BUTTONS_5.defaultValue
+                )
+            )
         }
     }
 

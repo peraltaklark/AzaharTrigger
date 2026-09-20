@@ -168,6 +168,10 @@
 	<string name="button_swap">Swap Screens</string>
 	<string name="button_turbo">Turbo</string>
 	<string name="button_combo">Combo Button</string>
+	<string name="button_combo_2">Combo Button 2</string>
+	<string name="button_combo_3">Combo Button 3</string>
+	<string name="button_combo_4">Combo Button 4</string>
+	<string name="button_combo_5">Combo Button 5</string>
 	<string name="button_x" translatable="false">X</string>
 	<string name="button_y" translatable="false">Y</string>
 	<string name="button_l" translatable="false">L</string>
@@ -180,6 +184,10 @@
 	<string name="turbo_enabled_toast">Turbo Speed Enabled</string>
 	<string name="turbo_disabled_toast">Turbo Speed Disabled</string>
 	<string name="combo_button_settings">Configure Combo Button</string>
+	<string name="combo_button_settings_2">Configure Combo Button 2</string>
+	<string name="combo_button_settings_3">Configure Combo Button 3</string>
+	<string name="combo_button_settings_4">Configure Combo Button 4</string>
+	<string name="combo_button_settings_5">Configure Combo Button 5</string>
 	<string name="combo_button_settings_description">Select which buttons are triggered by the Combo Button.</string>
 
 	<!-- System files strings -->

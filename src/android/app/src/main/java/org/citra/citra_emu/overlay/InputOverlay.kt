@@ -186,8 +186,13 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) :
                         button.status == NativeLibrary.ButtonState.PRESSED
                     ) {
                         TurboHelper.toggleTurbo(true)
-                    } else if (button.id == Hotkey.COMBO_BUTTON.button) {
-                        ComboHelper.comboActivate(button.status)
+                    } else if (button.id >= Hotkey.COMBO_BUTTON.button &&
+                        button.id < Hotkey.COMBO_BUTTON.button + ComboHelper.COMBO_COUNT
+                    ) {
+                        ComboHelper.comboActivate(
+                            button.status,
+                            button.id - Hotkey.COMBO_BUTTON.button
+                        )
                     }
 
                     NativeLibrary.onGamePadEvent(
@@ -598,16 +603,20 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) :
             )
         }
 
-        if (preferences.getBoolean("buttonToggle16", false)) {
-            overlayButtons.add(
-                initializeOverlayButton(
-                    context,
-                    R.drawable.button_combo,
-                    R.drawable.button_combo_pressed,
-                    Hotkey.COMBO_BUTTON.button,
-                    orientation
+        // Combo buttons: 5 independent buttons, IDs Hotkey.COMBO_BUTTON.button + 0..4
+        // toggled by buttonToggle16..20 in the shared preferences.
+        for (comboIndex in 0 until ComboHelper.COMBO_COUNT) {
+            if (preferences.getBoolean("buttonToggle${16 + comboIndex}", false)) {
+                overlayButtons.add(
+                    initializeOverlayButton(
+                        context,
+                        R.drawable.button_combo,
+                        R.drawable.button_combo_pressed,
+                        Hotkey.COMBO_BUTTON.button + comboIndex,
+                        orientation
+                    )
                 )
-            )
+            }
         }
     }
 
