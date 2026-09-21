@@ -1,15 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Room card (rooms that have players).
-
-    Layout:
-      [history] Room name (2 lines) ........................ [lock] 3/6
-      [controller] Game name
-      [====== slot bar ======]
-      [crown Host] [dot Player] [dot Player] ...   (scrolls sideways)
-
-    Every color comes from the active theme, so it follows all Theme.Citra.* variants.
--->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
