@@ -9,9 +9,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
-import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
@@ -20,25 +18,18 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.annotation.AttrRes
-import androidx.annotation.ColorInt
-import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.R as MaterialR
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
-import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -46,9 +37,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.citra.citra_emu.R
 import org.citra.citra_emu.databinding.DialogLobbyBrowserBinding
-import org.citra.citra_emu.databinding.ItemLobbyEmptyRoomBinding
 import org.citra.citra_emu.databinding.ItemLobbyRoomBinding
 import org.citra.citra_emu.utils.NetPlayManager
+import org.citra.citra_emu.utils.ThemeUtil
+import java.util.Locale
 
 class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
 
@@ -58,15 +50,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         private const val REFRESH_SPIN_MS = 800L
         private const val CHIP_CORNER_RADIUS_DP = 10f
         private const val CHIP_DOT_SIZE_DP = 6
-        private const val CHIP_CROWN_SIZE_DP = 12
         private const val CHIP_SPACING_DP = 6
-        private const val SLOT_SPACING_DP = 3
-        private const val SLOT_EMPTY_ALPHA = 100
-        private const val LAST_JOINED_STROKE_DP = 2
-        private const val WIDE_LAYOUT_MIN_WIDTH_DP = 600
-
-        private const val TYPE_ROOM = 0
-        private const val TYPE_EMPTY = 1
     }
 
     private lateinit var binding: DialogLobbyBrowserBinding
@@ -86,19 +70,6 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     private var lastIp: String? = null
     private var lastPort: Int = -1
     private var lastName: String? = null
-
-    private val density = context.resources.displayMetrics.density
-
-    /**
-     * A room plus whether it is the last room the user joined.
-     * Rooms without players are drawn as a thin row, unless it's the last joined room.
-     */
-    private data class LobbyItem(
-        val room: NetPlayManager.RoomInfo,
-        val isLast: Boolean
-    ) {
-        val compact: Boolean get() = !isLast && room.members.isEmpty()
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -146,42 +117,16 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         }
     }
 
-    private fun Int.dp(): Int = (this * density).toInt()
-
-    // Resolves a color from the active theme (all Theme.Citra.* variants and Material You)
-    @ColorInt
-    private fun themeColor(@AttrRes attr: Int): Int =
-        MaterialColors.getColor(context, attr, Color.MAGENTA)
-
-    // Accent while the room has a free slot, muted once it is full.
-    // Password protected rooms are not muted, you can still see who is inside.
-    @ColorInt
-    private fun availabilityColor(hasSpace: Boolean): Int {
-        val attr = if (hasSpace) {
-            MaterialR.attr.colorPrimary
-        } else {
-            MaterialR.attr.colorOnSurfaceVariant
-        }
-        return themeColor(attr)
-    }
-
     private fun avatarLetterFor(name: String?): String =
         name?.trim()?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
-
-    private fun memberLabel(member: NetPlayManager.RoomInfo.Member): String =
-        member.username.ifEmpty { member.nickname }
 
     private fun setupRecyclerView() {
         adapter = LobbyRoomAdapter(context) { room -> handleRoomSelection(room) }
 
-        // One column on phones in portrait, two on landscape and tablets.
-        // Both row types take a single cell, so the empty room rows pair up too.
-        val spanCount =
-            if (context.resources.configuration.screenWidthDp >= WIDE_LAYOUT_MIN_WIDTH_DP) 2 else 1
-
         binding.roomList.apply {
-            layoutManager = GridLayoutManager(context, spanCount)
+            layoutManager = LinearLayoutManager(context)
             adapter = this@LobbyBrowser.adapter
+            addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         }
     }
 
@@ -217,7 +162,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         // 1. Instantly display whatever is already in local memory
         val cachedRooms = NetPlayManager.getPublicRooms()
         if (cachedRooms.isNotEmpty()) {
-            adapter.updateRooms(cachedRooms)
+            adapter.updateRooms(moveLastVisitedRoomToTop(cachedRooms))
             binding.emptyView.visibility = View.GONE
             binding.roomList.visibility = View.VISIBLE
         }
@@ -239,12 +184,11 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
 
         if (refreshing) {
             if (refreshSpin?.isRunning != true) {
-                refreshSpin =
-                    ObjectAnimator.ofFloat(binding.refreshButton, View.ROTATION, 0f, 360f).apply {
-                        duration = REFRESH_SPIN_MS
-                        repeatCount = ObjectAnimator.INFINITE
-                        start()
-                    }
+                refreshSpin = ObjectAnimator.ofFloat(binding.refreshButton, View.ROTATION, 0f, 360f).apply {
+                    duration = REFRESH_SPIN_MS
+                    repeatCount = ObjectAnimator.INFINITE
+                    start()
+                }
             }
         } else {
             refreshSpin?.cancel()
@@ -287,42 +231,26 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             .apply()
     }
 
-    private fun isLastVisited(room: NetPlayManager.RoomInfo): Boolean {
+    private fun moveLastVisitedRoomToTop(
+        rooms: List<NetPlayManager.RoomInfo>
+    ): List<NetPlayManager.RoomInfo> {
         val ip = lastIp
         val port = lastPort
 
         if (ip == null || port == -1) {
-            return false
+            return rooms
         }
 
         val name = lastName
-        return room.ip == ip && room.port == port && (name.isNullOrEmpty() || room.name == name)
-    }
+        val lastRoom = rooms.find {
+            it.ip == ip && it.port == port && (name.isNullOrEmpty() || it.name == name)
+        }
 
-    /**
-     * Flat list without section headers: the last joined room first, then the rooms with
-     * the most players, and the empty rooms at the end.
-     */
-    private fun buildItems(rooms: List<NetPlayManager.RoomInfo>): List<LobbyItem> {
-        val last = rooms.firstOrNull { isLastVisited(it) }
-        val rest = rooms
-            .filter { it !== last }
-            .sortedByDescending { it.members.size }
-
-        return listOfNotNull(last?.let { LobbyItem(it, true) }) + rest.map { LobbyItem(it, false) }
-    }
-
-    private fun sameContent(old: LobbyItem, new: LobbyItem): Boolean {
-        val oldRoom = old.room
-        val newRoom = new.room
-
-        return old.isLast == new.isLast &&
-            oldRoom.maxPlayers == newRoom.maxPlayers &&
-            oldRoom.name == newRoom.name &&
-            oldRoom.owner == newRoom.owner &&
-            oldRoom.hasPassword == newRoom.hasPassword &&
-            oldRoom.preferredGameName == newRoom.preferredGameName &&
-            oldRoom.members.map { memberLabel(it) } == newRoom.members.map { memberLabel(it) }
+        return if (lastRoom != null) {
+            listOf(lastRoom) + rooms.filter { it != lastRoom }
+        } else {
+            rooms
+        }
     }
 
     private fun joinRoom(room: NetPlayManager.RoomInfo, password: String) {
@@ -345,129 +273,100 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     inner class LobbyRoomAdapter(
         private val context: Context,
         private val onRoomSelected: (NetPlayManager.RoomInfo) -> Unit
-    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    ) : RecyclerView.Adapter<LobbyRoomAdapter.RoomViewHolder>() {
 
-        private val items = mutableListOf<LobbyItem>()
+        private val rooms = mutableListOf<NetPlayManager.RoomInfo>()
         private var searchJob: Job? = null
+        private val density = context.resources.displayMetrics.density
 
         inner class RoomViewHolder(private val binding: ItemLobbyRoomBinding) :
             RecyclerView.ViewHolder(binding.root) {
-
-            fun bind(item: LobbyItem) {
-                val room = item.room
-                val hasSpace = room.members.size < room.maxPlayers
-
+            fun bind(room: NetPlayManager.RoomInfo) {
                 binding.roomName.text = room.name
                 binding.playerCount.text = "${room.members.size}/${room.maxPlayers}"
-                binding.playerCount.setTextColor(availabilityColor(hasSpace))
+                binding.playerCount.setTextColor(playerCountColor(room))
 
-                binding.lockIcon.isVisible = room.hasPassword
-                binding.lastJoinedIcon.isVisible = item.isLast
+                binding.lockIcon.visibility = if (room.hasPassword) View.VISIBLE else View.GONE
 
-                // Last joined room gets an accent outline
-                binding.card.strokeWidth = if (item.isLast) LAST_JOINED_STROKE_DP.dp() else 0
-                binding.card.strokeColor = themeColor(MaterialR.attr.colorPrimary)
+                if (room.preferredGameName.isNotEmpty() && room.preferredGameId != 0L) {
+                    binding.gameName.text = room.preferredGameName
+                } else {
+                    binding.gameName.text = context.getString(R.string.multiplayer_no_game_info)
+                }
 
-                binding.gameName.text =
-                    if (room.preferredGameName.isNotEmpty() && room.preferredGameId != 0L) {
-                        room.preferredGameName
-                    } else {
-                        context.getString(R.string.multiplayer_no_game_info)
-                    }
+                // Show host only if it exists and is not empty
+                if (room.owner.isNotEmpty()) {
+                    binding.roomHost.text = context.getString(R.string.multiplayer_room_host_format, room.owner)
+                    binding.roomHost.visibility = View.VISIBLE
+                } else {
+                    binding.roomHost.visibility = View.GONE
+                }
 
-                bindSlotBar(room, hasSpace)
                 bindPlayerChips(room)
 
                 itemView.setOnClickListener { onRoomSelected(room) }
             }
 
-            // One segment per slot. Filled segments are the players in the room.
-            private fun bindSlotBar(room: NetPlayManager.RoomInfo, hasSpace: Boolean) {
-                val bar = binding.slotBar
-                bar.removeAllViews()
-
-                val filled = room.members.size.coerceAtMost(room.maxPlayers)
-                val fillColor = availabilityColor(hasSpace)
-                val outline = themeColor(MaterialR.attr.colorOutline)
-                val emptyColor = ColorUtils.setAlphaComponent(outline, SLOT_EMPTY_ALPHA)
-
-                repeat(room.maxPlayers) { index ->
-                    val params = LinearLayout.LayoutParams(0, MATCH_PARENT, 1f)
-                    if (index > 0) {
-                        params.marginStart = SLOT_SPACING_DP.dp()
-                    }
-
-                    val segment = View(context)
-                    segment.layoutParams = params
-                    segment.background = GradientDrawable().apply {
-                        cornerRadius = 2 * density
-                        setColor(if (index < filled) fillColor else emptyColor)
-                    }
-                    bar.addView(segment)
+            // Green (colorPrimary) when there's an open, unlocked slot; muted
+            // (colorOnSurfaceVariant) once the room is full or locked. Resolved from the
+            // active theme so it follows whichever theme the user has picked.
+            private fun playerCountColor(room: NetPlayManager.RoomInfo): Int {
+                return if (!room.hasPassword && room.members.size < room.maxPlayers) {
+                    ThemeUtil.colorPrimary(context)
+                } else {
+                    ThemeUtil.colorOnSurfaceVariant(context)
                 }
             }
 
-            // One chip per player, showing their full name. The host (room owner) comes
-            // first with a crown. The row scrolls sideways rather than wrapping, so card
-            // height stays predictable inside the RecyclerView.
+            // One chip per player, showing their full name. Falls back to an "Empty"
+            // label when the room has no players. The row scrolls sideways rather than
+            // wrapping, so card height stays predictable inside the RecyclerView.
             private fun bindPlayerChips(room: NetPlayManager.RoomInfo) {
                 val container = binding.playerChips
                 container.removeAllViews()
 
-                val owner = room.owner
-                val (hosts, others) = room.members.partition { member ->
-                    owner.isNotEmpty() && (member.username == owner || member.nickname == owner)
+                if (room.members.isEmpty()) {
+                    binding.playerChipsScroll.isVisible = false
+                    binding.emptyLabel.isVisible = true
+                    return
                 }
+                binding.playerChipsScroll.isVisible = true
+                binding.emptyLabel.isVisible = false
 
-                hosts.forEach { container.addView(newChipView(memberLabel(it), isHost = true)) }
-                others.forEach { container.addView(newChipView(memberLabel(it), isHost = false)) }
-            }
-
-            private fun crownDrawable(@ColorInt tint: Int): Drawable? {
-                val crown = AppCompatResources.getDrawable(context, R.drawable.ic_crown)
-                val drawable = crown?.mutate()
-                drawable?.setTint(tint)
-                drawable?.setBounds(0, 0, CHIP_CROWN_SIZE_DP.dp(), CHIP_CROWN_SIZE_DP.dp())
-                return drawable
-            }
-
-            private fun dotDrawable(): Drawable = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(themeColor(MaterialR.attr.colorPrimary))
-                setBounds(0, 0, CHIP_DOT_SIZE_DP.dp(), CHIP_DOT_SIZE_DP.dp())
-            }
-
-            // Colors come from theme attributes, so chips follow whichever theme is active.
-            // The host uses the tertiary container to stand out from the other players.
-            private fun newChipView(text: String, isHost: Boolean): TextView {
-                val paddingHPx = 9.dp()
-                val paddingVPx = 3.dp()
-
-                val backgroundAttr: Int
-                val textAttr: Int
-                if (isHost) {
-                    backgroundAttr = MaterialR.attr.colorTertiaryContainer
-                    textAttr = MaterialR.attr.colorOnTertiaryContainer
-                } else {
-                    backgroundAttr = MaterialR.attr.colorSecondaryContainer
-                    textAttr = MaterialR.attr.colorOnSecondaryContainer
+                room.members.forEach { member ->
+                    val label = member.username.ifEmpty { member.nickname }
+                    container.addView(newChipView(label))
                 }
-                val chipBackground = themeColor(backgroundAttr)
-                val textColor = themeColor(textAttr)
-                val leading = if (isHost) crownDrawable(textColor) else dotDrawable()
+            }
+
+            private fun newChipView(text: String): TextView {
+                val paddingHPx = 9.dpToPx()
+                val paddingVPx = 3.dpToPx()
+                val dotSizePx = CHIP_DOT_SIZE_DP.dpToPx()
+                // Theme attributes via ThemeUtil, not hardcoded palette resources, so chips
+                // follow whichever Theme.Citra.* variant is currently active.
+                val chipBackground = ThemeUtil.colorSecondaryContainer(context)
+                val dotColor = ThemeUtil.colorPrimary(context)
+                val textColor = ThemeUtil.colorOnSecondaryContainer(context)
+
+                val dot = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(dotColor)
+                    setSize(dotSizePx, dotSizePx)
+                }
 
                 return TextView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply { marginEnd = CHIP_SPACING_DP.dp() }
+                    ).apply { marginEnd = CHIP_SPACING_DP.dpToPx() }
                     background = GradientDrawable().apply {
                         cornerRadius = CHIP_CORNER_RADIUS_DP * density
                         setColor(chipBackground)
                     }
                     setPadding(paddingHPx, paddingVPx, paddingHPx, paddingVPx)
-                    setCompoundDrawablesRelative(leading, null, null, null)
-                    compoundDrawablePadding = 4.dp()
+                    setCompoundDrawablesWithIntrinsicBounds(dot, null, null, null)
+                    compoundDrawablePadding = 4.dpToPx()
                     gravity = Gravity.CENTER_VERTICAL
                     setTextColor(textColor)
                     textSize = 11f
@@ -476,80 +375,53 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                     this.text = text
                 }
             }
+
+            private fun Int.dpToPx(): Int = (this * density).toInt()
         }
 
-        inner class EmptyViewHolder(private val binding: ItemLobbyEmptyRoomBinding) :
-            RecyclerView.ViewHolder(binding.root) {
-
-            fun bind(item: LobbyItem) {
-                val room = item.room
-
-                binding.roomName.text = room.name
-                binding.playerCount.text = "${room.members.size}/${room.maxPlayers}"
-                binding.lockIcon.isVisible = room.hasPassword
-
-                itemView.setOnClickListener { onRoomSelected(room) }
-            }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RoomViewHolder {
+            val binding = ItemLobbyRoomBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false
+            )
+            return RoomViewHolder(binding)
         }
 
-        override fun getItemViewType(position: Int): Int =
-            if (items[position].compact) TYPE_EMPTY else TYPE_ROOM
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val inflater = LayoutInflater.from(parent.context)
-
-            return when (viewType) {
-                TYPE_EMPTY -> {
-                    val binding = ItemLobbyEmptyRoomBinding.inflate(inflater, parent, false)
-                    EmptyViewHolder(binding)
-                }
-
-                else -> {
-                    val binding = ItemLobbyRoomBinding.inflate(inflater, parent, false)
-                    RoomViewHolder(binding)
-                }
-            }
+        override fun onBindViewHolder(holder: RoomViewHolder, position: Int) {
+            holder.bind(rooms[position])
         }
 
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            val item = items[position]
-
-            when (holder) {
-                is RoomViewHolder -> holder.bind(item)
-                is EmptyViewHolder -> holder.bind(item)
-            }
-        }
-
-        override fun getItemCount() = items.size
+        override fun getItemCount() = rooms.size
 
         /**
-         * Sorts the rooms (last joined, most players, empty last) and updates the list
-         * smoothly using DiffUtil. Detects player, password, owner and room name changes
-         * without re-rendering the whole list.
+         * Updates rooms smoothly using DiffUtil. Detects player count,
+         * password status, and room name changes without re-rendering the whole list.
          */
         fun updateRooms(newRooms: List<NetPlayManager.RoomInfo>) {
-            val newItems = buildItems(newRooms)
-
             val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-                override fun getOldListSize() = items.size
-                override fun getNewListSize() = newItems.size
+                override fun getOldListSize() = rooms.size
+                override fun getNewListSize() = newRooms.size
 
                 override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-                    val old = items[oldItemPosition].room
-                    val new = newItems[newItemPosition].room
+                    val old = rooms[oldItemPosition]
+                    val new = newRooms[newItemPosition]
                     return old.ip == new.ip && old.port == new.port
                 }
 
-                override fun areContentsTheSame(
-                    oldItemPosition: Int,
-                    newItemPosition: Int
-                ): Boolean {
-                    return sameContent(items[oldItemPosition], newItems[newItemPosition])
+                override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                    val old = rooms[oldItemPosition]
+                    val new = newRooms[newItemPosition]
+                    return old.members.size == new.members.size &&
+                        old.maxPlayers == new.maxPlayers &&
+                        old.name == new.name &&
+                        old.hasPassword == new.hasPassword &&
+                        old.preferredGameName == new.preferredGameName
                 }
             })
 
-            items.clear()
-            items.addAll(newItems)
+            rooms.clear()
+            rooms.addAll(newRooms)
             diffResult.dispatchUpdatesTo(this)
         }
 
@@ -581,18 +453,20 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                 }
 
                 if (query.isNotEmpty()) {
-                    fun String.hasQuery() = lowercase(Locale.getDefault()).contains(query)
-
                     filteredList = filteredList.filter { room ->
-                        room.name.hasQuery() ||
-                            room.owner.hasQuery() ||
-                            room.preferredGameName.hasQuery() ||
-                            room.members.any { it.nickname.hasQuery() || it.username.hasQuery() }
+                        room.name.lowercase(Locale.getDefault()).contains(query) ||
+                            room.owner.lowercase(Locale.getDefault()).contains(query) ||
+                            room.preferredGameName.lowercase(Locale.getDefault()).contains(query) ||
+                            room.members.any { member ->
+                                member.nickname.lowercase(Locale.getDefault()).contains(query)
+                            }
                     }
                 }
 
+                val finalList = moveLastVisitedRoomToTop(filteredList)
+
                 withContext(Dispatchers.Main) {
-                    updateRooms(filteredList)
+                    updateRooms(finalList)
                 }
             }
         }
