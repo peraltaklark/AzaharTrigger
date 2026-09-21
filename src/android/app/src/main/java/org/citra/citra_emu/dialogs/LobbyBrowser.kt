@@ -292,9 +292,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                 binding.playerCount.text = "${room.members.size}/${room.maxPlayers}"
                 binding.playerCount.setTextColor(playerCountColor(room))
 
-                binding.lockIcon.setImageResource(
-                    if (room.hasPassword) R.drawable.ic_lock else R.drawable.ic_lock_open
-                )
+                binding.lockIcon.visibility = if (room.hasPassword) View.VISIBLE else View.GONE
 
                 if (room.preferredGameName.isNotEmpty() && room.preferredGameId != 0L) {
                     binding.gameName.text = room.preferredGameName
