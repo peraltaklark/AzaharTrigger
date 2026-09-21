@@ -463,10 +463,10 @@
     <string name="touch_input_coordinates">Touch position (%1$s, %2$s)</string>
 	<string name="touch_input_empty_title">No bindings yet</string>
     <string name="touch_input_empty_message">Tap the preview to choose a spot, then press a button or move a stick on your controller.</string>
+	<string name="touch_input_binding_options">Binding options</string>
     <string name="delete_all">Delete All</string>
     <string name="delete_all_touch_input_confirm">Are you sure you want to delete all touch input bindings?</string>
     <string name="delete_touch_input_confirm">Delete this touch input binding?</string>
-    <string name="touch_input_instruction">Tap anywhere in the preview to create a new mapping.</string>
     <string name="profile">Profile</string>
     <string name="create_profile">Create Profile</string>
     <string name="create_new_profile">Create New Profile</string>
