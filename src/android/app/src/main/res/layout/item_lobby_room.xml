@@ -1,18 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Room card (rooms that have players).
+
+    Layout:
+      [history] Room name (2 lines) ........................ [lock] 3/6
+      [controller] Game name
+      [====== slot bar ======]
+      [crown Host] [dot Player] [dot Player] ...   (scrolls sideways)
+
+    Every color comes from the active theme, so it follows all Theme.Citra.* variants.
+-->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/card"
     style="?attr/materialCardViewFilledStyle"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="12dp"
-    android:layout_marginVertical="6dp"
-    android:background="?attr/selectableItemBackground"
-    android:backgroundTint="?attr/colorSurfaceContainerHigh"
+    android:layout_marginHorizontal="6dp"
+    android:layout_marginVertical="5dp"
     android:clickable="true"
     android:focusable="true"
+    app:cardBackgroundColor="?attr/colorSurfaceVariant"
     app:cardCornerRadius="14dp"
-    app:cardElevation="0dp">
+    app:cardElevation="0dp"
+    app:strokeWidth="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -20,9 +32,11 @@
         android:orientation="vertical"
         android:padding="14dp">
 
+        <!-- Header: title + game, lock + count -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:baselineAligned="false"
             android:gravity="top">
 
             <LinearLayout
@@ -32,45 +46,63 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <!-- Room Name -->
-                <TextView
-                    android:id="@+id/room_name"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                    tools:text="Monster Hunter Brasil #5" />
-
-                <!-- Room Host -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:gravity="top">
+
+                    <!-- Only visible on the last room the user joined -->
+                    <ImageView
+                        android:id="@+id/last_joined_icon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginEnd="6dp"
+                        android:contentDescription="@string/multiplayer_last_joined"
+                        android:src="@drawable/ic_history"
+                        android:visibility="gone"
+                        app:tint="?attr/colorPrimary"
+                        tools:visibility="visible" />
+
+                    <TextView
+                        android:id="@+id/room_name"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:lineSpacingExtra="1dp"
+                        android:maxLines="2"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        tools:text="(ANTHENA #3 US) MH4G, MH4U [G-rank] LV.136+ GQ" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
                     android:gravity="center_vertical">
 
                     <ImageView
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
-                        android:layout_marginEnd="4dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_user"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginEnd="6dp"
+                        android:contentDescription="@string/multiplayer_game"
+                        android:src="@drawable/ic_controller"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
                     <TextView
-                        android:id="@+id/room_host"
+                        android:id="@+id/game_name"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:ellipsize="end"
                         android:maxLines="1"
-                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        tools:text="Host: Akrasia" />
+                        tools:text="Monster Hunter 4 Ultimate" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Lock icon + player count -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -92,60 +124,32 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                    tools:text="2/4"
-                    tools:textColor="?attr/colorPrimary" />
+                    tools:text="3/6" />
             </LinearLayout>
         </LinearLayout>
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="8dp"
-            android:background="?attr/colorOutlineVariant" />
-
-        <!-- Game Info -->
+        <!-- One segment per slot, filled in code -->
         <LinearLayout
+            android:id="@+id/slot_bar"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:orientation="horizontal" />
+
+        <!-- One chip per player. Scrolls sideways so card height stays predictable. -->
+        <HorizontalScrollView
+            android:id="@+id/player_chips_scroll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical">
+            android:clipToPadding="false"
+            android:scrollbars="none">
 
-            <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:layout_marginEnd="6dp"
-                android:contentDescription="@string/multiplayer_game"
-                android:src="@drawable/ic_controller"
-                app:tint="?attr/colorOnSurfaceVariant" />
-
-            <TextView
-                android:id="@+id/game_name"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                android:textStyle="bold"
-                tools:text="Monster Hunter" />
-
-            <!-- Player avatars: filled in by the adapter, capped with a "+N" badge -->
             <LinearLayout
-                android:id="@+id/player_avatars"
-                android:layout_width="wrap_content"
-                android:layout_height="22dp"
-                android:gravity="center_vertical"
-                tools:ignore="UselessParent" />
-
-            <TextView
-                android:id="@+id/empty_label"
+                android:id="@+id/player_chips"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/multiplayer_room_empty"
-                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:visibility="gone"
-                tools:visibility="visible" />
-        </LinearLayout>
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

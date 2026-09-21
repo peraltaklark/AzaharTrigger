@@ -1223,6 +1223,7 @@
 	<string name="multiplayer_hide_empty_rooms">Hide Empty Rooms</string>
 	<string name="multiplayer_hide_locked_rooms">Hide Locked</string>
     <string name="multiplayer_room_empty">Empty</string>
+	<string name="multiplayer_last_joined">Last joined</string>
     <string name="multiplayer_player_count_format">%1$d/%2$d</string>
     <string name="multiplayer_room_host_format">Host: %1$s</string>
 	<string name="multiplayer_tap_refresh_to_check_again">Tap refresh to check again</string>
