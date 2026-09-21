@@ -22,14 +22,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import java.util.Locale
+import kotlin.math.roundToInt
 import org.citra.citra_emu.R
 import org.citra.citra_emu.databinding.FragmentTouchInputBinding
 import org.citra.citra_emu.features.touchinput.TouchInputBinding
 import org.citra.citra_emu.features.touchinput.TouchInputBindingAdapter
 import org.citra.citra_emu.features.touchinput.TouchInputBindingManager
 import org.citra.citra_emu.features.touchinput.TouchInputBindingProfileManager
-import java.util.Locale
-import kotlin.math.roundToInt
 
 class TouchInputBindingFragment : Fragment() {
     private var _binding: FragmentTouchInputBinding? = null
@@ -41,7 +41,7 @@ class TouchInputBindingFragment : Fragment() {
     private var currentProfile = TouchInputBindingProfileManager.DEFAULT_PROFILE
     private var selectedBinding: TouchInputBinding? = null
 
-    // The fragment's root never changes; its content is re-inflated when the configuration does
+    // The root never changes; its content is inflated again when the configuration does
     private var contentHost: FrameLayout? = null
     private var inflatedOrientation = Configuration.ORIENTATION_UNDEFINED
     private var inflatedNightMode = 0
@@ -56,7 +56,7 @@ class TouchInputBindingFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            // Fallback for hosts that don't pass configuration changes on to fragments
+            // Fallback for hosts that don't pass configuration changes on to their fragments
             addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
                 post { rebuildContentIfNeeded() }
             }
@@ -103,8 +103,8 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     /**
-     * The host activity handles rotation and light/dark changes itself, so the view is not
-     * rebuilt automatically. Re-inflate it to pick up the matching layout and colors.
+     * The host activity handles rotation and light/dark changes itself, so the view isn't rebuilt
+     * automatically. Inflating it again picks up the matching layout and colors.
      */
     private fun rebuildContentIfNeeded() {
         if (_binding == null || !isAdded) return
@@ -118,9 +118,17 @@ class TouchInputBindingFragment : Fragment() {
     }
 
     private fun bindViews() {
-        setupBindingList()
-        setupProfilePicker()
+        bindingAdapter = TouchInputBindingAdapter(
+            onRowClicked = { selectBinding(if (it == selectedBinding) null else it) },
+            onEditClicked = { showEditBindingDialog(it) },
+            onDeleteClicked = { showDeleteBindingDialog(it) }
+        )
+        binding.bindingList.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = bindingAdapter
+        }
 
+        binding.profileCard.setOnClickListener { showProfilePicker(it) }
         binding.profileMenuButton.setOnClickListener { showProfileMenu(it) }
         binding.deleteAllButton.setOnClickListener { showDeleteAllDialog() }
         binding.touchInputBindingView.onTouchPointSelected = { x, y ->
@@ -128,82 +136,30 @@ class TouchInputBindingFragment : Fragment() {
             showBindSheet(x, y)
         }
 
+        updateProfileName()
         loadCurrentProfile()
     }
 
-    private fun setupBindingList() {
-        bindingAdapter = TouchInputBindingAdapter(
-            onRowClicked = { selectBinding(if (it == selectedBinding) null else it) },
-            onEditClicked = { showEditBindingDialog(it) },
-            onDeleteClicked = { showDeleteBindingDialog(it) }
-        )
-
-        binding.bindingList.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = bindingAdapter
-        }
-    }
-
     private fun setupResultListeners() {
-        val onBindingsChanged = { _: String, _: Bundle -> commitChanges() }
-
         parentFragmentManager.setFragmentResultListener(
             TouchInputBindingBottomSheetDialogFragment.RESULT_BINDING_ADDED,
-            viewLifecycleOwner,
-            onBindingsChanged
-        )
-        parentFragmentManager.setFragmentResultListener(
-            RESULT_BINDING_REMOVED,
-            viewLifecycleOwner,
-            onBindingsChanged
-        )
+            viewLifecycleOwner
+        ) { _, _ -> commitChanges() }
+
         parentFragmentManager.setFragmentResultListener(
             TouchInputBindingBottomSheetDialogFragment.RESULT_BINDING_CANCELLED,
             viewLifecycleOwner
         ) { _, _ -> binding.touchInputBindingView.clearSelection() }
     }
 
-    private fun setupProfilePicker() {
-        updateProfileName()
-        binding.profileCard.setOnClickListener { showProfilePicker(it) }
-    }
-
     private fun updateProfileName() {
         binding.profileName.text = currentProfile
-    }
-
-    /** Lists every profile, with the current one checked, plus an item to create a new one. */
-    private fun showProfilePicker(anchor: View) {
-        val profiles = profileManager.getProfiles()
-
-        PopupMenu(requireContext(), anchor, Gravity.START).apply {
-            profiles.forEachIndexed { index, name ->
-                menu.add(GROUP_PROFILES, MENU_PROFILE_BASE + index, index, name)
-            }
-            menu.setGroupCheckable(GROUP_PROFILES, true, true)
-            menu.findItem(MENU_PROFILE_BASE + profiles.indexOf(currentProfile))?.isChecked = true
-            menu.add(Menu.NONE, MENU_CREATE_PROFILE, profiles.size, R.string.create_profile)
-
-            setOnMenuItemClickListener { item ->
-                if (item.itemId == MENU_CREATE_PROFILE) {
-                    showCreateProfileDialog()
-                } else {
-                    val profile = profiles.getOrNull(item.itemId - MENU_PROFILE_BASE)
-                        ?: return@setOnMenuItemClickListener false
-                    if (profile != currentProfile) {
-                        selectProfile(profile)
-                        updateProfileName()
-                    }
-                }
-                true
-            }
-            show()
-        }
     }
 
     private fun selectProfile(profileName: String) {
         currentProfile = profileName
         profileManager.setCurrentProfile(profileName)
+        updateProfileName()
         loadCurrentProfile()
     }
 
@@ -212,7 +168,7 @@ class TouchInputBindingFragment : Fragment() {
         refreshBindings()
     }
 
-    /** Saves the active bindings to the current profile and updates the UI. */
+    /** Saves the active bindings to the current profile and updates the screen. */
     private fun commitChanges() {
         profileManager.saveProfile(currentProfile, TouchInputBindingManager.getBindings())
         refreshBindings()
@@ -225,8 +181,10 @@ class TouchInputBindingFragment : Fragment() {
         binding.touchInputBindingView.setBindings(bindings)
         bindingAdapter.submitList(bindings)
 
+        binding.bindingCount.text = bindings.size.toString()
+        binding.bindingCount.visibility = if (isEmpty) View.GONE else View.VISIBLE
+        binding.bindingsCard.visibility = if (isEmpty) View.GONE else View.VISIBLE
         binding.emptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
-        binding.bindingList.visibility = if (isEmpty) View.GONE else View.VISIBLE
         binding.deleteAllButton.isEnabled = !isEmpty
         binding.deleteAllButton.alpha = if (isEmpty) DISABLED_ALPHA else 1f
 
@@ -249,6 +207,34 @@ class TouchInputBindingFragment : Fragment() {
         TouchInputBindingBottomSheetDialogFragment
             .newInstance(x, y)
             .show(parentFragmentManager, BIND_SHEET_TAG)
+    }
+
+    /** Lists every profile, with the current one checked, plus an item to create a new one. */
+    private fun showProfilePicker(anchor: View) {
+        val profiles = profileManager.getProfiles()
+
+        PopupMenu(requireContext(), anchor, Gravity.START).apply {
+            profiles.forEachIndexed { index, name ->
+                menu.add(GROUP_PROFILES, MENU_PROFILE_BASE + index, index, name)
+            }
+            menu.setGroupCheckable(GROUP_PROFILES, true, true)
+            menu.findItem(MENU_PROFILE_BASE + profiles.indexOf(currentProfile))?.isChecked = true
+            menu.add(Menu.NONE, MENU_CREATE_PROFILE, profiles.size, R.string.create_profile)
+
+            setOnMenuItemClickListener { item ->
+                if (item.itemId == MENU_CREATE_PROFILE) {
+                    showCreateProfileDialog()
+                } else {
+                    val profile = profiles.getOrNull(item.itemId - MENU_PROFILE_BASE)
+                        ?: return@setOnMenuItemClickListener false
+                    if (profile != currentProfile) {
+                        selectProfile(profile)
+                    }
+                }
+                true
+            }
+            show()
+        }
     }
 
     private fun showProfileMenu(anchor: View) {
@@ -280,7 +266,6 @@ class TouchInputBindingFragment : Fragment() {
 
                 if (profileManager.createProfile(name)) {
                     selectProfile(name)
-                    updateProfileName()
                 } else {
                     showToast(R.string.profile_already_exists)
                 }
@@ -324,7 +309,6 @@ class TouchInputBindingFragment : Fragment() {
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 if (profileManager.deleteProfile(currentProfile)) {
                     selectProfile(TouchInputBindingProfileManager.DEFAULT_PROFILE)
-                    updateProfileName()
                     showToast(R.string.profile_deleted)
                 }
             }
@@ -438,7 +422,7 @@ class TouchInputBindingFragment : Fragment() {
     private fun formatCoordinate(value: Float): String =
         String.format(Locale.US, "%.3f", value)
 
-    /** Accepts "0.5" or "0,5"; returns null unless the value is within 0..1. */
+    /** Accepts "0.5" or "0,5", and returns null unless the value is between 0 and 1. */
     private fun parseCoordinate(text: String): Float? =
         text.replace(',', '.').toFloatOrNull()?.takeIf { it in 0f..1f }
 
@@ -450,7 +434,6 @@ class TouchInputBindingFragment : Fragment() {
 
     companion object {
         private const val BIND_SHEET_TAG = "TouchInputBindingBottomSheet"
-        private const val RESULT_BINDING_REMOVED = "touch_binding_removed"
 
         private const val TEXT_FIELD_CORNER_RADIUS_DP = 28
         private const val DISABLED_ALPHA = 0.38f

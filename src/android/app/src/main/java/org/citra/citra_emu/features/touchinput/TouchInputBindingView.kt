@@ -6,263 +6,148 @@ package org.citra.citra_emu.features.touchinput
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
+import android.text.TextPaint
+import android.text.TextUtils
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
+import androidx.annotation.AttrRes
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.color.MaterialColors
 import kotlin.math.min
+import com.google.android.material.R as MaterialR
 
+/**
+ * Preview of the 3DS bottom screen. Bindings are drawn as numbered dots with a name tag, and a
+ * tap on the screen is reported as a position between 0 and 1 on both axes.
+ */
 class TouchInputBindingView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
+    /** Called with the normalized (x, y) position of a tap on the screen. */
+    var onTouchPointSelected: ((Float, Float) -> Unit)? = null
 
     private val density = resources.displayMetrics.density
+    private val inset = INSET_DP * density
 
-    private val bottomScreenRect = RectF()
-    private val clipPath = Path()
+    private val screenRect = RectF()
+    private val tagRect = RectF()
 
-    private val bottomScreenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val bindings = mutableListOf<TouchInputBinding>()
+    private val tagTexts = mutableListOf<String>()
+    private var highlightedIndex = NO_HIGHLIGHT
+    private var pendingX = NO_POINT
+    private var pendingY = NO_POINT
+
+    // The view is recreated when the theme changes, so the colors only need resolving once
+    private val surfaceColor = themeColor(MaterialR.attr.colorSurface)
+    private val surfaceVariantColor = themeColor(MaterialR.attr.colorSurfaceVariant)
+    private val onSurfaceColor = themeColor(MaterialR.attr.colorOnSurface)
+    private val outlineColor = themeColor(MaterialR.attr.colorOutline)
+    private val primaryColor = themeColor(androidx.appcompat.R.attr.colorPrimary)
+    private val onPrimaryColor = themeColor(MaterialR.attr.colorOnPrimary)
+    private val primaryContainerColor = themeColor(MaterialR.attr.colorPrimaryContainer)
+    private val onPrimaryContainerColor = themeColor(MaterialR.attr.colorOnPrimaryContainer)
+
+    private val screenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-    }
-
-    private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1f
+        color = surfaceColor
     }
 
     private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 1.5f * density
+        strokeWidth = OUTLINE_WIDTH_DP * density
+        color = ColorUtils.setAlphaComponent(outlineColor, OUTLINE_ALPHA)
     }
 
-    private val pointRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-    }
-
-    private val pointFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
+        color = ColorUtils.setAlphaComponent(outlineColor, GRID_ALPHA)
     }
 
     private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
+        color = ColorUtils.setAlphaComponent(primaryColor, HALO_ALPHA)
     }
 
-    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val dotRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = surfaceColor
+    }
+
+    private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+
+    private val dotOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = DOT_OUTLINE_WIDTH_DP * density
+        color = ColorUtils.setAlphaComponent(primaryColor, DOT_OUTLINE_ALPHA)
+    }
+
+    private val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        textSize = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_SP,
-            POINT_LABEL_TEXT_SIZE_SP,
-            resources.displayMetrics
-        )
+        textSize = spToPx(NUMBER_TEXT_SIZE_SP)
         isFakeBoldText = true
     }
 
-    private val bindings = mutableListOf<TouchInputBinding>()
-
-    private var selectedX = UNSELECTED_COORDINATE
-    private var selectedY = UNSELECTED_COORDINATE
-    private var highlightedIndex = NO_HIGHLIGHT
-
-    var onTouchPointSelected: ((Float, Float) -> Unit)? = null
-
-    companion object {
-        private const val UNSELECTED_COORDINATE = -1f
-        private const val NO_HIGHLIGHT = -1
-
-        private const val BOTTOM_SCREEN_WIDTH = 320f
-        private const val BOTTOM_SCREEN_HEIGHT = 240f
-
-        // Use nearly the full view; the outline needs a little room
-        private const val SCREEN_SCALE_FACTOR = 0.98f
-
-        private const val BINDING_POINT_RADIUS_DP = 12f
-        private const val SELECTED_POINT_RADIUS_DP = 14f
-        private const val SELECTED_HALO_RADIUS_DP = 26f
-        private const val POINT_RING_WIDTH_DP = 2f
-        private const val POINT_LABEL_TEXT_SIZE_SP = 13f
-        private const val CORNER_RADIUS_DP = 16f
-
-        // Grid lines density (16 columns x 12 rows)
-        private const val GRID_COLUMNS = 16
-        private const val GRID_ROWS = 12
+    private val tagPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
     }
 
-    private fun themeColor(attr: Int): Int =
-        MaterialColors.getColor(this, attr)
+    private val tagTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        textSize = spToPx(TAG_TEXT_SIZE_SP)
+        isFakeBoldText = true
+    }
 
+    /** With a wrap_content height the view takes the 4:3 shape of the 3DS bottom screen. */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        // With wrap_content the view takes the 4:3 shape of the 3DS bottom screen
         if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) {
             super.onMeasure(widthMeasureSpec, heightMeasureSpec)
             return
         }
 
-        val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = (width * BOTTOM_SCREEN_HEIGHT / BOTTOM_SCREEN_WIDTH / SCREEN_SCALE_FACTOR).toInt()
-        setMeasuredDimension(width, height)
+        val widthPx = MeasureSpec.getSize(widthMeasureSpec)
+        val screenWidth = widthPx - 2 * inset
+        val heightPx = (screenWidth * SCREEN_HEIGHT / SCREEN_WIDTH + 2 * inset).toInt()
+        setMeasuredDimension(widthPx, heightPx)
     }
 
-    override fun onSizeChanged(
-        width: Int,
-        height: Int,
-        oldWidth: Int,
-        oldHeight: Int
-    ) {
+    override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         super.onSizeChanged(width, height, oldWidth, oldHeight)
         updateScreenRect()
     }
 
-    private fun updateScreenRect() {
-        if (width <= 0 || height <= 0) return
-
-        // The 3DS bottom screen is always 4:3, whatever layout or orientation the emulator uses
-        val scale = min(
-            (width * SCREEN_SCALE_FACTOR) / BOTTOM_SCREEN_WIDTH,
-            (height * SCREEN_SCALE_FACTOR) / BOTTOM_SCREEN_HEIGHT
-        )
-        val scaledWidth = BOTTOM_SCREEN_WIDTH * scale
-        val scaledHeight = BOTTOM_SCREEN_HEIGHT * scale
-        val offsetX = (width - scaledWidth) / 2f
-        val offsetY = (height - scaledHeight) / 2f
-
-        bottomScreenRect.set(
-            offsetX,
-            offsetY,
-            offsetX + scaledWidth,
-            offsetY + scaledHeight
-        )
-
-        // Rounded clip path so the grid stays inside the corners
-        val cornerPx = CORNER_RADIUS_DP * density
-        clipPath.reset()
-        clipPath.addRoundRect(bottomScreenRect, cornerPx, cornerPx, Path.Direction.CW)
-
-        invalidate()
-    }
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        if (screenRect.isEmpty) return
 
-        val cornerPx = CORNER_RADIUS_DP * density
-
-        // 1. Rounded "screen" background. Theme-aware, so it works in dark mode too.
-        bottomScreenPaint.color = themeColor(com.google.android.material.R.attr.colorSurface)
-        canvas.drawRoundRect(bottomScreenRect, cornerPx, cornerPx, bottomScreenPaint)
-
-        // 2. Subtle grid clipped to the rounded rectangle
+        val corner = SCREEN_CORNER_RADIUS_DP * density
+        canvas.drawRoundRect(screenRect, corner, corner, screenPaint)
         drawGrid(canvas)
+        canvas.drawRoundRect(screenRect, corner, corner, outlinePaint)
 
-        // 3. Outline
-        outlinePaint.color = themeColor(com.google.android.material.R.attr.colorOutlineVariant)
-        canvas.drawRoundRect(bottomScreenRect, cornerPx, cornerPx, outlinePaint)
+        val showTags = screenRect.width() >= MIN_TAG_SCREEN_WIDTH_DP * density
 
-        // 4. Confirmed bindings, numbered 1, 2, 3... The highlighted one is drawn last, on top
+        // The highlighted binding is drawn last so that it ends up on top
         bindings.forEachIndexed { index, binding ->
             if (index != highlightedIndex) {
-                drawBinding(canvas, binding, index + 1, selected = false)
+                drawBinding(canvas, binding, index, selected = false, showTag = showTags)
             }
         }
         bindings.getOrNull(highlightedIndex)?.let {
-            drawBinding(canvas, it, highlightedIndex + 1, selected = true)
+            drawBinding(canvas, it, highlightedIndex, selected = true, showTag = showTags)
         }
 
-        // 5. Pending selection: blank marker with a halo while waiting for a button press
-        if (selectedX >= 0f && selectedY >= 0f) {
-            drawBindingPoint(
-                canvas = canvas,
-                x = selectedX,
-                y = selectedY,
-                number = 0,
-                selected = true
-            )
-        }
-    }
-
-    private fun drawGrid(canvas: Canvas) {
-        gridPaint.color = themeColor(com.google.android.material.R.attr.colorOutlineVariant)
-        gridPaint.alpha = 55
-
-        canvas.save()
-        canvas.clipPath(clipPath)
-
-        val width = bottomScreenRect.width()
-        val height = bottomScreenRect.height()
-
-        val columnWidth = width / GRID_COLUMNS
-        for (i in 1 until GRID_COLUMNS) {
-            val x = bottomScreenRect.left + (i * columnWidth)
-            canvas.drawLine(x, bottomScreenRect.top, x, bottomScreenRect.bottom, gridPaint)
-        }
-
-        val rowHeight = height / GRID_ROWS
-        for (i in 1 until GRID_ROWS) {
-            val y = bottomScreenRect.top + (i * rowHeight)
-            canvas.drawLine(bottomScreenRect.left, y, bottomScreenRect.right, y, gridPaint)
-        }
-
-        canvas.restore()
-    }
-
-    private fun drawBinding(
-        canvas: Canvas,
-        binding: TouchInputBinding,
-        number: Int,
-        selected: Boolean
-    ) {
-        drawBindingPoint(
-            canvas = canvas,
-            x = bottomScreenRect.left + binding.x * bottomScreenRect.width(),
-            y = bottomScreenRect.top + binding.y * bottomScreenRect.height(),
-            number = number,
-            selected = selected
-        )
-    }
-
-    private fun drawBindingPoint(
-        canvas: Canvas,
-        x: Float,
-        y: Float,
-        number: Int,
-        selected: Boolean
-    ) {
-        val radius = (if (selected) SELECTED_POINT_RADIUS_DP else BINDING_POINT_RADIUS_DP) * density
-        val ringWidth = POINT_RING_WIDTH_DP * density
-
-        val primary = themeColor(androidx.appcompat.R.attr.colorPrimary)
-        val primaryContainer = themeColor(com.google.android.material.R.attr.colorPrimaryContainer)
-        val surface = themeColor(com.google.android.material.R.attr.colorSurface)
-
-        if (selected) {
-            // Soft halo so the pending point stands out from confirmed ones
-            haloPaint.color = ColorUtils.setAlphaComponent(primary, 60)
-            canvas.drawCircle(x, y, SELECTED_HALO_RADIUS_DP * density, haloPaint)
-        }
-
-        // Ring uses the surface color so it follows light/dark theme
-        pointRingPaint.color = surface
-        canvas.drawCircle(x, y, radius, pointRingPaint)
-
-        pointFillPaint.color = if (selected) primary else primaryContainer
-        canvas.drawCircle(x, y, radius - ringWidth, pointFillPaint)
-
-        // Number only for confirmed bindings
-        if (number > 0) {
-            labelPaint.color = themeColor(
-                if (selected) {
-                    com.google.android.material.R.attr.colorOnPrimary
-                } else {
-                    com.google.android.material.R.attr.colorOnPrimaryContainer
-                }
-            )
-
-            val textY = y - (labelPaint.ascent() + labelPaint.descent()) / 2f
-            canvas.drawText(number.toString(), x, textY, labelPaint)
+        // A tapped position that isn't bound yet is shown as an empty, highlighted dot
+        if (pendingX != NO_POINT && pendingY != NO_POINT) {
+            drawDot(canvas, pendingX, pendingY, number = 0, selected = true)
         }
     }
 
@@ -271,52 +156,186 @@ class TouchInputBindingView @JvmOverloads constructor(
             return super.onTouchEvent(event)
         }
 
-        if (!bottomScreenRect.contains(event.x, event.y)) {
+        if (!screenRect.contains(event.x, event.y)) {
             return false
         }
 
-        selectedX = event.x
-        selectedY = event.y
+        pendingX = event.x
+        pendingY = event.y
         invalidate()
 
-        val normalizedX = (event.x - bottomScreenRect.left) / bottomScreenRect.width()
-        val normalizedY = (event.y - bottomScreenRect.top) / bottomScreenRect.height()
-
-        onTouchPointSelected?.invoke(
-            normalizedX.coerceIn(0f, 1f),
-            normalizedY.coerceIn(0f, 1f)
-        )
-
+        val normalizedX = (event.x - screenRect.left) / screenRect.width()
+        val normalizedY = (event.y - screenRect.top) / screenRect.height()
+        onTouchPointSelected?.invoke(normalizedX.coerceIn(0f, 1f), normalizedY.coerceIn(0f, 1f))
         return true
     }
 
     fun setBindings(newBindings: List<TouchInputBinding>) {
         bindings.clear()
         bindings.addAll(newBindings)
-        // Clear temporary point so the new saved binding renders in place
-        selectedX = UNSELECTED_COORDINATE
-        selectedY = UNSELECTED_COORDINATE
 
-        if (isAttachedToWindow) {
-            updateScreenRect()
-            invalidate()
-        } else {
-            post {
-                updateScreenRect()
-                invalidate()
-            }
-        }
+        tagTexts.clear()
+        newBindings.mapTo(tagTexts) { it.displayName() }
+
+        // The saved binding replaces the temporary point
+        pendingX = NO_POINT
+        pendingY = NO_POINT
+        invalidate()
     }
 
-    /** Highlights the binding at [index] in the list, or nothing for a negative index. */
+    /** Highlights the binding at [index], or nothing if the index is out of range. */
     fun setHighlightedIndex(index: Int) {
         highlightedIndex = if (index in bindings.indices) index else NO_HIGHLIGHT
         invalidate()
     }
 
     fun clearSelection() {
-        selectedX = UNSELECTED_COORDINATE
-        selectedY = UNSELECTED_COORDINATE
+        pendingX = NO_POINT
+        pendingY = NO_POINT
         invalidate()
+    }
+
+    private fun updateScreenRect() {
+        val availableWidth = width - 2 * inset
+        val availableHeight = height - 2 * inset
+        if (availableWidth <= 0f || availableHeight <= 0f) return
+
+        val scale = min(availableWidth / SCREEN_WIDTH, availableHeight / SCREEN_HEIGHT)
+        val screenWidth = SCREEN_WIDTH * scale
+        val screenHeight = SCREEN_HEIGHT * scale
+        val left = (width - screenWidth) / 2f
+        val top = (height - screenHeight) / 2f
+
+        screenRect.set(left, top, left + screenWidth, top + screenHeight)
+        invalidate()
+    }
+
+    private fun drawGrid(canvas: Canvas) {
+        val radius = GRID_DOT_RADIUS_DP * density
+        val columnWidth = screenRect.width() / GRID_COLUMNS
+        val rowHeight = screenRect.height() / GRID_ROWS
+
+        for (column in 1 until GRID_COLUMNS) {
+            for (row in 1 until GRID_ROWS) {
+                canvas.drawCircle(
+                    screenRect.left + column * columnWidth,
+                    screenRect.top + row * rowHeight,
+                    radius,
+                    gridPaint
+                )
+            }
+        }
+    }
+
+    private fun drawBinding(
+        canvas: Canvas,
+        binding: TouchInputBinding,
+        index: Int,
+        selected: Boolean,
+        showTag: Boolean
+    ) {
+        val x = screenRect.left + binding.x * screenRect.width()
+        val y = screenRect.top + binding.y * screenRect.height()
+
+        if (showTag) {
+            drawTag(canvas, tagTexts[index], x, y, selected)
+        }
+        drawDot(canvas, x, y, number = index + 1, selected = selected)
+    }
+
+    private fun drawDot(canvas: Canvas, x: Float, y: Float, number: Int, selected: Boolean) {
+        val radius = (if (selected) SELECTED_DOT_RADIUS_DP else DOT_RADIUS_DP) * density
+        val ringWidth = DOT_RING_WIDTH_DP * density
+
+        if (selected) {
+            canvas.drawCircle(x, y, HALO_RADIUS_DP * density, haloPaint)
+        }
+
+        canvas.drawCircle(x, y, radius + ringWidth, dotRingPaint)
+        dotPaint.color = if (selected) primaryColor else primaryContainerColor
+        canvas.drawCircle(x, y, radius, dotPaint)
+        canvas.drawCircle(x, y, radius, dotOutlinePaint)
+
+        if (number > 0) {
+            numberPaint.color = if (selected) onPrimaryColor else onPrimaryContainerColor
+            val baseline = y - (numberPaint.ascent() + numberPaint.descent()) / 2f
+            canvas.drawText(number.toString(), x, baseline, numberPaint)
+        }
+    }
+
+    /** Draws the name of a binding beside its dot, on whichever side has more room. */
+    private fun drawTag(canvas: Canvas, text: String, x: Float, y: Float, selected: Boolean) {
+        val padding = TAG_PADDING_DP * density
+        val tagHeight = TAG_HEIGHT_DP * density
+        val gap = (DOT_RADIUS_DP + DOT_RING_WIDTH_DP + TAG_GAP_DP) * density
+        val edge = TAG_EDGE_MARGIN_DP * density
+
+        val label = TextUtils.ellipsize(
+            text,
+            tagTextPaint,
+            TAG_MAX_WIDTH_DP * density - 2 * padding,
+            TextUtils.TruncateAt.END
+        )
+        val tagWidth = tagTextPaint.measureText(label, 0, label.length) + 2 * padding
+
+        val fitsRight = x + gap + tagWidth <= screenRect.right - edge
+        val fitsLeft = x - gap - tagWidth >= screenRect.left + edge
+        val placeRight = if (x < screenRect.centerX()) fitsRight || !fitsLeft else !fitsLeft
+
+        val left = if (placeRight) x + gap else x - gap - tagWidth
+        val top = (y - tagHeight / 2f).coerceIn(
+            screenRect.top + edge,
+            screenRect.bottom - edge - tagHeight
+        )
+        tagRect.set(left, top, left + tagWidth, top + tagHeight)
+
+        tagPaint.color = if (selected) primaryColor else surfaceVariantColor
+        tagTextPaint.color = if (selected) onPrimaryColor else onSurfaceColor
+
+        canvas.drawRoundRect(tagRect, tagHeight / 2f, tagHeight / 2f, tagPaint)
+        val baseline = tagRect.centerY() - (tagTextPaint.ascent() + tagTextPaint.descent()) / 2f
+        canvas.drawText(label, 0, label.length, tagRect.centerX(), baseline, tagTextPaint)
+    }
+
+    private fun themeColor(@AttrRes attr: Int): Int =
+        MaterialColors.getColor(context, attr, Color.TRANSPARENT)
+
+    private fun spToPx(sp: Float): Float =
+        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, resources.displayMetrics)
+
+    companion object {
+        private const val NO_HIGHLIGHT = -1
+        private const val NO_POINT = -1f
+
+        // The 3DS bottom screen is 320x240 whatever layout or orientation the emulator uses
+        private const val SCREEN_WIDTH = 320f
+        private const val SCREEN_HEIGHT = 240f
+        private const val SCREEN_CORNER_RADIUS_DP = 16f
+        private const val INSET_DP = 2f
+        private const val OUTLINE_WIDTH_DP = 1.5f
+        private const val OUTLINE_ALPHA = 130
+
+        private const val GRID_COLUMNS = 16
+        private const val GRID_ROWS = 12
+        private const val GRID_DOT_RADIUS_DP = 1.1f
+        private const val GRID_ALPHA = 110
+
+        private const val DOT_RADIUS_DP = 12f
+        private const val SELECTED_DOT_RADIUS_DP = 14f
+        private const val HALO_RADIUS_DP = 26f
+        private const val HALO_ALPHA = 60
+        private const val DOT_RING_WIDTH_DP = 2f
+        private const val DOT_OUTLINE_WIDTH_DP = 1f
+        private const val DOT_OUTLINE_ALPHA = 90
+        private const val NUMBER_TEXT_SIZE_SP = 13f
+
+        // Name tags are left out when the screen is too small to fit them
+        private const val MIN_TAG_SCREEN_WIDTH_DP = 220f
+        private const val TAG_TEXT_SIZE_SP = 11f
+        private const val TAG_HEIGHT_DP = 22f
+        private const val TAG_PADDING_DP = 9f
+        private const val TAG_GAP_DP = 4f
+        private const val TAG_EDGE_MARGIN_DP = 4f
+        private const val TAG_MAX_WIDTH_DP = 110f
     }
 }

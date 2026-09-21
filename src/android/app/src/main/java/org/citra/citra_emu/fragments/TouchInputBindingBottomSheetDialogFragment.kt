@@ -16,11 +16,11 @@ import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import kotlin.math.abs
 import org.citra.citra_emu.R
 import org.citra.citra_emu.databinding.DialogTouchInputBindingBinding
 import org.citra.citra_emu.features.touchinput.TouchInputBinding
 import org.citra.citra_emu.features.touchinput.TouchInputBindingManager
-import kotlin.math.abs
 
 /**
  * Bottom sheet shown after tapping the touchscreen preview. Waits for a controller
@@ -118,7 +118,12 @@ class TouchInputBindingBottomSheetDialogFragment : BottomSheetDialogFragment() {
 
     /** Gentle pulse on the icon to show the sheet is waiting for input. */
     private fun startPulse() {
-        pulseAnimator = ObjectAnimator.ofFloat(binding.iconBind, View.ALPHA, 1f, PULSE_MIN_ALPHA).apply {
+        pulseAnimator = ObjectAnimator.ofFloat(
+            binding.iconBind,
+            View.ALPHA,
+            1f,
+            PULSE_MIN_ALPHA
+        ).apply {
             duration = PULSE_DURATION_MS
             repeatCount = ObjectAnimator.INFINITE
             repeatMode = ObjectAnimator.REVERSE

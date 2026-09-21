@@ -7,10 +7,10 @@ package org.citra.citra_emu.features.touchinput
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
+import kotlin.math.roundToInt
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import kotlin.math.roundToInt
 
 /**
  * A controller key or axis mapped to normalized (x, y) coordinates on the 3DS bottom screen.

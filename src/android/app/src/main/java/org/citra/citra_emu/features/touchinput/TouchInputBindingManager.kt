@@ -9,10 +9,10 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.preference.PreferenceManager
+import kotlin.math.abs
 import org.citra.citra_emu.CitraApplication
 import org.citra.citra_emu.NativeLibrary
 import org.citra.citra_emu.utils.ControllerMappingHelper
-import kotlin.math.abs
 
 /**
  * Holds the active touch input bindings and turns controller input into touchscreen events.

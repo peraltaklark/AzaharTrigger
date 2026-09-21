@@ -4,23 +4,24 @@
 
 package org.citra.citra_emu.features.touchinput
 
+import android.graphics.Color
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.color.MaterialColors
 import org.citra.citra_emu.R
 import org.citra.citra_emu.databinding.ItemTouchInputBindingBinding
-import kotlin.math.roundToInt
 
 class TouchInputBindingAdapter(
     private val onRowClicked: (TouchInputBinding) -> Unit,
     private val onEditClicked: (TouchInputBinding) -> Unit,
     private val onDeleteClicked: (TouchInputBinding) -> Unit
 ) : ListAdapter<TouchInputBinding, TouchInputBindingAdapter.ViewHolder>(DiffCallback) {
-
     /** The binding whose row is highlighted, or null for none. */
     var selectedBinding: TouchInputBinding? = null
         set(value) {
@@ -30,9 +31,8 @@ class TouchInputBindingAdapter(
         }
 
     /**
-     * Row numbers depend on list position, so unchanged rows that shift after an
-     * insert or delete still need refreshing. The payload keeps the refresh silent
-     * (no change animation).
+     * Row numbers and dividers depend on the position in the list, so rows that only moved still
+     * need refreshing. The payload keeps that refresh silent, without a change animation.
      */
     override fun submitList(list: List<TouchInputBinding>?) {
         super.submitList(list) {
@@ -50,7 +50,7 @@ class TouchInputBindingAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(position + 1, getItem(position))
+        holder.bind(position, getItem(position))
     }
 
     override fun onBindViewHolder(
@@ -61,36 +61,34 @@ class TouchInputBindingAdapter(
         if (payloads.isEmpty()) {
             super.onBindViewHolder(holder, position, payloads)
         } else {
-            holder.refresh(position + 1, getItem(position))
+            holder.refresh(position, getItem(position))
         }
     }
 
     inner class ViewHolder(
         private val binding: ItemTouchInputBindingBinding
     ) : RecyclerView.ViewHolder(binding.root) {
+        private val selectedColor = ColorUtils.setAlphaComponent(
+            MaterialColors.getColor(binding.root, androidx.appcompat.R.attr.colorPrimary),
+            SELECTED_ALPHA
+        )
 
-        fun bind(number: Int, touchBinding: TouchInputBinding) {
-            refresh(number, touchBinding)
+        fun bind(position: Int, touchBinding: TouchInputBinding) {
+            refresh(position, touchBinding)
+
             binding.bindingName.text = touchBinding.displayName()
             binding.bindingCoordinates.text = touchBinding.positionLabel()
             binding.root.setOnClickListener { onRowClicked(touchBinding) }
             binding.menuButton.setOnClickListener { showMenu(touchBinding) }
         }
 
-        /** Updates the parts of the row that depend on list position and selection. */
-        fun refresh(number: Int, touchBinding: TouchInputBinding) {
-            binding.bindingNumber.text = number.toString()
-            showSelected(touchBinding == selectedBinding)
-        }
-
-        private fun showSelected(selected: Boolean) {
-            val card = binding.root
-            card.strokeWidth = if (selected) {
-                (SELECTED_STROKE_DP * card.resources.displayMetrics.density).roundToInt()
-            } else {
-                0
-            }
-            card.strokeColor = MaterialColors.getColor(card, androidx.appcompat.R.attr.colorPrimary)
+        /** Updates what depends on the position in the list and on the selection. */
+        fun refresh(position: Int, touchBinding: TouchInputBinding) {
+            binding.bindingNumber.text = (position + 1).toString()
+            binding.divider.visibility = if (position == 0) View.GONE else View.VISIBLE
+            binding.root.setBackgroundColor(
+                if (touchBinding == selectedBinding) selectedColor else Color.TRANSPARENT
+            )
         }
 
         private fun showMenu(touchBinding: TouchInputBinding) {
@@ -112,7 +110,6 @@ class TouchInputBindingAdapter(
     }
 
     private object DiffCallback : DiffUtil.ItemCallback<TouchInputBinding>() {
-
         // A binding is identified by the physical input it listens to
         override fun areItemsTheSame(
             oldItem: TouchInputBinding,
@@ -127,8 +124,9 @@ class TouchInputBindingAdapter(
 
     private companion object {
         const val PAYLOAD_REFRESH = "refresh"
+        const val SELECTED_ALPHA = 36
+
         const val MENU_EDIT = 1
         const val MENU_DELETE = 2
-        const val SELECTED_STROKE_DP = 2
     }
 }

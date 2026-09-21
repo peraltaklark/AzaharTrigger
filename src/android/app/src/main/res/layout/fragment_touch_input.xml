@@ -6,69 +6,74 @@
     android:background="?attr/colorSurface"
     android:orientation="vertical">
 
-    <!-- Profile -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/profileCard"
-        android:clickable="true"
-        android:focusable="true"
-        style="@style/Widget.Azahar.TouchInput.Card"
+    <!-- Profile picker -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/touch_input_margin"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="@dimen/touch_input_margin"
-        android:layout_marginBottom="@dimen/touch_input_card_gap">
+        android:layout_marginBottom="@dimen/touch_input_card_gap"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="8dp">
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/profileCard"
+            style="@style/Widget.Azahar.TouchInput.Card.Pill"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:clickable="true"
+            android:contentDescription="@string/profile"
+            android:focusable="true">
 
             <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/profile"
-                    android:textAppearance="?attr/textAppearanceLabelMedium"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="10dp">
 
                 <TextView
                     android:id="@+id/profileName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:drawableEnd="@drawable/ic_profile_dropdown"
-                    android:drawablePadding="4dp"
-                    android:drawableTint="?attr/colorOnSurfaceVariant"
                     android:ellipsize="end"
+                    android:maxWidth="220dp"
                     android:maxLines="1"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:textAppearance="?attr/textAppearanceLabelLarge"
+                    android:textColor="?attr/colorOnSecondaryContainer" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginStart="4dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_profile_dropdown"
+                    app:tint="?attr/colorOnSecondaryContainer" />
 
             </LinearLayout>
 
-            <ImageView
-                android:id="@+id/profileMenuButton"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/profile_options"
-                android:padding="10dp"
-                android:src="@drawable/ic_overflow_menu"
-                app:tint="?attr/colorOnSurfaceVariant" />
+        </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
-    </com.google.android.material.card.MaterialCardView>
+        <ImageView
+            android:id="@+id/profileMenuButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/profile_options"
+            android:padding="8dp"
+            android:src="@drawable/ic_overflow_menu"
+            app:tint="?attr/colorOnSurfaceVariant" />
 
-    <!-- Touchscreen preview: sized by width, always 4:3 -->
+    </LinearLayout>
+
+    <!-- Touchscreen preview, sized by its width and always 4:3 -->
     <com.google.android.material.card.MaterialCardView
         style="@style/Widget.Azahar.TouchInput.Card"
         android:layout_width="match_parent"
@@ -76,24 +81,17 @@
         android:layout_marginStart="@dimen/touch_input_margin"
         android:layout_marginEnd="@dimen/touch_input_margin">
 
-        <LinearLayout
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:padding="12dp">
 
-            <FrameLayout
+            <org.citra.citra_emu.features.touchinput.TouchInputBindingView
+                android:id="@+id/touchInputBindingView"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="@dimen/touch_input_margin">
+                android:layout_height="wrap_content" />
 
-                <org.citra.citra_emu.features.touchinput.TouchInputBindingView
-                    android:id="@+id/touchInputBindingView"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-
-            </FrameLayout>
-
-        </LinearLayout>
+        </FrameLayout>
 
     </com.google.android.material.card.MaterialCardView>
 
@@ -102,44 +100,73 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:paddingStart="20dp"
-        android:paddingTop="8dp"
+        android:orientation="horizontal"
+        android:paddingStart="24dp"
+        android:paddingTop="4dp"
         android:paddingEnd="12dp">
 
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="@string/touch_input_bindings"
             android:textAppearance="?attr/textAppearanceTitleSmall"
             android:textColor="?attr/colorOnSurface" />
+
+        <TextView
+            android:id="@+id/bindingCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_touch_input_count"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="1dp"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="?attr/colorOnPrimaryContainer" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/deleteAllButton"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minHeight="40dp"
             android:text="@string/delete_all"
             android:textColor="?attr/colorError"
             app:rippleColor="?attr/colorError" />
 
     </LinearLayout>
 
-    <!-- Bindings: takes the remaining height and scrolls -->
+    <!-- Bindings: the card hugs the rows, and the list scrolls once it fills the screen -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:paddingStart="@dimen/touch_input_margin"
+        android:paddingTop="4dp"
+        android:paddingEnd="@dimen/touch_input_margin"
+        android:paddingBottom="@dimen/touch_input_margin">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/bindingList"
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/bindingsCard"
+            style="@style/Widget.Azahar.TouchInput.Card"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingStart="@dimen/touch_input_margin"
-            android:paddingTop="4dp"
-            android:paddingEnd="@dimen/touch_input_margin"
-            android:paddingBottom="@dimen/touch_input_margin" />
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:clipToOutline="true">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/bindingList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:overScrollMode="never" />
+
+        </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:id="@+id/emptyState"
