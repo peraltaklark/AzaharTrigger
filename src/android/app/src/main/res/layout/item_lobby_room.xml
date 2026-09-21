@@ -5,127 +5,145 @@
     style="?attr/materialCardViewFilledStyle"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="24dp"
     android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="6dp"
     android:background="?attr/selectableItemBackground"
-    android:backgroundTint="?attr/colorSurfaceVariant"
+    android:backgroundTint="?attr/colorSurfaceContainerHigh"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp">
-
-        <ImageView
-            android:id="@+id/lock_icon"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:contentDescription="@string/multiplayer_password_protected"
-            android:src="@drawable/ic_lock"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="?attr/colorOnSurface" />
+        android:orientation="vertical"
+        android:padding="14dp">
 
         <LinearLayout
-            android:id="@+id/room_info_container"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginEnd="8dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/lock_icon"
-            app:layout_constraintBottom_toBottomOf="parent">
+            android:gravity="top">
 
-            <!-- Room Name -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/room_name"
-                style="@style/TextAppearance.Material3.BodyMedium"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAlignment="viewStart"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                tools:text="Room Name" />
-            
-            <!-- Room Host -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/room_host"
-                style="@style/TextAppearance.Material3.BodySmall"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textAlignment="viewStart"
-                android:textSize="13sp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                tools:text="Hosted by: Owner" />
-
-            <!-- Player Chips -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/player_list"
-                style="@style/TextAppearance.Material3.BodySmall"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textAlignment="viewStart"
-                android:textSize="13sp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                tools:text="Players: Player1, Player2, Player3" />
-
-            <!-- Game Info -->
             <LinearLayout
-                android:id="@+id/game_info"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:orientation="horizontal">
+                android:layout_marginEnd="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- Room Name -->
+                <TextView
+                    android:id="@+id/room_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                    tools:text="Monster Hunter Brasil #5" />
+
+                <!-- Room Host -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:layout_marginEnd="4dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_user"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+
+                    <TextView
+                        android:id="@+id/room_host"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="Host: Akrasia" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Lock icon + player count -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical">
 
                 <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_gravity="center_vertical"
-                    android:contentDescription="@string/multiplayer_game"
-                    android:src="@drawable/ic_controller" />
+                    android:id="@+id/lock_icon"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="4dp"
+                    android:contentDescription="@string/multiplayer_password_protected"
+                    android:src="@drawable/ic_lock"
+                    tools:tint="?attr/colorOnSurfaceVariant" />
 
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/game_name"
-                    style="@style/TextAppearance.Material3.LabelMedium"
+                <TextView
+                    android:id="@+id/player_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:textStyle="bold"
-                    tools:text="Monster Hunter" />
+                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                    tools:text="2/4"
+                    tools:textColor="?attr/colorPrimary" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Player Count with Icon -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="8dp"
+            android:background="?attr/colorOutlineVariant" />
+
+        <!-- Game Info -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            android:gravity="center_vertical">
 
             <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_user"
-                android:contentDescription="@string/multiplayer_player_count"
-                app:tint="?attr/colorAccent" />
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginEnd="6dp"
+                android:contentDescription="@string/multiplayer_game"
+                android:src="@drawable/ic_controller"
+                app:tint="?attr/colorOnSurfaceVariant" />
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/player_count"
-                style="@style/TextAppearance.Material3.BodyMedium"
+            <TextView
+                android:id="@+id/game_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textStyle="bold"
+                tools:text="Monster Hunter" />
+
+            <!-- Player avatars: filled in by the adapter, capped with a "+N" badge -->
+            <LinearLayout
+                android:id="@+id/player_avatars"
+                android:layout_width="wrap_content"
+                android:layout_height="22dp"
+                android:gravity="center_vertical"
+                tools:ignore="UselessParent" />
+
+            <TextView
+                android:id="@+id/empty_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textColor="?attr/colorAccent"
-                tools:text="4/4" />
+                android:text="@string/multiplayer_room_empty"
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:visibility="visible" />
         </LinearLayout>
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

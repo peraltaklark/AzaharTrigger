@@ -1,19 +1,27 @@
-// Copyright 2025 Azahar Project
+// Copyright Citra Emulator Project / Azahar Emulator Project
 // Licensed under GPLv2 or any later version
-// Refer to the license.txt file included
+// Refer to the license.txt file included.
 
 package org.citra.citra_emu.dialogs
 
+import android.animation.ObjectAnimator
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -35,15 +43,34 @@ import org.citra.citra_emu.utils.NetPlayManager
 import java.util.Locale
 
 class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
+
+    companion object {
+        private const val PREFS_NAME = "lobby_history"
+        private const val SEARCH_DEBOUNCE_MS = 300L
+        private const val MAX_VISIBLE_AVATARS = 3
+        private const val REFRESH_SPIN_MS = 800L
+
+        // Background/foreground pairs cycled across the avatar stack
+        private val AVATAR_PALETTE = listOf(
+            0xFFD0BCFF.toInt() to 0xFF21005D.toInt(),
+            0xFFCCC2DC.toInt() to 0xFF332D41.toInt(),
+            0xFFEFB8C8.toInt() to 0xFF31111D.toInt()
+        )
+        private val AVATAR_OVERFLOW_COLOR = 0xFFE8DEF8.toInt() to 0xFF1D192B.toInt()
+    }
+
     private lateinit var binding: DialogLobbyBrowserBinding
+    private lateinit var adapter: LobbyRoomAdapter
+    private var refreshSpin: ObjectAnimator? = null
+
     private val activity: Activity? = context as? Activity
         ?: (context as? android.content.ContextWrapper)?.baseContext as? Activity
-    private lateinit var adapter: LobbyRoomAdapter
+
     private val handler = Handler(Looper.getMainLooper())
     private val searchRunnable = Runnable { adapter.filterAndSearch() }
 
     private val preferences: SharedPreferences =
-        context.getSharedPreferences("lobby_history", Context.MODE_PRIVATE)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     // Cached preference variables to eliminate disk reads on UI filter passes
     private var lastIp: String? = null
@@ -60,11 +87,13 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         binding = DialogLobbyBrowserBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Load saved username from NetPlayManager
-        binding.usernameInput.setText(NetPlayManager.getUsername(context))
+        // Load saved username, keep the pill's avatar letter in sync as it's edited
+        val savedUsername = NetPlayManager.getUsername(context)
+        binding.usernameInput.setText(savedUsername)
+        binding.usernameAvatar.text = avatarLetterFor(savedUsername)
 
-        // Save username automatically as user types
         binding.usernameInput.doOnTextChanged { text, _, _, _ ->
+            binding.usernameAvatar.text = avatarLetterFor(text?.toString())
             activity?.let {
                 NetPlayManager.setUsername(it, text.toString())
             }
@@ -76,7 +105,6 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         lastName = preferences.getString("last_room_name", "")
 
         binding.emptyRefreshButton.setOnClickListener {
-            binding.progressBar.visibility = View.VISIBLE
             refreshRoomList()
         }
 
@@ -95,8 +123,11 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         }
     }
 
+    private fun avatarLetterFor(name: String?): String =
+        name?.trim()?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+
     private fun setupRecyclerView() {
-        adapter = LobbyRoomAdapter { room -> handleRoomSelection(room) }
+        adapter = LobbyRoomAdapter(context) { room -> handleRoomSelection(room) }
 
         binding.roomList.apply {
             layoutManager = LinearLayoutManager(context)
@@ -107,8 +138,6 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
 
     private fun setupRefreshButton() {
         binding.refreshButton.setOnClickListener {
-            binding.refreshButton.isEnabled = false
-            binding.progressBar.visibility = View.VISIBLE
             refreshRoomList()
         }
     }
@@ -123,7 +152,7 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                 if (text.isNullOrEmpty()) View.INVISIBLE else View.VISIBLE
             // Debounce: wait 300ms after user stops typing before filtering
             handler.removeCallbacks(searchRunnable)
-            handler.postDelayed(searchRunnable, 300)
+            handler.postDelayed(searchRunnable, SEARCH_DEBOUNCE_MS)
         }
 
         binding.clearButton.setOnClickListener {
@@ -134,6 +163,8 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
     }
 
     private fun refreshRoomList() {
+        setRefreshing(true)
+
         // 1. Instantly display whatever is already in local memory
         val cachedRooms = NetPlayManager.getPublicRooms()
         if (cachedRooms.isNotEmpty()) {
@@ -142,15 +173,33 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
             binding.roomList.visibility = View.VISIBLE
         }
 
-        // 2. Refresh from network asynchronously
+        // 2. Refresh from the network asynchronously
         NetPlayManager.refreshRoomListAsync { rooms ->
             binding.emptyView.visibility = if (rooms.isEmpty()) View.VISIBLE else View.GONE
             binding.roomList.visibility = if (rooms.isEmpty()) View.GONE else View.VISIBLE
             binding.appbar.visibility = if (rooms.isEmpty()) View.GONE else View.VISIBLE
 
             adapter.filterAndSearch(rooms)
-            binding.refreshButton.isEnabled = true
-            binding.progressBar.visibility = View.GONE
+            setRefreshing(false)
+        }
+    }
+
+    // Spins the tonal refresh button in place instead of swapping in a separate progress bar
+    private fun setRefreshing(refreshing: Boolean) {
+        binding.refreshButton.isEnabled = !refreshing
+
+        if (refreshing) {
+            if (refreshSpin?.isRunning != true) {
+                refreshSpin = ObjectAnimator.ofFloat(binding.refreshButton, View.ROTATION, 0f, 360f).apply {
+                    duration = REFRESH_SPIN_MS
+                    repeatCount = ObjectAnimator.INFINITE
+                    start()
+                }
+            }
+        } else {
+            refreshSpin?.cancel()
+            refreshSpin = null
+            binding.refreshButton.rotation = 0f
         }
     }
 
@@ -227,20 +276,25 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
         }.start()
     }
 
-    inner class LobbyRoomAdapter(private val onRoomSelected: (NetPlayManager.RoomInfo) -> Unit) :
-        RecyclerView.Adapter<LobbyRoomAdapter.RoomViewHolder>() {
+    inner class LobbyRoomAdapter(
+        private val context: Context,
+        private val onRoomSelected: (NetPlayManager.RoomInfo) -> Unit
+    ) : RecyclerView.Adapter<LobbyRoomAdapter.RoomViewHolder>() {
 
         private val rooms = mutableListOf<NetPlayManager.RoomInfo>()
         private var searchJob: Job? = null
+        private val density = context.resources.displayMetrics.density
 
         inner class RoomViewHolder(private val binding: ItemLobbyRoomBinding) :
             RecyclerView.ViewHolder(binding.root) {
             fun bind(room: NetPlayManager.RoomInfo) {
                 binding.roomName.text = room.name
-                // Player count with icon (icon is in the layout)
                 binding.playerCount.text = "${room.members.size}/${room.maxPlayers}"
+                binding.playerCount.setTextColor(playerCountColor(room))
 
-                binding.lockIcon.visibility = if (room.hasPassword) View.VISIBLE else View.GONE
+                binding.lockIcon.setImageResource(
+                    if (room.hasPassword) R.drawable.ic_lock else R.drawable.ic_lock_open
+                )
 
                 if (room.preferredGameName.isNotEmpty() && room.preferredGameId != 0L) {
                     binding.gameName.text = room.preferredGameName
@@ -256,18 +310,77 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                     binding.roomHost.visibility = View.GONE
                 }
 
-                                // Populate player list (Text instead of chips)
-                val playerNames = room.members.joinToString(", ") {
-                    if (it.username.isNotEmpty()) it.username else it.nickname
-                }
-                if (playerNames.isNotEmpty()) {
-                    binding.playerList.text = "Players: $playerNames"
-                    binding.playerList.visibility = View.VISIBLE
-                } else {
-                    binding.playerList.visibility = View.GONE
-                }
+                bindPlayerAvatars(room)
 
                 itemView.setOnClickListener { onRoomSelected(room) }
+            }
+
+            // Green when there's an open, unlocked slot; muted once the room is full or locked
+            private fun playerCountColor(room: NetPlayManager.RoomInfo): Int {
+                val colorRes = if (!room.hasPassword && room.members.size < room.maxPlayers) {
+                    R.color.material_dynamic_primary40
+                } else {
+                    R.color.material_dynamic_neutral_variant50
+                }
+                return ContextCompat.getColor(context, colorRes)
+            }
+
+            // Renders up to MAX_VISIBLE_AVATARS overlapping initials circles, capped with a
+            // "+N" badge past that. Falls back to an "Empty" label when there are no players.
+            private fun bindPlayerAvatars(room: NetPlayManager.RoomInfo) {
+                val container = binding.playerAvatars
+                container.removeAllViews()
+
+                if (room.members.isEmpty()) {
+                    container.isVisible = false
+                    binding.emptyLabel.isVisible = true
+                    return
+                }
+                container.isVisible = true
+                binding.emptyLabel.isVisible = false
+
+                val visible = room.members.take(MAX_VISIBLE_AVATARS)
+                visible.forEachIndexed { index, member ->
+                    val label = member.username.ifEmpty { member.nickname }
+                    val (bg, fg) = AVATAR_PALETTE[index % AVATAR_PALETTE.size]
+                    container.addView(newAvatarView(avatarLetterFor(label), bg, fg, isFirst = index == 0))
+                }
+
+                val overflow = room.members.size - visible.size
+                if (overflow > 0) {
+                    val (bg, fg) = AVATAR_OVERFLOW_COLOR
+                    container.addView(newAvatarView("+$overflow", bg, fg, isFirst = false, small = true))
+                }
+            }
+
+            private fun newAvatarView(
+                text: String,
+                backgroundColor: Int,
+                textColor: Int,
+                isFirst: Boolean,
+                small: Boolean = false
+            ): TextView {
+                val sizePx = (22 * density).toInt()
+                val overlapPx = (-6 * density).toInt()
+                val strokePx = (1.5f * density).toInt()
+                val strokeColor = ContextCompat.getColor(context, R.color.material_dynamic_neutral95)
+
+                return TextView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(sizePx, sizePx).apply {
+                        if (!isFirst) marginStart = overlapPx
+                    }
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(backgroundColor)
+                        setStroke(strokePx, strokeColor)
+                    }
+                    gravity = Gravity.CENTER
+                    setTextColor(textColor)
+                    textSize = if (small) 9f else 10f
+                    setTypeface(typeface, Typeface.BOLD)
+                    includeFontPadding = false
+                    this.text = text
+                }
             }
         }
 
@@ -305,10 +418,10 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                     val old = rooms[oldItemPosition]
                     val new = newRooms[newItemPosition]
                     return old.members.size == new.members.size &&
-                           old.maxPlayers == new.maxPlayers &&
-                           old.name == new.name &&
-                           old.hasPassword == new.hasPassword &&
-                           old.preferredGameName == new.preferredGameName
+                        old.maxPlayers == new.maxPlayers &&
+                        old.name == new.name &&
+                        old.hasPassword == new.hasPassword &&
+                        old.preferredGameName == new.preferredGameName
                 }
             })
 
@@ -347,11 +460,11 @@ class LobbyBrowser(context: Context) : BottomSheetDialog(context) {
                 if (query.isNotEmpty()) {
                     filteredList = filteredList.filter { room ->
                         room.name.lowercase(Locale.getDefault()).contains(query) ||
-                        room.owner.lowercase(Locale.getDefault()).contains(query) ||
-                        room.preferredGameName.lowercase(Locale.getDefault()).contains(query) ||
-                        room.members.any { member ->
-                            member.nickname.lowercase(Locale.getDefault()).contains(query)
-                        }
+                            room.owner.lowercase(Locale.getDefault()).contains(query) ||
+                            room.preferredGameName.lowercase(Locale.getDefault()).contains(query) ||
+                            room.members.any { member ->
+                                member.nickname.lowercase(Locale.getDefault()).contains(query)
+                            }
                     }
                 }
 

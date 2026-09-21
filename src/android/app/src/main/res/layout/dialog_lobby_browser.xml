@@ -18,148 +18,108 @@
             android:orientation="vertical"
             app:layout_scrollFlags="scroll|enterAlways|snap">
 
+            <!-- Title -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
                 android:paddingHorizontal="16dp"
-                android:paddingTop="10dp">
+                android:paddingTop="16dp"
+                android:gravity="center_vertical">
 
                 <TextView
                     android:id="@+id/title"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
                     android:text="@string/multiplayer_room_browser"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                    android:textSize="19sp" />
+                    android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
+                <!-- Username pill: avatar initial + inline-editable name -->
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/username_card"
-                    style="?attr/materialCardViewOutlinedStyle"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
-                    android:layout_marginStart="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
                     app:cardBackgroundColor="?attr/colorSecondaryContainer"
-                    app:cardCornerRadius="12dp"
-                    app:strokeColor="?attr/colorOutline"
-                    app:strokeWidth="1dp">
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp">
 
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingStart="5dp"
-                        android:paddingEnd="8dp">
+                        android:paddingStart="4dp"
+                        android:paddingEnd="10dp"
+                        android:gravity="center_vertical">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:background="@drawable/bg_number_circle"
-                            android:backgroundTint="?attr/colorOnSecondaryContainer"
-                            android:padding="4dp"
-                            android:src="@drawable/ic_user"
-                            app:tint="?attr/colorSecondaryContainer" />
+                        <TextView
+                            android:id="@+id/username_avatar"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:gravity="center"
+                            android:includeFontPadding="false"
+                            android:textColor="?attr/colorOnPrimaryContainer"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            tools:text="A" />
 
-                        <LinearLayout
-                            android:layout_width="wrap_content"
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/username_input"
+                            android:layout_width="76dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:includeFontPadding="false"
-                                android:text="@string/multiplayer_username"
-                                android:textColor="?attr/colorOnSecondaryContainer"
-                                android:textSize="9sp" />
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/username_input"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:background="@android:color/transparent"
-                                android:ellipsize="end"
-                                android:imeOptions="actionDone"
-                                android:includeFontPadding="false"
-                                android:inputType="textPersonName"
-                                android:maxLines="1"
-                                android:maxWidth="80dp"
-                                android:minWidth="48dp"
-                                android:padding="0dp"
-                                android:textColor="?attr/colorOnSurface"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
+                            android:layout_marginStart="8dp"
+                            android:background="@android:color/transparent"
+                            android:ellipsize="end"
+                            android:hint="@string/multiplayer_username"
+                            android:imeOptions="actionDone"
+                            android:inputType="text"
+                            android:maxLines="1"
+                            android:textColor="?attr/colorOnSecondaryContainer"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
 
                         <ImageView
-                            android:id="@+id/edit_username_button"
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:layout_marginStart="6dp"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:layout_marginStart="4dp"
+                            android:contentDescription="@null"
                             android:src="@drawable/ic_edit"
                             app:tint="?attr/colorOnSecondaryContainer" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView
-                    style="?attr/materialCardViewOutlinedStyle"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:layout_marginStart="6dp"
-                    app:cardBackgroundColor="?attr/colorSecondaryContainer"
-                    app:cardCornerRadius="12dp"
-                    app:strokeColor="?attr/colorOutline"
-                    app:strokeWidth="1dp">
-
-                    <ImageView
-                        android:id="@+id/refresh_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:background="?attr/selectableItemBackground"
-                        android:padding="8dp"
-                        android:src="@drawable/ic_refresh"
-                        app:tint="?attr/colorOnSecondaryContainer" />
-
-                    <ProgressBar
-                        android:id="@+id/progress_bar"
-                        style="?android:attr/progressBarStyleSmall"
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:layout_gravity="center"
-                        android:visibility="gone" />
-                </com.google.android.material.card.MaterialCardView>
+                <!-- Refresh button, rotates in place while loading -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/refresh_button"
+                    style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:contentDescription="@string/refresh"
+                    app:icon="@drawable/ic_refresh"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp" />
             </LinearLayout>
 
+            <!-- Search -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/search_background"
                 style="?attr/materialCardViewFilledStyle"
                 android:layout_width="match_parent"
-                android:layout_height="36dp"
+                android:layout_height="48dp"
                 android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="8dp"
-                app:cardCornerRadius="18dp">
+                android:layout_marginTop="12dp"
+                app:cardCornerRadius="24dp">
 
                 <LinearLayout
-                    android:id="@+id/search_container"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_marginStart="14dp"
-                    android:layout_marginEnd="44dp"
-                    android:orientation="horizontal">
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="48dp"
+                    android:gravity="center_vertical">
 
                     <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:layout_gravity="center_vertical"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
                         android:layout_marginEnd="12dp"
+                        android:contentDescription="@null"
                         android:src="@drawable/ic_search"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
@@ -172,26 +132,25 @@
                         android:imeOptions="flagNoFullscreen"
                         android:inputType="text"
                         android:maxLines="1"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="4dp"
-                        android:textSize="13sp" />
+                        android:textSize="14sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:id="@+id/clear_button"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
                     android:layout_gravity="center_vertical|end"
-                    android:layout_marginEnd="14dp"
-                    android:background="?attr/selectableItemBackground"
+                    android:layout_marginEnd="16dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/clear_search"
                     android:src="@drawable/ic_clear"
                     android:visibility="invisible"
                     app:tint="?attr/colorOnSurfaceVariant"
                     tools:visibility="visible" />
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Filter chips -->
             <HorizontalScrollView
-                android:id="@+id/horizontalScrollView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginVertical="8dp"
@@ -205,7 +164,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:clipToPadding="false"
-                    app:chipSpacingHorizontal="6dp"
+                    app:chipSpacingHorizontal="8dp"
                     app:singleLine="true"
                     app:singleSelection="false">
 
@@ -215,10 +174,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checkable="true"
-                        android:text="@string/multiplayer_hide_empty_rooms"
-                        android:textSize="12sp"
-                        app:chipMinHeight="26dp"
-                        app:ensureMinTouchTargetSize="false" />
+                        android:text="@string/multiplayer_hide_empty_rooms" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_hide_full"
@@ -226,10 +182,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checkable="true"
-                        android:text="@string/multiplayer_hide_full_rooms"
-                        android:textSize="12sp"
-                        app:chipMinHeight="26dp"
-                        app:ensureMinTouchTargetSize="false" />
+                        android:text="@string/multiplayer_hide_full_rooms" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_hide_locked"
@@ -237,10 +190,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checkable="true"
-                        android:text="Hide Locked Rooms"
-                        android:textSize="12sp"
-                        app:chipMinHeight="26dp"
-                        app:ensureMinTouchTargetSize="false" />
+                        android:text="@string/multiplayer_hide_locked_rooms" />
                 </com.google.android.material.chip.ChipGroup>
             </HorizontalScrollView>
         </LinearLayout>
@@ -251,6 +201,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
+        android:paddingHorizontal="4dp"
         android:paddingBottom="16dp"
         android:scrollbars="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
@@ -263,13 +214,15 @@
         android:gravity="center"
         android:orientation="vertical"
         android:padding="32dp"
-        android:visibility="gone">
+        android:visibility="gone"
+        tools:visibility="visible">
 
         <ImageView
             android:layout_width="72dp"
             android:layout_height="72dp"
             android:layout_marginBottom="16dp"
             android:alpha="0.5"
+            android:contentDescription="@null"
             android:src="@drawable/ic_refresh"
             app:tint="?attr/colorOnSurface" />
 
@@ -283,6 +236,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:gravity="center"
             android:text="@string/multiplayer_tap_refresh_to_check_again"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
 
