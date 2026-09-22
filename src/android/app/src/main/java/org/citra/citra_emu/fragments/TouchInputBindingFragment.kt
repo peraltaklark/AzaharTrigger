@@ -4,21 +4,23 @@
 
 package org.citra.citra_emu.fragments
 
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.os.Bundle
 import android.text.InputType
-import android.view.Gravity
 import android.view.LayoutInflater
-import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.PopupWindow
+import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -26,10 +28,13 @@ import java.util.Locale
 import kotlin.math.roundToInt
 import org.citra.citra_emu.R
 import org.citra.citra_emu.databinding.FragmentTouchInputBinding
+import org.citra.citra_emu.databinding.ItemProfilePickerRowBinding
+import org.citra.citra_emu.databinding.PopupProfilePickerBinding
 import org.citra.citra_emu.features.touchinput.TouchInputBinding
 import org.citra.citra_emu.features.touchinput.TouchInputBindingAdapter
 import org.citra.citra_emu.features.touchinput.TouchInputBindingManager
 import org.citra.citra_emu.features.touchinput.TouchInputBindingProfileManager
+import com.google.android.material.R as MaterialR
 
 class TouchInputBindingFragment : Fragment() {
     private var _binding: FragmentTouchInputBinding? = null
@@ -129,14 +134,13 @@ class TouchInputBindingFragment : Fragment() {
         }
 
         binding.profileCard.setOnClickListener { showProfilePicker(it) }
-        binding.profileMenuButton.setOnClickListener { showProfileMenu(it) }
         binding.deleteAllButton.setOnClickListener { showDeleteAllDialog() }
         binding.touchInputBindingView.onTouchPointSelected = { x, y ->
             selectBinding(null)
             showBindSheet(x, y)
         }
 
-        updateProfileName()
+        updateProfileChip()
         loadCurrentProfile()
     }
 
@@ -152,14 +156,15 @@ class TouchInputBindingFragment : Fragment() {
         ) { _, _ -> binding.touchInputBindingView.clearSelection() }
     }
 
-    private fun updateProfileName() {
+    private fun updateProfileChip() {
         binding.profileName.text = currentProfile
+        binding.profileAvatar.text = avatarLetterFor(currentProfile)
     }
 
     private fun selectProfile(profileName: String) {
         currentProfile = profileName
         profileManager.setCurrentProfile(profileName)
-        updateProfileName()
+        updateProfileChip()
         loadCurrentProfile()
     }
 
@@ -209,50 +214,136 @@ class TouchInputBindingFragment : Fragment() {
             .show(parentFragmentManager, BIND_SHEET_TAG)
     }
 
-    /** Lists every profile, with the current one checked, plus an item to create a new one. */
+    /**
+     * Dropdown anchored below the profile chip: every profile, the current one checked, then
+     * create, rename and delete for the current profile.
+     */
     private fun showProfilePicker(anchor: View) {
-        val profiles = profileManager.getProfiles()
+        val popupBinding = PopupProfilePickerBinding.inflate(LayoutInflater.from(requireContext()))
+        val container = popupBinding.profilePickerContent
 
-        PopupMenu(requireContext(), anchor, Gravity.START).apply {
-            profiles.forEachIndexed { index, name ->
-                menu.add(GROUP_PROFILES, MENU_PROFILE_BASE + index, index, name)
-            }
-            menu.setGroupCheckable(GROUP_PROFILES, true, true)
-            menu.findItem(MENU_PROFILE_BASE + profiles.indexOf(currentProfile))?.isChecked = true
-            menu.add(Menu.NONE, MENU_CREATE_PROFILE, profiles.size, R.string.create_profile)
+        val popupWindow = PopupWindow(
+            popupBinding.root,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            isOutsideTouchable = true
+            elevation = dpToPx(POPUP_ELEVATION_DP).toFloat()
+        }
 
-            setOnMenuItemClickListener { item ->
-                if (item.itemId == MENU_CREATE_PROFILE) {
-                    showCreateProfileDialog()
-                } else {
-                    val profile = profiles.getOrNull(item.itemId - MENU_PROFILE_BASE)
-                        ?: return@setOnMenuItemClickListener false
-                    if (profile != currentProfile) {
-                        selectProfile(profile)
+        profileManager.getProfiles().forEach { name ->
+            container.addView(
+                createProfileRow(name, selected = name == currentProfile) {
+                    popupWindow.dismiss()
+                    if (name != currentProfile) {
+                        selectProfile(name)
                     }
                 }
-                true
+            )
+        }
+
+        container.addView(createDivider())
+
+        container.addView(
+            createActionRow(R.drawable.ic_add, getString(R.string.create_profile)) {
+                popupWindow.dismiss()
+                showCreateProfileDialog()
             }
-            show()
+        )
+        container.addView(
+            createActionRow(
+                R.drawable.ic_edit,
+                getString(R.string.profile_action_rename_format, currentProfile)
+            ) {
+                popupWindow.dismiss()
+                showRenameProfileDialog()
+            }
+        )
+
+        val canDelete = currentProfile != TouchInputBindingProfileManager.DEFAULT_PROFILE
+        container.addView(
+            createActionRow(
+                R.drawable.ic_delete_outline,
+                getString(R.string.profile_action_delete_format, currentProfile),
+                destructive = true,
+                enabled = canDelete
+            ) {
+                popupWindow.dismiss()
+                showDeleteProfileDialog()
+            }
+        )
+        if (!canDelete) {
+            container.addView(createHintText(R.string.touch_input_cannot_delete_only_profile))
+        }
+
+        popupWindow.showAsDropDown(anchor, 0, dpToPx(POPUP_OFFSET_DP))
+    }
+
+    private fun createProfileRow(name: String, selected: Boolean, onClick: () -> Unit): View {
+        val rowBinding = ItemProfilePickerRowBinding.inflate(LayoutInflater.from(requireContext()))
+        rowBinding.rowAvatar.visibility = View.VISIBLE
+        rowBinding.rowAvatar.text = avatarLetterFor(name)
+        rowBinding.rowLabel.text = name
+        rowBinding.rowCheck.visibility = if (selected) View.VISIBLE else View.GONE
+        rowBinding.root.setOnClickListener { onClick() }
+        return rowBinding.root
+    }
+
+    private fun createActionRow(
+        @DrawableRes iconRes: Int,
+        label: String,
+        destructive: Boolean = false,
+        enabled: Boolean = true,
+        onClick: () -> Unit
+    ): View {
+        val rowBinding = ItemProfilePickerRowBinding.inflate(LayoutInflater.from(requireContext()))
+        val color = themeColor(
+            if (destructive) MaterialR.attr.colorError else MaterialR.attr.colorOnSurfaceVariant
+        )
+
+        rowBinding.rowIcon.visibility = View.VISIBLE
+        rowBinding.rowIcon.setImageResource(iconRes)
+        rowBinding.rowIcon.imageTintList = ColorStateList.valueOf(color)
+        rowBinding.rowLabel.text = label
+        rowBinding.rowLabel.setTextColor(
+            if (destructive) color else themeColor(MaterialR.attr.colorOnSurface)
+        )
+
+        rowBinding.root.isEnabled = enabled
+        rowBinding.root.alpha = if (enabled) 1f else DISABLED_ALPHA
+        rowBinding.root.setOnClickListener { if (enabled) onClick() }
+        return rowBinding.root
+    }
+
+    private fun createDivider(): View =
+        View(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dpToPx(1)
+            ).apply {
+                topMargin = dpToPx(4)
+                bottomMargin = dpToPx(4)
+                marginStart = dpToPx(16)
+                marginEnd = dpToPx(16)
+            }
+            alpha = DIVIDER_ALPHA
+            setBackgroundColor(themeColor(MaterialR.attr.colorOutline))
+        }
+
+    private fun createHintText(@StringRes textRes: Int): View {
+        val style = MaterialR.style.TextAppearance_Material3_BodySmall
+        return TextView(requireContext(), null, 0, style).apply {
+            setText(textRes)
+            setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
+            setPadding(dpToPx(HINT_TEXT_START_DP), 0, dpToPx(16), dpToPx(8))
         }
     }
 
-    private fun showProfileMenu(anchor: View) {
-        PopupMenu(requireContext(), anchor).apply {
-            menu.add(Menu.NONE, MENU_RENAME_PROFILE, 1, R.string.rename_profile)
-            menu.add(Menu.NONE, MENU_DELETE_PROFILE, 2, R.string.delete_profile)
+    private fun avatarLetterFor(name: String): String =
+        name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
 
-            setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    MENU_RENAME_PROFILE -> showRenameProfileDialog()
-                    MENU_DELETE_PROFILE -> showDeleteProfileDialog()
-                    else -> return@setOnMenuItemClickListener false
-                }
-                true
-            }
-            show()
-        }
-    }
+    private fun themeColor(attr: Int): Int = MaterialColors.getColor(requireContext(), attr, 0)
 
     private fun showCreateProfileDialog() {
         val nameField = createTextField(R.string.profile_name)
@@ -288,7 +379,7 @@ class TouchInputBindingFragment : Fragment() {
 
                 if (profileManager.renameProfile(currentProfile, newName)) {
                     currentProfile = newName
-                    updateProfileName()
+                    updateProfileChip()
                 } else {
                     showToast(R.string.profile_name_already_exists)
                 }
@@ -384,7 +475,7 @@ class TouchInputBindingFragment : Fragment() {
         val layout = TextInputLayout(
             requireContext(),
             null,
-            com.google.android.material.R.attr.textInputOutlinedStyle
+            MaterialR.attr.textInputOutlinedStyle
         ).apply {
             setHint(hintRes)
             setBoxCornerRadii(cornerRadius, cornerRadius, cornerRadius, cornerRadius)
@@ -437,13 +528,10 @@ class TouchInputBindingFragment : Fragment() {
 
         private const val TEXT_FIELD_CORNER_RADIUS_DP = 28
         private const val DISABLED_ALPHA = 0.38f
+        private const val DIVIDER_ALPHA = 0.3f
+        private const val HINT_TEXT_START_DP = 52
 
-        private const val MENU_CREATE_PROFILE = Menu.FIRST
-        private const val MENU_RENAME_PROFILE = Menu.FIRST + 1
-        private const val MENU_DELETE_PROFILE = Menu.FIRST + 2
-
-        // Profile items in the picker use ids from MENU_PROFILE_BASE upwards
-        private const val GROUP_PROFILES = 1
-        private const val MENU_PROFILE_BASE = 100
+        private const val POPUP_ELEVATION_DP = 8
+        private const val POPUP_OFFSET_DP = 4
     }
 }

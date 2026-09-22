@@ -133,16 +133,14 @@ class TouchInputBindingView @JvmOverloads constructor(
         drawGrid(canvas)
         canvas.drawRoundRect(screenRect, corner, corner, outlinePaint)
 
-        val showTags = screenRect.width() >= MIN_TAG_SCREEN_WIDTH_DP * density
-
         // The highlighted binding is drawn last so that it ends up on top
         bindings.forEachIndexed { index, binding ->
             if (index != highlightedIndex) {
-                drawBinding(canvas, binding, index, selected = false, showTag = showTags)
+                drawBinding(canvas, binding, index, selected = false)
             }
         }
         bindings.getOrNull(highlightedIndex)?.let {
-            drawBinding(canvas, it, highlightedIndex, selected = true, showTag = showTags)
+            drawBinding(canvas, it, highlightedIndex, selected = true)
         }
 
         // A tapped position that isn't bound yet is shown as an empty, highlighted dot
@@ -231,14 +229,13 @@ class TouchInputBindingView @JvmOverloads constructor(
         canvas: Canvas,
         binding: TouchInputBinding,
         index: Int,
-        selected: Boolean,
-        showTag: Boolean
+        selected: Boolean
     ) {
         val x = screenRect.left + binding.x * screenRect.width()
         val y = screenRect.top + binding.y * screenRect.height()
 
-        if (showTag) {
-            drawTag(canvas, tagTexts[index], x, y, selected)
+        if (selected && screenRect.width() >= MIN_TAG_SCREEN_WIDTH_DP * density) {
+            drawTag(canvas, tagTexts[index], x, y, selected = true)
         }
         drawDot(canvas, x, y, number = index + 1, selected = selected)
     }

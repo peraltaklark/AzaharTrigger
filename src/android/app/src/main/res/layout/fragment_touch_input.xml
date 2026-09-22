@@ -7,71 +7,59 @@
     android:orientation="vertical">
 
     <!-- Profile picker -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/profileCard"
+        style="@style/Widget.Azahar.TouchInput.Card.Pill"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
         android:layout_marginStart="@dimen/touch_input_margin"
         android:layout_marginTop="8dp"
-        android:layout_marginEnd="@dimen/touch_input_margin"
         android:layout_marginBottom="@dimen/touch_input_card_gap"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:clickable="true"
+        android:contentDescription="@string/profile"
+        android:focusable="true">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/profileCard"
-            style="@style/Widget.Azahar.TouchInput.Card.Pill"
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:clickable="true"
-            android:contentDescription="@string/profile"
-            android:focusable="true">
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="10dp">
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/profileAvatar"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_profile_avatar"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textColor="?attr/colorOnPrimaryContainer"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/profileName"
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="10dp">
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:ellipsize="end"
+                android:maxWidth="200dp"
+                android:maxLines="1"
+                android:textAppearance="?attr/textAppearanceLabelLarge"
+                android:textColor="?attr/colorOnSecondaryContainer" />
 
-                <TextView
-                    android:id="@+id/profileName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxWidth="220dp"
-                    android:maxLines="1"
-                    android:textAppearance="?attr/textAppearanceLabelLarge"
-                    android:textColor="?attr/colorOnSecondaryContainer" />
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="4dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_profile_dropdown"
+                app:tint="?attr/colorOnSecondaryContainer" />
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_marginStart="4dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_profile_dropdown"
-                    app:tint="?attr/colorOnSecondaryContainer" />
+        </LinearLayout>
 
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <ImageView
-            android:id="@+id/profileMenuButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/profile_options"
-            android:padding="8dp"
-            android:src="@drawable/ic_overflow_menu"
-            app:tint="?attr/colorOnSurfaceVariant" />
-
-    </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- Touchscreen preview, sized by its width and always 4:3 -->
     <com.google.android.material.card.MaterialCardView
