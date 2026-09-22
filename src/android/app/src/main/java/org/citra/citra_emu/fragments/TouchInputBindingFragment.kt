@@ -14,7 +14,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupWindow
-import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -158,7 +157,7 @@ class TouchInputBindingFragment : Fragment() {
 
     private fun updateProfileChip() {
         binding.profileName.text = currentProfile
-        binding.profileAvatar.text = avatarLetterFor(currentProfile)
+        binding.profileAvatar?.text = avatarLetterFor(currentProfile)
     }
 
     private fun selectProfile(profileName: String) {
@@ -273,9 +272,6 @@ class TouchInputBindingFragment : Fragment() {
                 showDeleteProfileDialog()
             }
         )
-        if (!canDelete) {
-            container.addView(createHintText(R.string.touch_input_cannot_delete_only_profile))
-        }
 
         popupWindow.showAsDropDown(anchor, 0, dpToPx(POPUP_OFFSET_DP))
     }
@@ -298,17 +294,17 @@ class TouchInputBindingFragment : Fragment() {
         onClick: () -> Unit
     ): View {
         val rowBinding = ItemProfilePickerRowBinding.inflate(LayoutInflater.from(requireContext()))
-        val color = themeColor(
-            if (destructive) MaterialR.attr.colorError else MaterialR.attr.colorOnSurfaceVariant
+        val useErrorColor = destructive && enabled
+        val iconColor = themeColor(
+            if (useErrorColor) MaterialR.attr.colorError else MaterialR.attr.colorOnSurfaceVariant
         )
+        val labelColor = if (useErrorColor) iconColor else themeColor(MaterialR.attr.colorOnSurface)
 
         rowBinding.rowIcon.visibility = View.VISIBLE
         rowBinding.rowIcon.setImageResource(iconRes)
-        rowBinding.rowIcon.imageTintList = ColorStateList.valueOf(color)
+        rowBinding.rowIcon.imageTintList = ColorStateList.valueOf(iconColor)
         rowBinding.rowLabel.text = label
-        rowBinding.rowLabel.setTextColor(
-            if (destructive) color else themeColor(MaterialR.attr.colorOnSurface)
-        )
+        rowBinding.rowLabel.setTextColor(labelColor)
 
         rowBinding.root.isEnabled = enabled
         rowBinding.root.alpha = if (enabled) 1f else DISABLED_ALPHA
@@ -330,15 +326,6 @@ class TouchInputBindingFragment : Fragment() {
             alpha = DIVIDER_ALPHA
             setBackgroundColor(themeColor(MaterialR.attr.colorOutline))
         }
-
-    private fun createHintText(@StringRes textRes: Int): View {
-        val style = MaterialR.style.TextAppearance_Material3_BodySmall
-        return TextView(requireContext(), null, 0, style).apply {
-            setText(textRes)
-            setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
-            setPadding(dpToPx(HINT_TEXT_START_DP), 0, dpToPx(16), dpToPx(8))
-        }
-    }
 
     private fun avatarLetterFor(name: String): String =
         name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
@@ -529,7 +516,6 @@ class TouchInputBindingFragment : Fragment() {
         private const val TEXT_FIELD_CORNER_RADIUS_DP = 28
         private const val DISABLED_ALPHA = 0.38f
         private const val DIVIDER_ALPHA = 0.3f
-        private const val HINT_TEXT_START_DP = 52
 
         private const val POPUP_ELEVATION_DP = 8
         private const val POPUP_OFFSET_DP = 4
