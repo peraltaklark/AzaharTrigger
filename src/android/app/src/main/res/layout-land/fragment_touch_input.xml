@@ -46,10 +46,10 @@
                         android:id="@+id/profileAvatar"
                         android:layout_width="28dp"
                         android:layout_height="28dp"
-                        android:background="@drawable/bg_profile_avatar"
+                        android:background="@drawable/bg_avatar_circle"
                         android:gravity="center"
                         android:includeFontPadding="false"
-                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:textColor="?attr/colorOnPrimary"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
