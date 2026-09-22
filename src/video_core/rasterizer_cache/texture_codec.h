@@ -9,7 +9,9 @@
 #include <span>
 #include "common/alignment.h"
 #include "common/color.h"
+#include "common/settings.h"
 #include "video_core/rasterizer_cache/pixel_format.h"
+#include "video_core/rasterizer_cache/texture_codec_neon.h"
 #include "video_core/texture/etc1.h"
 #include "video_core/utils.h"
 
@@ -484,12 +486,58 @@ static constexpr std::array<LinearFunc, 18> LINEAR_DECODE_TABLE = {
     LinearCopy<true, PixelFormat::D24S8>, // 17
 };
 
+// These wrap the scalar LinearCopy<true, format, true> instantiations with a
+// runtime check of Settings::values.use_simd_texture_decode and, on arm64,
+// dispatch to the NEON versions in texture_codec_neon.h when enabled. The
+// check happens once per whole-buffer call (not per pixel), so its cost is
+// negligible either way. On non-arm64 builds this always falls through to
+// the original scalar path.
+inline void LinearDecodeRGBA8Converted(std::span<u8> src, std::span<u8> dst) {
+#if CITRA_ARCH(arm64)
+    if (Settings::values.use_simd_texture_decode.GetValue()) {
+        NeonDecode::DecodeRGBA8(src, dst);
+        return;
+    }
+#endif
+    LinearCopy<true, PixelFormat::RGBA8, true>(src, dst);
+}
+
+inline void LinearDecodeRGB565Converted(std::span<u8> src, std::span<u8> dst) {
+#if CITRA_ARCH(arm64)
+    if (Settings::values.use_simd_texture_decode.GetValue()) {
+        NeonDecode::DecodeRGB565(src, dst);
+        return;
+    }
+#endif
+    LinearCopy<true, PixelFormat::RGB565, true>(src, dst);
+}
+
+inline void LinearDecodeRGB5A1Converted(std::span<u8> src, std::span<u8> dst) {
+#if CITRA_ARCH(arm64)
+    if (Settings::values.use_simd_texture_decode.GetValue()) {
+        NeonDecode::DecodeRGB5A1(src, dst);
+        return;
+    }
+#endif
+    LinearCopy<true, PixelFormat::RGB5A1, true>(src, dst);
+}
+
+inline void LinearDecodeRGBA4Converted(std::span<u8> src, std::span<u8> dst) {
+#if CITRA_ARCH(arm64)
+    if (Settings::values.use_simd_texture_decode.GetValue()) {
+        NeonDecode::DecodeRGBA4(src, dst);
+        return;
+    }
+#endif
+    LinearCopy<true, PixelFormat::RGBA4, true>(src, dst);
+}
+
 static constexpr std::array<LinearFunc, 18> LINEAR_DECODE_TABLE_CONVERTED = {
-    LinearCopy<true, PixelFormat::RGBA8, true>,  // 0
+    LinearDecodeRGBA8Converted,  // 0
     LinearCopy<true, PixelFormat::RGB8, true>,   // 1
-    LinearCopy<true, PixelFormat::RGB5A1, true>, // 2
-    LinearCopy<true, PixelFormat::RGB565, true>, // 3
-    LinearCopy<true, PixelFormat::RGBA4, true>,  // 4
+    LinearDecodeRGB5A1Converted, // 2
+    LinearDecodeRGB565Converted, // 3
+    LinearDecodeRGBA4Converted,  // 4
     // These formats cannot be used linearly and can be ignored.
     nullptr,                                  // 5
     nullptr,                                  // 6

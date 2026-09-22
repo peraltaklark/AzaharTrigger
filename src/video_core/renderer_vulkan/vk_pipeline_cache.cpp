@@ -3,6 +3,7 @@
 // Refer to the license.txt file included.
 
 #include <boost/container/static_vector.hpp>
+#include <cstring>
 
 #include "common/common_paths.h"
 #include "common/file_util.h"
@@ -303,6 +304,15 @@ void PipelineCache::LoadDiskCache(const std::atomic_bool& stop_loading,
         disk_caches.emplace_back(std::make_shared<ShaderDiskCache>(*this, GetProgramID()));
 
     curr_disk_cache->Init(stop_loading, callback);
+
+    // The GraphicsPipeline objects owned by the previous disk cache(s) are
+    // destroyed by the clear() above. current_pipeline must not be left
+    // pointing at one of them: previously this was safe only because
+    // current_pipeline was solely used in a pointer *comparison* below; the
+    // BindPipeline() fast path above now also dereferences it directly, so a
+    // stale pointer here would be a use-after-free.
+    current_pipeline = nullptr;
+    current_info = {};
 }
 
 void PipelineCache::SwitchDiskCache(u64 title_id, const std::atomic_bool& stop_loading,
@@ -370,7 +380,23 @@ bool PipelineCache::BindPipeline(PipelineInfo& info, bool wait_built) {
         info.state.shader_ids[i] = shader_hashes[i];
     }
 
-    GraphicsPipeline* const pipeline = curr_disk_cache->GetPipeline(info);
+    // Fast path: 3DS games frequently issue runs of draw calls that share the
+    // exact same pipeline-relevant state (batched small draws, particle
+    // systems, repeated UI elements, etc). GetPipeline() otherwise pays for a
+    // full-struct hash plus a hashmap probe on every single draw even when
+    // the state is byte-identical to what we already have bound. Since
+    // StaticPipelineInfo is a trivial/POD type (see static_assert below),
+    // comparing it against the state we bound last draw is a cheap way to
+    // detect that case and skip straight to the cached pipeline.
+    // This can only ever produce a false negative (e.g. due to padding
+    // bytes), never a false positive, so falling through to the original
+    // hash + lookup remains correct in every case.
+    GraphicsPipeline* pipeline = current_pipeline;
+    if (!current_pipeline ||
+        std::memcmp(&info.state, &current_info.state, sizeof(info.state)) != 0) {
+        pipeline = curr_disk_cache->GetPipeline(info);
+    }
+
     if (!pipeline->IsDone() && !pipeline->TryBuild(wait_built)) {
         return false;
     }

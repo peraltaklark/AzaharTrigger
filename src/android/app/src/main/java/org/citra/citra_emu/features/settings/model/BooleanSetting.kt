@@ -107,6 +107,7 @@ enum class BooleanSetting(
         false
     ),
     DISK_SHADER_CACHE(SettingKeys.use_disk_shader_cache(), Settings.SECTION_RENDERER, true),
+    SIMD_TEXTURE_DECODE(SettingKeys.use_simd_texture_decode(), Settings.SECTION_RENDERER, true),
     DUMP_TEXTURES(SettingKeys.dump_textures(), Settings.SECTION_UTILITY, false),
     CUSTOM_TEXTURES(SettingKeys.custom_textures(), Settings.SECTION_UTILITY, false),
     ASYNC_CUSTOM_LOADING(SettingKeys.async_custom_loading(), Settings.SECTION_UTILITY, true),

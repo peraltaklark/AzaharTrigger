@@ -1097,6 +1097,15 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
                 )
             )
             add(
+                SwitchSetting(
+                    BooleanSetting.SIMD_TEXTURE_DECODE,
+                    R.string.use_simd_texture_decode,
+                    R.string.use_simd_texture_decode_description,
+                    BooleanSetting.SIMD_TEXTURE_DECODE.key,
+                    BooleanSetting.SIMD_TEXTURE_DECODE.defaultValue
+                )
+            )
+            add(
                 SingleChoiceSetting(
                     IntSetting.TEXTURE_FILTER,
                     R.string.texture_filter_name,

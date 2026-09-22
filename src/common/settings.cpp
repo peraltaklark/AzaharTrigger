@@ -137,6 +137,7 @@ void LogSettings() {
     log_setting("Utility_PreloadTextures", values.preload_textures.GetValue());
     log_setting("Utility_AsyncCustomLoading", values.async_custom_loading.GetValue());
     log_setting("Utility_UseDiskShaderCache", values.use_disk_shader_cache.GetValue());
+    log_setting("Utility_UseSimdTextureDecode", values.use_simd_texture_decode.GetValue());
     log_setting("Audio_Emulation", GetAudioEmulationName(values.audio_emulation.GetValue()));
     log_setting("Audio_OutputType", values.output_type.GetValue());
     log_setting("Audio_OutputDevice", values.output_device.GetValue());
@@ -217,6 +218,7 @@ void RestoreGlobalState(bool is_powered_on) {
     values.async_presentation.SetGlobal(true);
     values.use_hw_shader.SetGlobal(true);
     values.use_disk_shader_cache.SetGlobal(true);
+    values.use_simd_texture_decode.SetGlobal(true);
     values.shaders_accurate_mul.SetGlobal(true);
     values.use_vsync.SetGlobal(true);
     values.use_skip_duplicate_frames.SetGlobal(true);

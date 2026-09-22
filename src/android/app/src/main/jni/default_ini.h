@@ -173,6 +173,10 @@ bottom_screen_half_res =
 # 0: Off, 1 (default. On)
 )") DECLARE_KEY(use_disk_shader_cache) BOOST_HANA_STRING(R"(
 
+# Use NEON-accelerated CPU texture format conversion on arm64 devices
+# 0: Off (scalar), 1 (default. On)
+)") DECLARE_KEY(use_simd_texture_decode) BOOST_HANA_STRING(R"(
+
 # Resolution scale factor
 # 0: Auto (scales resolution to window size), 1: Native 3DS screen resolution, Otherwise a scale
 # factor for the 3DS resolution
