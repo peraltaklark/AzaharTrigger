@@ -471,6 +471,8 @@
     <string name="create_profile">Create Profile</string>
     <string name="create_new_profile">Create New Profile</string>
     <string name="rename_profile">Rename Profile</string>
+	<string name="profile_action_rename_format">Rename \"%1$s\"</string>
+    <string name="profile_action_delete_format">Delete \"%1$s\"</string>
     <string name="delete_profile">Delete Profile</string>
     <string name="profile_name">Profile Name</string>
     <string name="edit_profile_name">Edit Profile Name</string>
