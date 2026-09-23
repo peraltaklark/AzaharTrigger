@@ -2084,6 +2084,15 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
             )
             add(
                 SwitchSetting(
+                    BooleanSetting.AGGRESSIVE_JIT_OPTIMIZATIONS,
+                    R.string.aggressive_jit_optimizations,
+                    R.string.aggressive_jit_optimizations_description,
+                    BooleanSetting.AGGRESSIVE_JIT_OPTIMIZATIONS.key,
+                    BooleanSetting.AGGRESSIVE_JIT_OPTIMIZATIONS.defaultValue
+                )
+            )
+            add(
+                SwitchSetting(
                     BooleanSetting.HW_SHADER,
                     R.string.hw_shaders,
                     R.string.hw_shaders_description,

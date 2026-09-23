@@ -401,6 +401,8 @@
 	<!-- Debug settings strings -->
 	<string name="cpu_jit">CPU JIT</string>
 	<string name="cpu_jit_description">Uses the Just-in-Time (JIT) compiler for CPU emulation. When enabled, game performance will be significantly improved.</string>
+	<string name="aggressive_jit_optimizations">Aggressive JIT Optimizations</string>
+	<string name="aggressive_jit_optimizations_description">Enables unsafe CPU optimizations for better performance in CPU-bound games like Monster Hunter. May cause issues in some games.</string>
 	<string name="hw_shaders">Enable Hardware Shader</string>
 	<string name="hw_shaders_description">Uses hardware to emulate 3DS shaders. When enabled, game performance will be significantly improved.</string>
 	<string name="cpu_clock_speed">CPU Clock Speed</string>

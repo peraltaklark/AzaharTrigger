@@ -9,6 +9,7 @@ foreach(KEY IN ITEMS
     "use_artic_base_controller"
     "enable_gamemode"
     "use_cpu_jit"
+    "use_aggressive_jit_optimizations"
     "use_fastmem"
     "bottom_screen_half_res"
     "cpu_clock_percentage"

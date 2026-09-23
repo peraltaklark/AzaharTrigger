@@ -121,6 +121,7 @@ enum class BooleanSetting(
         false
     ),
     CPU_JIT(SettingKeys.use_cpu_jit(), Settings.SECTION_CORE, true),
+    AGGRESSIVE_JIT_OPTIMIZATIONS(SettingKeys.use_aggressive_jit_optimizations(), Settings.SECTION_CORE, false),
     HW_SHADER(SettingKeys.use_hw_shader(), Settings.SECTION_RENDERER, true),
     SHADER_JIT(SettingKeys.use_shader_jit(), Settings.SECTION_RENDERER, true),
     VSYNC(SettingKeys.use_vsync(), Settings.SECTION_RENDERER, false),

@@ -361,6 +361,18 @@ std::unique_ptr<Dynarmic::A32::Jit> ARM_Dynarmic::MakeJit() {
     // Multi-process state
     config.processor_id = GetID();
     config.global_monitor = &exclusive_monitor.monitor;
+
+    // Enable aggressive optimizations if the setting is enabled
+    // Provides better performance in CPU-bound games like Monster Hunter
+    // Trade-off: slightly reduced accuracy in floating point operations
+    if (Settings::values.use_aggressive_jit_optimizations.GetValue()) {
+        config.optimizations = Dynarmic::OptimizationFlag::Unsafe_IgnoreGlobalMonitor |
+                              Dynarmic::OptimizationFlag::Unsafe_InaccurateNaN |
+                              Dynarmic::OptimizationFlag::Unsafe_UnfuseFMA |
+                              Dynarmic::OptimizationFlag::Unsafe_IgnoreStandardFPCRValue |
+                              Dynarmic::OptimizationFlag::Unsafe_ReducedErrorFP;
+    }
+
     if (Settings::values.use_fastmem) {
         const uintptr_t arena_base = memory.GetFastmemArenaBase(current_page_table);
         if (arena_base != 0) {
