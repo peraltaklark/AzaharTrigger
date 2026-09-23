@@ -45,6 +45,7 @@ foreach(KEY IN ITEMS
     "use_hw_shader"
     "use_disk_shader_cache"
     "use_simd_texture_decode"
+    "use_performance_hints"
     "shaders_accurate_mul"
     "use_vsync"
     "use_skip_duplicate_frames"

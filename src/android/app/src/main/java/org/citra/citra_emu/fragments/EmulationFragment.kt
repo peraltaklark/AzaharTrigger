@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.Process
 import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
@@ -1882,6 +1883,17 @@ class EmulationFragment :
                 State.STOPPED -> {
                     Thread({
                         Log.debug("[EmulationFragment] Starting emulation thread.")
+                        if (BooleanSetting.PERFORMANCE_HINTS.boolean) {
+                            // This is the single host thread that runs the entire 3DS CPU
+                            // emulation loop every frame, so it's the one thread in the app
+                            // where getting deprioritized by the OS scheduler (e.g. by
+                            // background system activity) directly costs frame time.
+                            // THREAD_PRIORITY_URGENT_DISPLAY is Android's own sanctioned
+                            // priority level for exactly this kind of frame-critical thread,
+                            // unlike raw POSIX nice()/setpriority() which Android's cgroups
+                            // may not honor consistently for a regular app.
+                            Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY)
+                        }
                         NativeLibrary.run(gamePath)
                     }, "NativeEmulation").start()
                 }

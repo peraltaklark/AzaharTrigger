@@ -540,6 +540,7 @@ struct Values {
     SwitchableSetting<bool> use_hw_shader{true, Keys::use_hw_shader};
     SwitchableSetting<bool> use_disk_shader_cache{true, Keys::use_disk_shader_cache};
     SwitchableSetting<bool> use_simd_texture_decode{true, Keys::use_simd_texture_decode};
+    SwitchableSetting<bool> use_performance_hints{true, Keys::use_performance_hints};
     SwitchableSetting<bool> use_skip_duplicate_frames{true, Keys::use_skip_duplicate_frames};
     SwitchableSetting<bool> shaders_accurate_mul{true, Keys::shaders_accurate_mul};
 #ifdef ANDROID // TODO: Fuck this -OS

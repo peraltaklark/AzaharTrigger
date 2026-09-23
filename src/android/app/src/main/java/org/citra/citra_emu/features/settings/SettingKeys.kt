@@ -43,6 +43,7 @@ object SettingKeys {
     external fun adreno_gpu_boost(): String
     external fun use_disk_shader_cache(): String
     external fun use_simd_texture_decode(): String
+    external fun use_performance_hints(): String
     external fun shaders_accurate_mul(): String
     external fun use_vsync(): String
     external fun use_skip_duplicate_frames(): String

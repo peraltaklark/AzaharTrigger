@@ -177,6 +177,11 @@ bottom_screen_half_res =
 # 0: Off (scalar), 1 (default. On)
 )") DECLARE_KEY(use_simd_texture_decode) BOOST_HANA_STRING(R"(
 
+# Request OS-level scheduling/performance hints for the emulation thread
+# (Android sustained performance mode + elevated thread priority)
+# 0: Off, 1 (default. On)
+)") DECLARE_KEY(use_performance_hints) BOOST_HANA_STRING(R"(
+
 # Resolution scale factor
 # 0: Auto (scales resolution to window size), 1: Native 3DS screen resolution, Otherwise a scale
 # factor for the 3DS resolution

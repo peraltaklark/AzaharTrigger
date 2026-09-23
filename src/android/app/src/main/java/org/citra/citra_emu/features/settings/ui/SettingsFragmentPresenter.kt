@@ -1106,6 +1106,15 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
                 )
             )
             add(
+                SwitchSetting(
+                    BooleanSetting.PERFORMANCE_HINTS,
+                    R.string.use_performance_hints,
+                    R.string.use_performance_hints_description,
+                    BooleanSetting.PERFORMANCE_HINTS.key,
+                    BooleanSetting.PERFORMANCE_HINTS.defaultValue
+                )
+            )
+            add(
                 SingleChoiceSetting(
                     IntSetting.TEXTURE_FILTER,
                     R.string.texture_filter_name,

@@ -108,6 +108,12 @@ class EmulationActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
         NativeLibrary.enableAdrenoTurboMode(BooleanSetting.ADRENO_GPU_BOOST.boolean)
+        if (BooleanSetting.PERFORMANCE_HINTS.boolean) {
+            // Tells Android this activity needs consistent sustained throughput rather than
+            // short bursts, which on many SoCs avoids a boost-clock-then-thermal-throttle
+            // sawtooth under long emulation sessions. No-op on devices that don't support it.
+            window.setSustainedPerformanceMode(true)
+        }
         NativeLibrary.initMultiplayer()
         secondaryDisplayManager = SecondaryDisplay(this)
         secondaryDisplayManager.updateDisplay()
