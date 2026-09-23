@@ -12,10 +12,11 @@
 #include "enet/enet.h"
 #include "network/packet.h"
 #include "network/room_member.h"
+#include "network/network_optimizations.h"
 
 namespace Network {
 
-constexpr u32 ConnectionTimeoutMs = 5000;
+constexpr u32 ConnectionTimeoutMs = Optimizations::CONNECTION_TIMEOUT_MS;
 
 class RoomMember::RoomMemberImpl {
 public:
@@ -162,7 +163,7 @@ void RoomMember::RoomMemberImpl::MemberLoop() {
     while (IsConnected()) {
         std::lock_guard network_lock(network_mutex);
         ENetEvent event;
-        if (enet_host_service(client, &event, 16) > 0) {
+        if (enet_host_service(client, &event, Optimizations::SERVICE_TIMEOUT_MS) > 0) {
             switch (event.type) {
             case ENET_EVENT_TYPE_RECEIVE:
                 switch (event.packet->data[0]) {
@@ -567,8 +568,13 @@ void RoomMember::Join(const std::string& nick, const std::string& console_id_has
     }
 
     if (!room_member_impl->client) {
-        room_member_impl->client = enet_host_create(nullptr, 1, NumChannels, 0, 0);
+        room_member_impl->client = enet_host_create(nullptr, 1, NumChannels,
+                                                     Optimizations::INCOMING_BANDWIDTH,
+                                                     Optimizations::OUTGOING_BANDWIDTH);
         ASSERT_MSG(room_member_impl->client != nullptr, "Could not create client");
+
+        // Apply network optimizations
+        Optimizations::EnableCompression(room_member_impl->client);
     }
 
     room_member_impl->SetState(State::Joining);
@@ -589,6 +595,9 @@ void RoomMember::Join(const std::string& nick, const std::string& console_id_has
     ENetEvent event{};
     int net = enet_host_service(room_member_impl->client, &event, ConnectionTimeoutMs);
     if (net > 0 && event.type == ENET_EVENT_TYPE_CONNECT) {
+        // Configure peer timeout settings for stable connection
+        Optimizations::ConfigurePeerTimeouts(room_member_impl->server);
+
         room_member_impl->nickname = nick;
         room_member_impl->StartLoop();
         room_member_impl->SendJoinRequest(nick, console_id_hash, preferred_mac, password, token);

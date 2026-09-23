@@ -57,10 +57,12 @@ constexpr std::size_t MaxBeaconFrames = 15;
 // Network node id used when a SecureData packet is addressed to every connected node.
 constexpr u16 BroadcastNetworkNodeId = 0xFFFF;
 
-constexpr std::chrono::milliseconds HEARTBEAT_INTERVAL{500};
-constexpr std::chrono::milliseconds CONNECTION_TIMEOUT{90000};
-constexpr std::chrono::milliseconds RECONNECT_DELAY{2000};
-constexpr int MAX_RECONNECT_ATTEMPTS = 3;
+// Optimized heartbeat and timeout settings for better connection stability
+// Original values were too conservative, causing disconnections on slower networks
+constexpr std::chrono::milliseconds HEARTBEAT_INTERVAL{250};     // Reduced from 500ms for faster detection
+constexpr std::chrono::milliseconds CONNECTION_TIMEOUT{30000};   // Reduced from 90s to 30s
+constexpr std::chrono::milliseconds RECONNECT_DELAY{1000};       // Reduced from 2s to 1s
+constexpr int MAX_RECONNECT_ATTEMPTS = 5;                        // Increased from 3 to 5
 constexpr u8 HEARTBEAT_CHANNEL = 0xF;
 
 // The Host has always dest_node_id 1

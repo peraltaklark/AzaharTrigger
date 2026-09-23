@@ -137,11 +137,16 @@ bool MelonLANAdapter::StartHost(const std::string& player_name, int max_players_
     addr.host = ENET_HOST_ANY;
     addr.port = kMelonLANPort;
 
-    enet_host = enet_host_create(&addr, 16, 2, 0, 0);
+    enet_host = enet_host_create(&addr, 16, 2,
+                                  Network::Optimizations::INCOMING_BANDWIDTH,
+                                  Network::Optimizations::OUTGOING_BANDWIDTH);
     if (!enet_host) {
         LOG_ERROR(Network, "Failed to create ENet host for melonDS LAN");
         return false;
     }
+
+    // Apply network optimizations
+    Network::Optimizations::EnableCompression(enet_host);
 
     std::lock_guard<std::mutex> lock(players_mutex);
 
@@ -186,7 +191,16 @@ bool MelonLANAdapter::StartClient(const std::string& player_name,
     LOG_INFO(Network, "Starting melonDS LAN client connection to {}:{}", host_address_str,
              kMelonLANPort);
 
-    enet_host = enet_host_create(nullptr, 16, 2, 0, 0);
+    enet_host = enet_host_create(nullptr, 16, 2,
+                                  Network::Optimizations::INCOMING_BANDWIDTH,
+                                  Network::Optimizations::OUTGOING_BANDWIDTH);
+    if (!enet_host) {
+        LOG_ERROR(Network, "Failed to create ENet host for melonDS LAN client");
+        return false;
+    }
+
+    // Apply network optimizations
+    Network::Optimizations::EnableCompression(enet_host);
     if (!enet_host) {
         LOG_ERROR(Network, "Failed to create ENet client host for melonDS LAN");
         return false;

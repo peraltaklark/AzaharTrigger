@@ -14,6 +14,7 @@
 #include "network/packet.h"
 #include "network/room.h"
 #include "network/verify_user.h"
+#include "network/network_optimizations.h"
 
 namespace Network {
 
@@ -1029,10 +1030,16 @@ bool Room::Create(const std::string& name, const std::string& description,
 
     // In order to send the room is full message to the connecting client, we need to leave one
     // slot open so enet won't reject the incoming connection without telling us
-    room_impl->server = enet_host_create(&address, max_connections + 1, NumChannels, 0, 0);
+    room_impl->server = enet_host_create(&address, max_connections + 1, NumChannels,
+                                          Optimizations::INCOMING_BANDWIDTH,
+                                          Optimizations::OUTGOING_BANDWIDTH);
     if (!room_impl->server) {
         return false;
     }
+
+    // Apply network optimizations to server
+    Optimizations::EnableCompression(room_impl->server);
+
     room_impl->state = State::Open;
 
     room_impl->room_information.name = name;
