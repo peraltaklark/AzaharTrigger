@@ -12,6 +12,9 @@ object SettingKeys {
     external fun use_artic_base_controller(): String
     external fun use_cpu_jit(): String
     external fun use_aggressive_jit_optimizations(): String
+    external fun mali_gpu_optimizations(): String
+    external fun parallel_shader_compilation(): String
+    external fun async_texture_loading(): String
     external fun cpu_clock_percentage(): String
     external fun is_new_3ds(): String
     external fun lle_applets(): String

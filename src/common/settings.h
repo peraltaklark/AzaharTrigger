@@ -490,6 +490,9 @@ struct Values {
     // Core
     Setting<bool> use_cpu_jit{true, Keys::use_cpu_jit};
     Setting<bool> use_aggressive_jit_optimizations{false, Keys::use_aggressive_jit_optimizations};
+    Setting<bool> mali_gpu_optimizations{false, Keys::mali_gpu_optimizations};
+    Setting<bool> parallel_shader_compilation{true, Keys::parallel_shader_compilation};
+    Setting<bool> async_texture_loading{true, Keys::async_texture_loading};
     SwitchableSetting<s32, true> cpu_clock_percentage{100, 5, 400, Keys::cpu_clock_percentage};
     SwitchableSetting<bool> is_new_3ds{true, Keys::is_new_3ds};
     SwitchableSetting<bool> lle_applets{true, Keys::lle_applets};
