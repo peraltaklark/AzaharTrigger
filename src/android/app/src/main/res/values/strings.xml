@@ -373,6 +373,8 @@
 	<string name="use_shader_jit">Shader JIT</string>
 	<string name="use_disk_shader_cache">Disk Shader Cache</string>
 	<string name="use_disk_shader_cache_description">Reduce stuttering by storing and loading generated shaders to disk. It cannot be used without Enabling Hardware Shader.</string>
+	<string name="use_performance_hints">Performance Hints</string>
+	<string name="use_performance_hints_description">Ask Android to prioritize the emulation thread and favor sustained performance over bursty clock speeds. May reduce stutter on some devices; disable if you notice issues.</string>
 	<string name="use_simd_texture_decode">NEON Texture Decode</string>
     <string name="use_simd_texture_decode_description">Use NEON-accelerated CPU texture format conversion on supported devices for a performance boost. Disable if you notice texture corruption.</string>
 	<string name="utility">Utility</string>
